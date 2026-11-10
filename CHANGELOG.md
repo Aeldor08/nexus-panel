@@ -8,6 +8,8 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+## [1.0.1] - 2026-11-10
+
 ### Modifié
 - Sommaire plus léger : une tuile (et les alertes) n'est réécrite que si son contenu change, et tout se met en pause quand l'onglet est caché
 - Mises à jour : un jeton peut être fourni par la variable d'environnement `NEXUS_MAJ_JETON` (tests automatiques ; jamais enregistré)
