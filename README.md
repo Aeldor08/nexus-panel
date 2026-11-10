@@ -438,6 +438,22 @@ ce PC, ou un téléphone appairé.
 
 ---
 
+## Santé, journal d'activité, processus, focus
+
+- **✚ Santé** (en haut, ou lien du sommaire) : l'état de chaque partie de NEXUS (serveur, bot Discord,
+  LibreHardwareMonitor, carte graphique, suivi des statistiques, lecture en cours, mises à jour, base, disque,
+  téléphone) et les dernières erreurs du serveur. Une pastille orange ou rouge s'allume sur le bouton quand quelque
+  chose ne va pas : c'est le premier endroit à regarder quand un bloc ne s'affiche plus.
+- **Journal d'activité** (2e onglet de la fenêtre Santé) : chaque action sensible avec l'heure et l'appareil :
+  boutons et connexions du deck, mises à jour, appairage ou refus d'un appareil, fermeture d'un processus,
+  sessions de focus. Gardé sur ce PC (`datactivite.jsonl`), jamais de mot de passe ni de jeton dedans.
+- **PC → Processus → ▤ Classement** : tous les programmes, du plus gourmand au moins gourmand (processeur ou
+  mémoire), avec **✖ Fermer** (confirmation demandée ; comme « Fin de tâche »). Les processus vitaux de Windows et
+  NEXUS lui-même sont protégés, et la fermeture n'est possible que depuis le PC.
+- **⏱ Focus** : minuteur Pomodoro (25 min de travail / 5 min de pause, pause longue toutes les 4 séances, tout est
+  réglable). Le temps de travail compte dans **Travail** de tes statistiques, même si tu lis sans toucher au PC.
+  Option « profil sobre » : le profil Ardoise s'applique pendant la session, puis ton profil revient.
+
 ## Mises à jour
 
 NEXUS vérifie tout seul s'il existe une nouvelle version : au démarrage, puis toutes les 6 heures

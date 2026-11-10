@@ -320,6 +320,11 @@ class Deck:
         line = f"{time.strftime('%Y-%m-%d %H:%M:%S')} | {source:<7} | {ip or '-':<15} | {bid} | {label} | {result} | {detail}\n"
         with self._lock, open(LOG_FILE, "a", encoding="utf-8") as f:
             f.write(line)
+        try:                                         # aussi dans le journal d'activité du panel (fenêtre Santé)
+            import activite
+            activite.noter("deck", label if label not in ("-", "?") else str(bid), result, detail, ip, source)
+        except Exception:
+            pass
 
     def recent_log(self, n: int = 15) -> list[str]:
         try:

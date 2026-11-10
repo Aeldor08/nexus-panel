@@ -311,6 +311,11 @@ try {
       <div class="rg-menu" id="rg-menu" hidden></div>
     </div>
     <button class="btn theme-btn" id="btn-theme" title="Changer de thème (Terminal / Sentinelle)">◐ Thème</button>
+    <div class="focus-wrap" id="focus-wrap">
+      <button class="btn focus-btn" id="btn-focus" aria-haspopup="true" aria-expanded="false" title="Minuteur Pomodoro et mode focus">⏱ Focus</button>
+      <div class="focus-menu" id="focus-menu" hidden></div>
+    </div>
+    <button class="btn sante-btn" id="btn-sante" title="Santé de NEXUS">✚ Santé</button>
     <button class="btn ver" id="btn-ver" title="Notes de version">v–</button>
     <button class="btn claude" id="btn-claude" title="Ouvrir l'application Claude (clic droit : claude.ai dans le navigateur)">✦ Claude</button>
     <button class="btn" id="btn-notif" title="Recevoir une notification Windows quand une alerte apparaît">Notifications : off</button>
@@ -400,7 +405,7 @@ try {
 
 <section class="grid row-wide">
   <div class="card c-proc">
-    <h2>Processus <small id="proc-sub"></small></h2>
+    <h2>Processus <small id="proc-sub"></small> <button class="btn proc-btn" id="btn-proc-classement" title="Tous les programmes, du plus gourmand au moins gourmand, avec un bouton pour en fermer un">▤ Classement</button></h2>
     <div class="proc-cols">
       <div><div class="proc-title">▸ Top CPU</div><div id="proc-cpu"></div></div>
       <div><div class="proc-title">▸ Top RAM</div><div id="proc-ram"></div></div>
@@ -835,11 +840,14 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) tick
 <script src="/static/js/journal.js"></script>
 <script src="/static/js/gamemode.js"></script>
 <script src="/static/js/version.js"></script>
+<script src="/static/js/sante.js"></script>
+<script src="/static/js/processus.js"></script>
 <script src="/static/js/home.js"></script>
 <script src="/static/js/splash.js"></script>
 <script src="/static/js/phone.js"></script>
 <script src="/static/js/theme.js"></script>
 <script src="/static/js/profiles.js"></script>
+<script src="/static/js/focus.js"></script>
 <script src="/static/js/rappels.js"></script>
 <script src="/static/js/reglages.js"></script>
 <script src="/static/js/blocs.js"></script>

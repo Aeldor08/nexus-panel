@@ -681,6 +681,12 @@ class NetMonitor:
 # --------------------------------------------------------------------------- #
 PROC_INTERVAL = 2.0
 PROC_IGNORE = {"system idle process", "idle", "system", "registry", "memory compression"}
+# Jamais fermés depuis le panel : processus vitaux de Windows (les fermer planterait ou déconnecterait la session)
+PROC_PROTEGES = {"system", "registry", "smss.exe", "csrss.exe", "wininit.exe", "winlogon.exe", "services.exe",
+                 "lsass.exe", "lsaiso.exe", "svchost.exe", "fontdrvhost.exe", "dwm.exe", "explorer.exe", "sihost.exe",
+                 "ctfmon.exe", "spoolsv.exe", "audiodg.exe", "secure system", "memory compression", "wudfhost.exe",
+                 "msmpeng.exe", "searchindexer.exe", "taskhostw.exe", "runtimebroker.exe", "startmenuexperiencehost.exe",
+                 "shellexperiencehost.exe", "textinputhost.exe", "conhost.exe", "dllhost.exe", "lsm.exe", "wlanext.exe"}
 
 
 class ProcessMonitor:
@@ -691,6 +697,7 @@ class ProcessMonitor:
         self._lock = threading.Lock()
         self._procs: dict[int, psutil.Process] = {}
         self._result = {"top_cpu": [], "top_ram": [], "count": 0}
+        self._tous: list[dict] = []          # tous les groupes (classement complet)
         self._ncpu = psutil.cpu_count(logical=True) or 1
         threading.Thread(target=self._loop, daemon=True).start()
 
@@ -727,7 +734,8 @@ class ProcessMonitor:
                 continue
             alive[p.pid] = proc
             count += 1
-            g = groups.setdefault(name, {"name": name, "cpu": 0.0, "ram": 0, "count": 0})
+            g = groups.setdefault(name, {"name": name, "cpu": 0.0, "ram": 0, "count": 0, "pids": []})
+            g["pids"].append(p.pid)
             g["cpu"] += cpu
             g["ram"] += rss
             g["count"] += 1
@@ -735,16 +743,82 @@ class ProcessMonitor:
         items = list(groups.values())
         for g in items:
             g["cpu"] = round(g["cpu"], 1)
+        court = [{k: v for k, v in g.items() if k != "pids"} for g in items]
         with self._lock:
+            self._tous = items
             self._result = {
-                "top_cpu": sorted(items, key=lambda g: g["cpu"], reverse=True)[:6],
-                "top_ram": sorted(items, key=lambda g: g["ram"], reverse=True)[:6],
+                "top_cpu": sorted(court, key=lambda g: g["cpu"], reverse=True)[:6],
+                "top_ram": sorted(court, key=lambda g: g["ram"], reverse=True)[:6],
                 "count": count,
             }
 
     def get(self) -> dict:
         with self._lock:
             return {**self._result, "paused": self.paused}
+
+    def classement(self, tri: str = "cpu", limite: int = 500) -> dict:
+        """Tous les programmes (regroupés par nom), du plus gourmand au moins gourmand."""
+        with self._lock:
+            items = list(self._tous)
+        cle = (lambda g: g["ram"]) if tri == "ram" else (lambda g: (g["cpu"], g["ram"]))
+        moi = _pids_nexus()
+        out = []
+        for g in sorted(items, key=cle, reverse=True)[:limite]:
+            n = g["name"].lower()
+            out.append({"name": g["name"], "cpu": g["cpu"], "ram": g["ram"], "count": g["count"],
+                        "protege": n in PROC_PROTEGES or any(pid in moi for pid in g["pids"])})
+        return {"tri": "ram" if tri == "ram" else "cpu", "processus": out, "total": len(items), "paused": self.paused}
+
+    def fermer(self, nom: str, delai: float = 3.0) -> dict:
+        """Ferme TOUS les processus de ce nom (comme « Fin de tâche ») : demande polie, puis arrêt forcé après
+        quelques secondes pour ceux qui résistent. Jamais un processus vital de Windows ni NEXUS lui-même."""
+        nom_l = str(nom or "").strip().lower()
+        if not nom_l:
+            raise ValueError("nom de processus manquant")
+        if nom_l in PROC_PROTEGES:
+            raise ValueError(f"{nom} est un processus vital de Windows : il ne peut pas être fermé depuis le panel")
+        moi = _pids_nexus()
+        cibles = []
+        for p in psutil.process_iter(["name"]):
+            if (p.info.get("name") or "").lower() == nom_l:
+                if p.pid in moi:
+                    raise ValueError("c'est NEXUS lui-même : utilise plutôt la fenêtre de NEXUS pour l'arrêter")
+                cibles.append(p)
+        if not cibles:
+            raise ValueError(f"aucun processus « {nom} » en cours")
+        refuses = 0
+        for p in cibles:
+            try:
+                p.terminate()
+            except psutil.NoSuchProcess:
+                pass
+            except psutil.AccessDenied:
+                refuses += 1
+        _, restants = psutil.wait_procs(cibles, timeout=delai)
+        for p in restants:
+            try:
+                p.kill()
+            except psutil.NoSuchProcess:
+                pass
+            except psutil.AccessDenied:
+                refuses += 1
+        _, encore = psutil.wait_procs(restants, timeout=2) if restants else ([], [])
+        return {"nom": nom, "trouves": len(cibles), "fermes": len(cibles) - len(encore), "forces": len(restants),
+                "refuses": len(encore)}
+
+
+def _pids_nexus() -> set[int]:
+    """NEXUS et ses parents (python, fenêtre de lancer.bat) : jamais proposés à la fermeture.
+    (Pas ses enfants : un jeu ou une appli lancés depuis le Lanceur ou le Deck doivent pouvoir être fermés.)"""
+    out = set()
+    try:
+        p = psutil.Process()
+        out.add(p.pid)
+        for a in p.parents():
+            out.add(a.pid)
+    except psutil.Error:
+        pass
+    return out
 
 
 # --------------------------------------------------------------------------- #

@@ -261,6 +261,7 @@ avec `stop:first-child` / `stop:last-child`, `.sp-traces`, `.sp-nodes`), `.sp-ti
 | Attribut | Valeurs | Moment |
 |---|---|---|
 | `body[data-alerte=…]` | `aucune`, `normale`, `critique` | état courant : aucune alerte, au moins une alerte, au moins une alerte critique |
+| `body[data-focus=…]` | `travail`, `pause`, `longue` | une session de focus (Pomodoro) est en cours, et sa phase |
 | `body[data-alerte-evenement=…]` | `nouvelle-critique`, `resolue` | posé **3 s** puis retiré : une alerte critique vient d'apparaître / toutes les alertes viennent de disparaître |
 
 ```css

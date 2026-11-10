@@ -18,6 +18,7 @@ TESTS = [
     ("test_modejeu.py", [str(BASE)]),
     ("test_modejeu_pc.py", [str(BASE)]),
     ("test_maj.py", []),
+    ("test_focus_sante.py", []),
 ]
 
 

@@ -22,12 +22,14 @@ from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Red
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 
+import activite
 import agenda as agenda_mod
 import audio as audio_mod
 import bot as bot_mod
 import config
 import db as db_mod
 import deck as deck_mod
+import focus as focus_mod
 import gamemode as gamemode_mod
 import journal as journal_mod
 import lan
@@ -36,6 +38,7 @@ import media as media_mod
 import profiles as profiles_mod
 import reminders as reminders_mod
 import remote as remote_mod
+import sante as sante_mod
 import souvenirs as souvenirs_mod
 import stats
 import statistiques as statistiques_mod
@@ -80,8 +83,11 @@ def _gpu_load():
         return None
 
 
+# Minuteur Pomodoro / mode focus (le temps de travail compte dans les statistiques)
+focus_svc = focus_mod.Focus(journal=activite.noter)
 # Statistiques personnelles : réutilise le mode jeu, le panneau multimédia et la lecture GPU (démarré dans __main__)
-tracker = statistiques_mod.Tracker(game_state=game_mode.state, media_state=media.state, gpu_load=_gpu_load)
+tracker = statistiques_mod.Tracker(game_state=game_mode.state, media_state=media.state, gpu_load=_gpu_load,
+                                   en_focus=focus_svc.en_travail)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
@@ -123,13 +129,16 @@ async def _guard(request: Request, call_next):
         return await call_next(request)          # le PC lui-même : tout est permis
     # --- requête venant du réseau ---
     if not remote_svc.enabled or not remote_mod.is_private(ip):
+        activite.noter("appareil", "accès refusé (réseau non autorisé)", "refusé", "", ip, unique_s=600)
         return PlainTextResponse("Accès refusé", status_code=403)
     path = request.url.path
-    if path.startswith(("/api/remote", "/api/maj")):          # (mises à jour : seulement depuis le PC)
+    # (mises à jour, appairage, fermeture de processus : seulement depuis le PC)
+    if path.startswith(("/api/remote", "/api/maj", "/api/processus/fermer")):
         return JSONResponse({"error": "réservé au PC"}, status_code=403)
     if path in PUBLIC_REMOTE_PATHS:
         return await call_next(request)
     if not remote_svc.check(request.cookies.get(remote_mod.COOKIE), ip):
+        activite.noter("appareil", "appareil non appairé", "refusé", path[:60], ip, unique_s=600)
         if request.method == "GET" and not path.startswith(("/api/", "/static/", "/profils/")):
             return RedirectResponse("/pair", status_code=303)
         return JSONResponse({"error": "appareil non appairé"}, status_code=401)
@@ -745,7 +754,10 @@ async def api_pair_claim(request: Request) -> JSONResponse:
     token = remote_svc.claim(ip, str(body.get("secret") or "")[:100] or None, str(body.get("code") or "")[:10] or None,
                              text_field(body, "name", 40, required=False), request.headers.get("user-agent", ""))
     if not token:
+        activite.noter("appareil", "appairage refusé", "refusé", "code invalide ou expiré", ip, unique_s=30)
         raise BadRequest("code invalide ou expiré : relance l'appairage sur le PC", 403)
+    activite.noter("appareil", "nouvel appareil appairé", "ok",
+                   text_field(body, "name", 40, required=False) or remote_mod.device_label(request.headers.get("user-agent", "")), ip)
     resp = JSONResponse({"ok": True})
     resp.set_cookie(remote_mod.COOKIE, token, max_age=remote_mod.COOKIE_MAX_AGE, httponly=True, samesite="strict", path="/")
     return resp
@@ -763,6 +775,7 @@ def api_remote() -> JSONResponse:
 async def api_remote_config(request: Request) -> JSONResponse:
     body = await json_body(request)
     restart = remote_svc.set_enabled(bool(body.get("enabled")))
+    activite.noter("appareil", "accès téléphone " + ("activé" if body.get("enabled") else "désactivé"), "ok", "", _ip(request))
     if restart:
         schedule_restart()
     return JSONResponse({"ok": True, "restart": restart})
@@ -774,6 +787,7 @@ async def api_remote_pair(request: Request) -> JSONResponse:
     if not remote_svc.active:
         raise BadRequest("active d'abord l'accès téléphone", 409)
     p = remote_svc.start_pairing()
+    activite.noter("appareil", "appairage lancé (code affiché)", "ok", "", _ip(request))
     return JSONResponse({"code": p["code"], "expires": p["expires"], "url": lan_url()})
 
 
@@ -798,7 +812,11 @@ def api_remote_qr() -> Response:
 @app.post("/api/remote/revoke")
 async def api_remote_revoke(request: Request) -> JSONResponse:
     body = await json_body(request)
-    return JSONResponse({"ok": remote_svc.revoke(text_field(body, "id", 40))})
+    did = text_field(body, "id", 40)
+    nom = next((d.get("name") for d in remote_svc.state()["devices"] if d.get("id") == did), did)
+    ok = remote_svc.revoke(did)
+    activite.noter("appareil", "appareil retiré", "ok" if ok else "erreur", str(nom), _ip(request))
+    return JSONResponse({"ok": ok})
 
 
 @app.post("/api/remote/rename")
@@ -833,6 +851,7 @@ async def api_deck_login(request: Request) -> JSONResponse:
     if not token:
         deck._log("web", _ip(request), "-", "connexion", "refusé", "mauvais mot de passe")
         raise BadRequest("mot de passe incorrect", 403)
+    deck._log("web", _ip(request), "-", "connexion", "ok", "nouvelle session du deck")
     resp = JSONResponse({"ok": True})
     resp.set_cookie(deck_mod.SESSION_COOKIE, token, max_age=deck_mod.SESSION_DAYS * 86400,
                     httponly=True, samesite="strict", path="/")
@@ -900,12 +919,13 @@ def _redemarrer_pour_maj() -> None:
     threading.Timer(.4, lambda: os._exit(RESTART_CODE)).start()
 
 
-def _maj_mot_de_passe(request: Request, body: dict) -> None:
+def _maj_mot_de_passe(request: Request, body: dict, action: str = "mise à jour") -> None:
     if not deck.rate_ok(_ip(request), "maj", 5):
         raise BadRequest("trop d'essais : attends une minute", 429)
     if not deck_mod.Deck.password_set(config.get("deck")):
         raise BadRequest("aucun mot de passe défini pour le panel : lance configurer.bat, puis réessaie", 403)
     if not _verify_panel_password(body.get("mot_de_passe")):
+        activite.noter("maj", action, "refusé", "mauvais mot de passe", _ip(request))
         raise BadRequest("mot de passe incorrect", 403)
 
 
@@ -930,9 +950,14 @@ async def api_maj_plus_tard(request: Request) -> JSONResponse:
 async def api_maj_reglages(request: Request) -> JSONResponse:
     body = await json_body(request)
     try:
-        maj_mod.modifier_reglages({k: body[k] for k in ("depot", "actif", "intervalle_heures", "discord") if k in body})
+        avant = maj_mod.reglages()
+        apres = maj_mod.modifier_reglages({k: body[k] for k in ("depot", "actif", "intervalle_heures", "discord") if k in body})
     except maj_mod.MajError as exc:
         raise BadRequest(str(exc))
+    changes = [f"{k} : {avant.get(k)} → {apres.get(k)}" for k in ("depot", "actif", "intervalle_heures", "discord")
+               if avant.get(k) != apres.get(k)]
+    if changes:
+        activite.noter("maj", "réglages des mises à jour", "ok", " ; ".join(changes), _ip(request))
     return JSONResponse(updater.public())
 
 
@@ -940,9 +965,10 @@ async def api_maj_reglages(request: Request) -> JSONResponse:
 async def api_maj_jeton(request: Request) -> JSONResponse:
     body = await json_body(request)
     try:
-        maj_mod.enregistrer_jeton(maj_mod.reglages()["depot"], str(body.get("jeton") or ""))
+        ou = maj_mod.enregistrer_jeton(maj_mod.reglages()["depot"], str(body.get("jeton") or ""))
     except maj_mod.MajError as exc:
         raise BadRequest(str(exc))
+    activite.noter("maj", "jeton GitHub " + ("enregistré" if ou else "effacé"), "ok", f"rangé : {ou}" if ou else "", _ip(request))
     # (le jeton n'est jamais renvoyé : seulement « enregistré » et où)
     return JSONResponse(await run_in_threadpool(updater.verifier))
 
@@ -960,11 +986,13 @@ async def api_maj_installer(request: Request) -> JSONResponse:
     # validation explicite de CETTE version (étape « Valider la mise à jour » de la fenêtre Version) : obligatoire
     if not dispo or str(body.get("validation") or "") != dispo["version"]:
         raise BadRequest("validation requise : confirme l'installation de cette version dans la fenêtre Version", 400)
-    _maj_mot_de_passe(request, body)
+    _maj_mot_de_passe(request, body, "installation")
     try:
         updater.installer(_redemarrer_pour_maj)
     except maj_mod.MajError as exc:
+        activite.noter("maj", "installation", "erreur", str(exc), _ip(request))
         raise BadRequest(str(exc))
+    activite.noter("maj", "installation validée", "ok", f"{version_mod.current()} → {dispo['version']}", _ip(request))
     return JSONResponse({"ok": True, **updater.public()})
 
 
@@ -974,12 +1002,151 @@ async def api_maj_revenir(request: Request) -> JSONResponse:
     sauv = updater.sauvegardes()
     if not sauv or str(body.get("validation") or "") != sauv[0]["version"]:
         raise BadRequest("validation requise : confirme le retour à la version précédente", 400)
-    _maj_mot_de_passe(request, body)
+    _maj_mot_de_passe(request, body, "retour à la version précédente")
     try:
         v = updater.revenir(_redemarrer_pour_maj)
     except maj_mod.MajError as exc:
         raise BadRequest(str(exc))
+    activite.noter("maj", "retour à la version précédente validé", "ok", f"{version_mod.current()} → {v}", _ip(request))
     return JSONResponse({"ok": True, "vers": v})
+
+
+# ---- Santé de NEXUS, journal d'activité -----------------------------------
+def _etat(ok: bool | None, detail: str = "", attention: bool = False) -> dict:
+    """ok : True / False / None (inactif ou facultatif) ; attention : marche, mais à surveiller."""
+    return {"etat": "inactif" if ok is None else "attention" if (attention and ok) else "ok" if ok else "erreur",
+            "detail": detail}
+
+
+def _duree(s: float) -> str:
+    s = max(0, int(s))
+    if s < 60:
+        return f"{s} s"
+    if s < 3600:
+        return f"{s // 60} min"
+    if s < 86400:
+        return f"{s // 3600} h {s % 3600 // 60:02d}"
+    return f"{s // 86400} j {s % 86400 // 3600} h"
+
+
+BOT_ETATS = {"online": (True, "connecté"), "connecting": (True, "connexion en cours"), "disabled": (None, "désactivé"),
+             "no_token": (None, "aucun jeton (facultatif)"), "stopped": (None, "arrêté"),
+             "missing_lib": (False, "bibliothèque discord.py absente"), "bad_token": (False, "jeton refusé par Discord"),
+             "bad_config": (False, "configuration incomplète")}
+
+
+def _sante_elements(now: float) -> list[dict]:
+    proc = psutil.Process()
+    b = discord_bot.status
+    ok_b, txt_b = BOT_ETATS.get(b.get("state"), (False, str(b.get("state") or "?")))
+    lhm = sensors.lhm.get()
+    tr = tracker.status
+    derniere = tr.get("derniere_mesure")
+    en_retard = bool(derniere and now - derniere > 3 * statistiques_mod.TICK + 15)
+    md = media.state()
+    v = updater.etat
+    try:
+        libre = psutil.disk_usage(str(BASE_DIR)).free
+    except OSError:
+        libre = None
+    src = getattr(sensors.gpu, "last_source", None)
+    if tr.get("etat") == "pause":
+        stats_e = _etat(None, "en pause (onglet Statistiques)")
+    elif tr.get("etat") == "erreur":
+        stats_e = _etat(False, f"erreur : {tr.get('erreur')}")
+    elif tr.get("etat") == "arrete":
+        stats_e = _etat(False, "arrêté (base de données indisponible ?)")
+    else:
+        stats_e = _etat(not en_retard, (f"dernière mesure il y a {_duree(now - derniere)}" if derniere else "en attente de la 1re mesure")
+                        + (" — en retard" if en_retard else ""))
+    res = v.get("resultat")
+    maj_txt = ("dernière vérification " + time.strftime("%d/%m %H:%M", time.localtime(v["derniere"])) + " : " if v.get("derniere") else "")
+    maj_txt += {"ok": "à jour" if v.get("a_jour") else "une nouvelle version est disponible",
+                "non_configure": "aucun dépôt configuré"}.get(res) or (v.get("erreur") or "pas encore vérifié")
+    db_f = db_mod.DB_FILE
+    lhm_pas_encore = lhm.get("error") == "pas encore interrogé"
+    return [
+        {"id": "serveur", "nom": "Serveur", **_etat(True, f"v{version_mod.current()} · démarré il y a {_duree(now - proc.create_time())} · "
+                                                           f"{proc.memory_info().rss / 2**20:.0f} Mo · {proc.num_threads()} fils · port {PORT}")},
+        {"id": "bot", "nom": "Bot Discord", **_etat(ok_b, (txt_b if not b.get("detail") or b["detail"].startswith(txt_b)
+                                                            else f"{txt_b} — {b['detail']}")[:200])},
+        {"id": "lhm", "nom": "LibreHardwareMonitor", **_etat(
+            None if lhm_pas_encore else bool(lhm.get("available")),
+            "en attente" if lhm_pas_encore else "répond (températures, ventilateurs)" if lhm.get("available")
+            else f"ne répond pas ({lhm.get('error') or '?'}) : températures CPU et ventilateurs indisponibles")},
+        {"id": "gpu", "nom": "Carte graphique", **_etat(bool(src) or None, f"lue par : {stats.SOURCE_LABELS.get(src, src) if src else 'aucune source'}")},
+        {"id": "stats", "nom": "Suivi des statistiques", **stats_e},
+        {"id": "media", "nom": "Lecture en cours (Windows)", **_etat(
+            bool(md.get("available")) and not md.get("error"),
+            f"{len(md.get('sessions') or [])} lecteur(s) détecté(s)" if md.get("available") else f"indisponible : {md.get('error') or '?'}")},
+        {"id": "maj", "nom": "Mises à jour", **_etat(None if res in (None, "non_configure") else res == "ok", maj_txt)},
+        {"id": "base", "nom": "Base de données", **_etat(
+            db_f.exists() or None, f"schéma {db_mod.VERSION} · {db_f.stat().st_size / 2**20:.1f} Mo" if db_f.exists() else "pas encore créée")},
+        {"id": "disque", "nom": "Espace disque (dossier de NEXUS)", **_etat(
+            libre is not None, f"{libre / 2**30:.1f} Go libres" if libre is not None else "inconnu",
+            attention=libre is not None and libre < 5 * 2**30)},
+        {"id": "telephone", "nom": "Accès téléphone", **_etat(
+            True if remote_svc.active else None,
+            f"activé · {len(remote_svc.state()['devices'])} appareil(s) appairé(s)" if remote_svc.active else "désactivé")},
+    ]
+
+
+@app.get("/api/sante")
+def api_sante() -> JSONResponse:
+    now = time.time()
+    elems = _sante_elements(now)
+    erreurs = sante_mod.liste()
+    recentes = [x for x in erreurs if x["niveau"] == "erreur" and now - x["t"] < 3600]
+    resume = ("erreur" if any(e["etat"] == "erreur" for e in elems)
+              else "attention" if recentes or any(e["etat"] == "attention" for e in elems) else "ok")
+    return JSONResponse({"elements": elems, "erreurs": erreurs, "resume": resume, "maintenant": now},
+                        headers={"Cache-Control": "no-store"})
+
+
+@app.get("/api/activite")
+def api_activite(cat: str = "", n: int = 200) -> JSONResponse:
+    return JSONResponse({"evenements": activite.lire(max(1, min(1000, n)), cat if cat in activite.CATEGORIES else None),
+                         "categories": activite.CATEGORIES}, headers={"Cache-Control": "no-store"})
+
+
+# ---- Processus : classement complet et fermeture (PC uniquement, avec confirmation) ----
+@app.get("/api/processus")
+def api_processus(tri: str = "cpu") -> JSONResponse:
+    return JSONResponse(sensors.procs.classement(tri), headers={"Cache-Control": "no-store"})
+
+
+@app.post("/api/processus/fermer")
+async def api_processus_fermer(request: Request) -> JSONResponse:
+    body = await json_body(request)
+    nom = text_field(body, "nom", 120)
+    if str(body.get("confirmation") or "") != nom:          # nom confirmé par l'utilisateur dans la page
+        raise BadRequest("confirmation manquante")
+    try:
+        r = await run_in_threadpool(sensors.procs.fermer, nom)
+    except ValueError as exc:
+        activite.noter("processus", f"fermeture de {nom}", "refusé", str(exc), _ip(request))
+        raise BadRequest(str(exc))
+    activite.noter("processus", f"fermeture de {nom}", "partiel" if r["refuses"] else "ok",
+                   f"{r['fermes']}/{r['trouves']} fermé(s)" + (f", {r['forces']} de force" if r["forces"] else "")
+                   + (f", {r['refuses']} refusé(s) par Windows" if r["refuses"] else ""), _ip(request))
+    return JSONResponse(r)
+
+
+# ---- Focus (Pomodoro) --------------------------------------------------------
+@app.get("/api/focus")
+def api_focus() -> JSONResponse:
+    return JSONResponse(focus_svc.etat(), headers={"Cache-Control": "no-store"})
+
+
+@app.post("/api/focus/{action}")
+async def api_focus_action(action: str, request: Request) -> JSONResponse:
+    body = await json_body(request)
+    actions = {"demarrer": lambda: focus_svc.demarrer(body.get("reglages") or None), "suspendre": focus_svc.suspendre,
+               "reprendre": focus_svc.reprendre, "passer": focus_svc.passer, "arreter": focus_svc.arreter,
+               "reglages": lambda: focus_svc.regler(body)}
+    if action not in actions:
+        raise BadRequest("action inconnue", 404)
+    return JSONResponse(actions[action]())
 
 
 @app.get("/api/version")
@@ -1125,6 +1292,25 @@ def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
 
+def _journaliser_resultat_maj() -> None:
+    """Résultat d'une installation / d'un retour (écrit par maj_demarrage.py) : une seule fois dans le journal."""
+    import json as _json
+    f = maj_mod.MAJ_DIR / "resultat.json"
+    try:
+        r = _json.loads(f.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    if r.get("journalise"):
+        return
+    activite.noter("maj", "retour effectué" if r.get("type") == "retour" else "installation terminée",
+                   "ok" if r.get("ok") else "erreur", str(r.get("message") or ""), "", "panel")
+    r["journalise"] = True
+    try:
+        f.write_text(_json.dumps(r, ensure_ascii=False, indent=2), encoding="utf-8")
+    except OSError:
+        pass
+
+
 def _test_demarrage(attendue: str) -> int:
     """Lancé par maj_demarrage.py après une mise à jour : migrations, serveur sur un port libre, /api/version doit
     répondre la version attendue. Code 0 = la nouvelle version démarre ; sinon la mise à jour est annulée."""
@@ -1170,6 +1356,8 @@ if __name__ == "__main__":
         except Exception as exc:
             print(f"{type(exc).__name__}: {exc}", file=sys.stderr, flush=True)
             os._exit(1)
+    sante_mod.install()                  # dernières erreurs gardées pour la fenêtre « Santé de NEXUS »
+    _journaliser_resultat_maj()
     try:
         config.migrer()                  # schéma de config.json (sauvegarde avant chaque migration)
     except Exception as exc:

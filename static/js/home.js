@@ -46,9 +46,11 @@
     <p class="hint" style="text-align:center">Clique sur une catégorie ou directement sur une sous-partie.
       Pour revenir ici : bouton <b>◀ Retour</b>, onglet <b>⌂ Sommaire</b> ou touche <b>Échap</b>. Le logo <b>NEXUS</b> ramène à la page de garde.
       · <a href="#accueil" id="h-intro" style="color:var(--magenta)">▶ Rejouer l'intro</a>
-      · <a href="#accueil" id="h-version" style="color:var(--cyan)">ℹ Version et mises à jour</a></p>`;
+      · <a href="#accueil" id="h-version" style="color:var(--cyan)">ℹ Version et mises à jour</a>
+      · <a href="#accueil" id="h-sante" style="color:var(--cyan)">✚ Santé de NEXUS</a></p>`;
   $("h-intro").addEventListener("click", ev => { ev.preventDefault(); if (window.replayIntro) window.replayIntro(); });
   $("h-version").addEventListener("click", ev => { ev.preventDefault(); if (window.nxVersion) window.nxVersion.ouvrir(); });
+  $("h-sante").addEventListener("click", ev => { ev.preventDefault(); if (window.nxSante) window.nxSante.ouvrir(); });
 
   // Réécrit une tuile seulement si son contenu a changé (moins de travail de mise en page chaque seconde)
   const dernier = {};

@@ -122,3 +122,65 @@ main.nx-free.nx-ajuste .nx-panel::-webkit-scrollbar { display: none; }
 .nx-rem small { grid-column: 1; font-size: 12px; color: var(--muted); }
 .nx-rem .btn { grid-column: 2; grid-row: 1 / span 3; }
 @keyframes nx-rem-in { from { transform: translateX(30px); opacity: 0; } }
+
+/* ---- Mode focus (Pomodoro) : bouton + menu du haut ---- */
+.focus-wrap { position: relative; display: inline-block; }
+.btn.focus-btn { font-variant-numeric: tabular-nums; }
+/* actif : bordure + texte colorés sur le fond normal du bouton (lisible dans tous les profils) */
+.btn.focus-btn.focus-actif { border-color: var(--ok, #6f6); color: var(--text); box-shadow: inset 3px 0 0 var(--ok, #6f6); }
+.btn.focus-btn.focus-actif.focus-pause { border-color: var(--cyan); box-shadow: inset 3px 0 0 var(--cyan); }
+.focus-menu { position: absolute; z-index: 900; top: calc(100% + 8px); right: 0; width: min(360px, calc(100vw - 32px));
+  padding: 12px; color: var(--text); font-family: var(--mono); background: var(--deep-1, #0b0b0b);
+  border: 1px solid var(--muted); box-shadow: 0 14px 40px rgba(0, 0, 0, .6);
+  text-transform: none; letter-spacing: normal; text-align: left; font-weight: 400; }
+.focus-menu[hidden] { display: none; }
+.focus-menu .btn { margin: 4px 6px 4px 0; }
+.focus-reglages { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin: 10px 0; font-size: 13px; }
+.focus-reglages label { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.focus-reglages .in { width: 64px; padding: 4px 6px; }
+.focus-temps { margin: 8px 0 6px; font-size: 44px; line-height: 1; text-align: center; font-variant-numeric: tabular-nums; }
+.focus-barre { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .1); overflow: hidden; }
+.focus-barre i { display: block; height: 100%; background: var(--green, #6f6); transition: width .9s linear; }
+body[data-focus="pause"] .focus-barre i, body[data-focus="longue"] .focus-barre i { background: var(--cyan); }
+.focus-info { font-size: 12px; margin: 8px 0; }
+@media (prefers-reduced-motion: reduce) { .focus-barre i { transition: none; } }
+@media (max-width: 760px) {
+  .focus-wrap { position: static; }
+  .focus-menu { position: fixed; left: 16px; right: 16px; top: 70px; width: auto; }
+}
+
+/* ---- Santé de NEXUS ---- */
+.btn.sante-btn { position: relative; }
+.btn.sante-btn.s-attention::before, .btn.sante-btn.s-erreur::before { content: ""; position: absolute; top: -4px; right: -4px;
+  width: 10px; height: 10px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 8px var(--warn); }
+.btn.sante-btn.s-erreur::before { background: var(--hot); box-shadow: 0 0 8px var(--hot); }
+.sante-onglets { margin: 4px 0 12px; }
+.sante-liste { display: grid; gap: 6px; margin-bottom: 14px; }
+.sante-el { display: grid; grid-template-columns: 22px minmax(150px, 220px) 110px minmax(0, 1fr); gap: 8px; align-items: baseline;
+  padding: 7px 10px; border: 1px solid rgba(255, 255, 255, .08); border-radius: 6px; font-size: 14px; }
+.sante-el small { color: var(--text-2, var(--muted)); overflow-wrap: anywhere; }
+.sante-etat { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+.sante-el.s-ok .sante-ico, .sante-el.s-ok .sante-etat { color: var(--ok, #4c4); }
+.sante-el.s-attention .sante-ico, .sante-el.s-attention .sante-etat { color: var(--warn); }
+.sante-el.s-erreur { border-color: var(--hot); }
+.sante-el.s-erreur .sante-ico, .sante-el.s-erreur .sante-etat { color: var(--hot); }
+.sante-el.s-inactif { opacity: .75; }
+.sante-el.s-inactif .sante-ico, .sante-el.s-inactif .sante-etat { color: var(--muted); }
+.sante-err { display: grid; gap: 6px; max-height: 320px; overflow: auto; font-size: 13px; }
+.sante-err code { display: block; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+.sante-filtres .btn { font-size: 12px; padding: 3px 10px; }
+.sante-journal { width: 100%; font-size: 13px; margin: 8px 0; }
+.sante-journal td { vertical-align: top; overflow-wrap: anywhere; }
+.sante-journal td:first-child, .sante-journal td:nth-child(2), .sante-journal td:nth-child(4) { white-space: nowrap; }
+@media (max-width: 760px) {
+  .sante-el { grid-template-columns: 22px minmax(0, 1fr) auto; }
+  .sante-el small { grid-column: 2 / -1; }
+}
+
+/* ---- Classement des processus ---- */
+.btn.proc-btn { float: right; font-size: 12px; padding: 2px 10px; letter-spacing: 1px; }
+.proc-tbl { width: 100%; font-size: 13px; margin: 8px 0; }
+.proc-tbl td { vertical-align: middle; }
+.proc-tbl .btn { font-size: 12px; padding: 2px 10px; }
+.proc-part { display: block; height: 3px; margin-top: 3px; background: rgba(255, 255, 255, .07); border-radius: 2px; overflow: hidden; }
+.proc-part i { display: block; height: 100%; background: var(--magenta); }

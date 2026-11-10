@@ -33,6 +33,7 @@ import db
 BASE = Path(__file__).resolve().parent
 JEUX_FILE, JEUX_EXAMPLE = BASE / "jeux.json", BASE / "jeux.example.json"
 CATEGORIES = ("jeu", "musique", "video", "navigation", "travail", "autre")
+FOCUS_NOM = "Focus (Pomodoro)"
 # lecteurs et sites de musique (nom donné par media.py) : comptés en « musique » même sans entrée dans jeux.json
 MUSIC_SERVICES = {"Spotify", "Deezer", "Apple Music", "iTunes", "Tidal", "Amazon Music", "Qobuz", "YouTube Music",
                   "SoundCloud", "Pandora", "Napster", "foobar2000", "MusicBee", "AIMP", "Winamp", "MediaMonkey",
@@ -85,7 +86,8 @@ def foreground_process() -> str | None:
 #  Service
 # --------------------------------------------------------------------------- #
 class Tracker:
-    def __init__(self, game_state=None, media_state=None, gpu_load=None) -> None:
+    def __init__(self, game_state=None, media_state=None, gpu_load=None, en_focus=None) -> None:
+        self.en_focus = en_focus or (lambda: False)       # séance de travail Pomodoro en cours (focus.py)
         self.game_state = game_state or (lambda: {})      # mode jeu (gamemode.py) : jeu reconnu
         self.media_state = media_state or (lambda: {})    # panneau multimédia Windows (media.py)
         self.gpu_load = gpu_load or (lambda: None)        # charge GPU en % (stats.py)
@@ -169,6 +171,17 @@ class Tracker:
         if m and active and m["categorie"] not in ("jeu",):
             if not (m["categorie"] in ("musique", "video") and any(k[1] == m["categorie"] for k in apps)):
                 apps[(m["nom"], m["categorie"])] = True
+        # Séance Pomodoro (phase de travail) : compte comme du TRAVAIL et comme présence, même sans toucher au PC
+        # (lecture, prise de notes). Les autres applis « travail » de ce moment ne sont pas comptées en plus,
+        # pour que le total « travail » reste le vrai temps passé.
+        try:
+            focus = bool(self.en_focus())
+        except Exception:
+            focus = False
+        if focus:
+            active = True
+            apps = {k: v for k, v in apps.items() if k[1] != "travail"}
+            apps[(FOCUS_NOM, "travail")] = True
         return {"actif": active, "inactif_depuis": idle, "premier_plan_jeu": fg_is_game,
                 "applis": [{"nom": n, "categorie": c} for (n, c) in apps]}
 

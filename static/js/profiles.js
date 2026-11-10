@@ -425,7 +425,25 @@
     if (file) importZip(file);
   });
 
-  window.nexusProfils = { switchTo, get busy() { return busy; }, get active() { return active; } };   // (tests)
+  // Profil TEMPORAIRE (mode focus) : appliqué sans toucher au choix enregistré ; temporaire(null) remet ce choix.
+  let tempId = null;
+  function temporaire(id) {
+    if (id) {
+      if (!loaded || !compatible().some(x => x.id === id)) return false;
+      tempId = id;
+      if (active !== id && !busy) apply(id, { remember: false });
+      return true;
+    }
+    if (tempId === null) return false;
+    tempId = null;
+    let saved = null;
+    try { saved = localStorage.getItem(KEY); } catch (e) {}
+    apply(saved && compatible().some(x => x.id === saved) ? saved : DEFAULT, { remember: false });
+    return true;
+  }
+
+  window.nexusProfils = { switchTo, temporaire, get busy() { return busy; }, get active() { return active; },
+                          get loaded() { return loaded; } };
 
   // ---------- démarrage + rescan à chaud ----------
   refresh();
