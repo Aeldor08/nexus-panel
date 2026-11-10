@@ -24,15 +24,16 @@ OUT_ROOT = BASE / "partage"
 
 # Liste autorisée (tout le reste est ignoré)
 ROOT_FILES = ["*.py", "*.bat", "requirements.txt", "README.md", "LICENSE", "CHANGELOG.md", "VERSION",
-              "panel.ico", "config.example.json", "deck.example.json", "jeux.example.json", ".gitignore", "NE_PAS_PARTAGER.md"]
-TREES = ["static", "outils", "profils"]
+              "panel.ico", "config.example.json", "deck.example.json", "jeux.example.json", ".gitignore", "NE_PAS_PARTAGER.md",
+              "THIRD_PARTY.md", "ruff.toml", "requirements-dev.txt"]
+TREES = ["static", "outils", "profils", "docs"]
 EXTRA = ["actions/exemple.bat"]
 
 # Jamais copiés, même s'ils correspondent à la liste autorisée
 NEVER_NAMES = {"config.json", "deck.json", ".env", "fan_names.json", "jeux.json", "nexus.db", "rappels.json"}
 # data\ contient tout le personnel : souvenirs (photos), statistiques, journal (nexus.db), agenda, sauvegardes…
 NEVER_DIRS = {"data", "souvenirs", "backups", "logs", "versions", ".venv", "__pycache__", "LibreHardwareMonitor",
-              "partage", ".git"}
+              "partage", ".git", "maj", "sauvegardes-maj", "dist"}
 NEVER_SUFFIXES = {".log", ".lnk", ".tmp", ".pyc", ".zip", ".db", ".db-wal", ".db-shm", ".sqlite"}
 
 TEXT_SUFFIXES = {".py", ".bat", ".md", ".txt", ".json", ".html", ".css", ".js", ".svg", ".webmanifest",
