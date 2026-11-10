@@ -1,0 +1,123 @@
+/* ===== Version mobile (téléphone) — chargée en dernier ===== */
+
+/* Partout : la page ne peut jamais être plus large que l'écran (pas de glissement gauche/droite).
+   « clip » et non « hidden » : la barre d'onglets collée (sticky) continue de fonctionner. */
+html, body { max-width: 100%; overflow-x: clip; }
+/* Les colonnes de grille peuvent rétrécir sous la taille de leur contenu (sinon un tableau ou une
+   ligne de réglage trop large élargit toute la page) */
+.grid > *, .row2 > *, .agenda > *, .gm-grid > *, .home-grid > *, .player > *, .proc-cols > *,
+.ping-cards > *, .net-rates > *, .temps > *, .speed > * { min-width: 0; }
+
+@media (max-width: 760px) {
+  body { padding: 10px 10px calc(24px + env(safe-area-inset-bottom)); }
+  /* Effets lourds coupés : batterie et fluidité */
+  body::before { display: none; }
+  .card { -webkit-backdrop-filter: none; backdrop-filter: none; }
+
+  /* En-tête compact */
+  header { gap: 8px; padding-bottom: 10px; margin-bottom: 10px; }
+  h1 { font-size: 26px; letter-spacing: 4px; }
+  h1 .sub { display: none; }
+  .hdr-logo { width: 30px; height: 30px; }
+  .status { gap: 8px; font-size: 12px; letter-spacing: 1px; width: 100%; }
+  .status > span:not(#clock):not(.gm-badge) { display: none; }       /* voyants API/GPU/LHM */
+  #btn-notif, #btn-claude, #btn-phone { display: none !important; }  /* sans intérêt sur le téléphone */
+  #clock { margin-left: auto; font-size: 18px; }
+
+  /* Onglets : barre collée en haut, défilement horizontal au doigt */
+  .tabs { position: sticky; top: 0; z-index: 20; flex-wrap: nowrap; overflow-x: auto; gap: 4px;
+    margin: 0 -10px 12px; padding: 8px 10px; background: rgba(5, 2, 11, .94);
+    scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs a, .nav-back { flex: none; scroll-snap-align: start; font-size: 16px; padding: 9px 14px; letter-spacing: 2px; }
+  .np { display: none !important; }
+
+  /* Cartes */
+  .grid { gap: 12px; }
+  .row3 + .row3, .row-wide, .bottom, .row2 { margin-top: 12px; }
+  .card { padding: 14px 14px 16px; }
+  .card h2 { font-size: 17px; letter-spacing: 3px; }
+  .gauge-row { gap: 12px; }
+  .gauge, .gauge canvas { width: 130px; height: 80px; }
+  .gauge .val { font-size: 30px; }
+  .temp .big:not(.na) { font-size: 56px; }
+  .ping-cards { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .ping-big { font-size: 43px; }
+  .games { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .game .info { flex-direction: column; gap: 2px; }
+  .apps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .proc-cols { grid-template-columns: 1fr; gap: 14px; }
+  .power { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .power .rate .v { font-size: 21px; }
+  .disk-head { flex-wrap: wrap; }
+  .disk-head .sub { order: 3; width: 100%; }
+
+  /* Sommaire */
+  .home-hello { font-size: 32px; }
+  .home-time { font-size: 44px; }
+  .home-title { font-size: 26px; }
+  .home-ico { width: 46px; height: 46px; font-size: 25px; }
+
+  /* Média : lecteur compact, image entière (jamais rognée), commandes centrées */
+  .player { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .cover { width: 100%; max-height: 44vh; aspect-ratio: 16 / 10; margin: 0 auto; }
+  .cover.square { aspect-ratio: 1; width: min(100%, 44vh); }
+  .track-app { font-size: 12px; }
+  .track-title { font-size: 25px; margin: 10px 0 4px; }
+  .track-artist { font-size: 17px; }
+  .progress { margin-top: 16px; }
+  .controls { justify-content: center; gap: 18px; margin-top: 16px; }
+  .ctl { width: 54px; height: 54px; }
+  .ctl.main { width: 70px; height: 70px; }
+  .m-vol { margin-top: 14px; max-width: none; }
+  .m-vol .mx-row, .mx-row { grid-template-columns: 30px minmax(0, 1fr) 46px 44px; gap: 8px 10px; }
+  .sessions { grid-template-columns: minmax(0, 1fr); }
+
+  /* Champs : 16 px minimum, sinon certains téléphones zooment la page au toucher d'un champ */
+  .in, .tab select, .tab textarea, input, select, textarea { font-size: 18px; }
+
+  /* Tableau des appareils : défile dans sa carte au lieu d'élargir la page */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tbl th:nth-child(4), .tbl td:nth-child(4) { display: none; }       /* colonne MAC masquée */
+  .tbl td, .tbl th { padding: 6px 5px; }
+
+  /* Cibles tactiles plus grandes */
+  .btn { padding: 8px 14px; }
+  .mx-mute { width: 44px; height: 38px; }
+  .mx-range { height: 32px; }
+  .edit, .del { padding: 6px 8px; font-size: 17px; }
+  .tile-x { opacity: 1; padding: 4px 8px; }      /* pas de survol au doigt : toujours visible */
+  .day { min-height: 54px; padding: 3px; }
+  .day .ev { display: none; }                      /* sur petit écran : un point au lieu du texte */
+  .day:has(.ev)::after { content: "•"; color: var(--yellow); font-size: 21px; line-height: 1; }
+
+  /* Stream deck en portrait : 3 gros boutons par ligne (2 sur très petit écran) */
+  .dk-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .dk-ico { font-size: 37px; }
+  .dk-lbl { font-size: 16px; }
+  .dk-btn { gap: 6px; padding: 8px; clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
+  .dk-tag { top: 5px; font-size: 11px; }
+  .dk-tag.warn { left: 12px; }
+  .dk-form-row { grid-template-columns: minmax(0, 1fr) 80px 64px; }
+
+  /* Fenêtres (version, téléphone) : centrées, marges de 8 px, texte plus compact */
+  .ver-dlg { width: calc(100vw - 16px); max-width: calc(100vw - 16px); max-height: 86vh; margin: auto;
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px)); }
+  .ver-head { padding: 12px 14px; }
+  .ver-head h2 { font-size: 21px; letter-spacing: 2px; }
+  .ver-body { padding: 4px 14px 16px; max-height: calc(86vh - 60px); }
+  .ver-line { gap: 2px 8px; }
+  .ver-line b { font-size: 18px; }
+  .ver-line span { flex: 1 1 100%; order: 2; font-size: 16px; }
+  .ver-line small { order: 3; font-size: 13px; }
+  .ver-line em { order: 4; }
+  .ver-entry ul { padding-left: 16px; font-size: 14.5px; line-height: 1.6; }
+  .ver-body .outage { flex-direction: column; gap: 2px; }
+  .ph-pair { flex-direction: column; align-items: stretch; }
+  .ph-qr { width: 100%; height: auto; max-width: 260px; margin: 0 auto; }
+}
+
+@media (max-width: 360px) { .dk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Lien direct : la barre d'onglets collée ne doit pas cacher la carte visée */
+@media (max-width: 760px) { .card { scroll-margin-top: 64px; } }

@@ -1,0 +1,29 @@
+{
+  "_aide": "Associe un nom de processus (.exe, en minuscules) à un nom affiché et une catégorie : jeu, musique, video, navigation, travail, autre. Copié en jeux.json au premier lancement : modifie jeux.json, il est relu toutes les minutes. Les jeux reconnus par le mode jeu sont aussi comptés, même s'ils ne sont pas dans cette liste. Option \"mode\": \"ouverte\" : l'appli compte tant qu'elle est ouverte ET que tu es actif (sinon, seulement quand elle est au premier plan).",
+  "processus": {
+    "valorant-win64-shipping.exe": { "nom": "Valorant", "categorie": "jeu" },
+    "leagueoflegends.exe": { "nom": "League of Legends", "categorie": "jeu" },
+    "cs2.exe": { "nom": "Counter-Strike 2", "categorie": "jeu" },
+    "fortniteclient-win64-shipping.exe": { "nom": "Fortnite", "categorie": "jeu" },
+    "minecraft.exe": { "nom": "Minecraft", "categorie": "jeu" },
+    "javaw.exe": { "nom": "Minecraft (Java)", "categorie": "jeu" },
+    "rocketleague.exe": { "nom": "Rocket League", "categorie": "jeu" },
+    "gta5.exe": { "nom": "GTA V", "categorie": "jeu" },
+    "spotify.exe": { "nom": "Spotify", "categorie": "musique" },
+    "deezer.exe": { "nom": "Deezer", "categorie": "musique" },
+    "itunes.exe": { "nom": "iTunes", "categorie": "musique" },
+    "vlc.exe": { "nom": "VLC", "categorie": "video" },
+    "netflix.exe": { "nom": "Netflix", "categorie": "video" },
+    "chrome.exe": { "nom": "Chrome", "categorie": "navigation" },
+    "msedge.exe": { "nom": "Edge", "categorie": "navigation" },
+    "firefox.exe": { "nom": "Firefox", "categorie": "navigation" },
+    "opera.exe": { "nom": "Opera", "categorie": "navigation" },
+    "discord.exe": { "nom": "Discord", "categorie": "autre" },
+    "code.exe": { "nom": "VS Code", "categorie": "travail" },
+    "winword.exe": { "nom": "Word", "categorie": "travail" },
+    "excel.exe": { "nom": "Excel", "categorie": "travail" },
+    "obs64.exe": { "nom": "OBS Studio", "categorie": "travail" },
+    "claude.exe": { "nom": "Claude", "categorie": "travail", "mode": "ouverte" },
+    "notion.exe": { "nom": "Notion (exemple)", "categorie": "travail", "mode": "ouverte" }
+  }
+}

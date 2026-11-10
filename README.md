@@ -1,0 +1,574 @@
+# NEXUS — tableau de bord du PC
+
+NEXUS affiche en direct l'état de ton PC Windows dans ton navigateur : processeur, mémoire, carte
+graphique, températures, disques, réseau. Il propose aussi un lecteur de musique avec mélangeur de son,
+un lanceur de jeux, un agenda, un mur de souvenirs, tes statistiques personnelles (temps de PC, de jeu, de
+musique), un journal quotidien, un stream deck (gros boutons d'actions) et, si tu
+veux, un bot Discord qui t'envoie des alertes.
+
+Tout tourne **sur ton PC uniquement** : la page est à l'adresse `http://127.0.0.1:8000`, que personne
+d'autre ne peut ouvrir. Tes données restent sur ton PC : la seule connexion faite par NEXUS lui-même est la
+vérification des mises à jour auprès de `api.github.com` (désactivable), plus le bot Discord si tu l'actives.
+
+---
+
+## Installation pas à pas (aucune connaissance en Python nécessaire)
+
+Compte environ 10 minutes.
+
+### Étape 1 — Dézipper NEXUS
+
+Télécharge `NEXUS-x.y.z.zip` dans la dernière release du dépôt GitHub (page **Releases**), ou utilise
+le zip qu'on t'a envoyé.
+
+1. Fais un clic droit sur le fichier `NEXUS-x.y.z.zip` → **Extraire tout…** → **Extraire**.
+2. Déplace le dossier obtenu à un endroit où tu le garderas, par exemple dans **Documents**.
+   (Évite le Bureau synchronisé par OneDrive et les dossiers « Programmes ».)
+
+### Étape 2 — Installer Python (une seule fois)
+
+Python est le langage dans lequel NEXUS est écrit ; il faut l'installer comme un logiciel normal.
+
+1. Va sur <https://www.python.org/downloads/> et clique sur le gros bouton jaune **Download Python 3.x**.
+2. Ouvre le fichier téléchargé.
+3. **Important :** en bas de la première fenêtre, coche **« Add python.exe to PATH »**.
+4. Clique sur **Install Now**, attends la fin, puis **Close**.
+
+> Tu as déjà Python ? Il faut la version 3.10 ou plus récente. L'installateur de NEXUS le vérifie.
+
+### Étape 3 — Lancer l'installation de NEXUS
+
+1. Dans le dossier de NEXUS, double-clique sur **`installer.bat`**.
+   - Si Windows affiche « Windows a protégé votre ordinateur » : clique sur **Informations
+     complémentaires** puis **Exécuter quand même** (c'est normal pour un script téléchargé).
+2. Une fenêtre noire s'ouvre et installe tout ce qu'il faut (1 à 3 minutes, il faut Internet).
+3. Elle affiche ensuite ce qu'elle a trouvé sur ton PC, par exemple :
+   - `Carte graphique détectée : …` (NVIDIA, AMD ou Intel), puis la façon dont elle sera lue. Avec une
+     carte **AMD ou Intel**, installe LibreHardwareMonitor (étape 5) pour avoir aussi sa température ;
+   - `LibreHardwareMonitor n'est pas installé` : c'est facultatif, voir l'étape 5.
+
+### Étape 4 — Répondre à l'assistant de configuration
+
+Juste après, l'assistant pose quelques questions :
+
+1. **Mot de passe du stream deck** (obligatoire) — il protège les boutons qui peuvent lancer des
+   applis ou mettre le PC en veille. Tape-le deux fois (rien ne s'affiche pendant la frappe, c'est
+   normal), ou appuie simplement sur **Entrée** pour qu'un mot de passe soit choisi pour toi :
+   **note-le**, il ne sera plus jamais affiché.
+2. **Bot Discord** (facultatif) — réponds `N` si tu n'en veux pas (tu pourras le faire plus tard).
+   Pour le configurer, voir l'étape 6.
+
+L'assistant crée le fichier `config.json`. Enfin, l'installateur propose un **raccourci NEXUS sur le
+Bureau** : appuie sur `O` pour oui.
+
+### Étape 5 — (Facultatif) Températures du processeur : LibreHardwareMonitor
+
+Windows ne donne pas la température du processeur aux programmes ordinaires. Le logiciel gratuit
+**LibreHardwareMonitor** sait la lire ; NEXUS l'utilise s'il est présent.
+
+1. Va sur <https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases>, et dans la
+   dernière version (section **Assets**), télécharge le fichier **`LibreHardwareMonitor-net472.zip`**
+   (ou celui dont le nom ressemble le plus).
+2. Dans le dossier de NEXUS, crée un dossier nommé exactement **`LibreHardwareMonitor`**.
+3. Dézippe le contenu du zip **dans** ce dossier : on doit avoir
+   `LibreHardwareMonitor\LibreHardwareMonitor.exe`.
+4. C'est tout : au prochain lancement, NEXUS le configure et le démarre tout seul.
+   - Windows demande l'**autorisation administrateur** : clique sur **Oui** (sans cela, pas de
+     température processeur).
+   - La toute première fois, LibreHardwareMonitor propose d'installer le pilote **PawnIO** :
+     accepte, c'est lui qui lit les capteurs.
+
+Sans LibreHardwareMonitor, NEXUS fonctionne : les températures CPU et disques et les ventilateurs
+affichent « indisponible ».
+
+### Étape 6 — (Facultatif) Bot Discord
+
+1. Va sur <https://discord.com/developers/applications> → **New Application** → donne un nom (ex. NEXUS).
+2. Onglet **Bot** → **Reset Token** → **Copy** : c'est le **jeton** (garde-le secret).
+3. Onglet **OAuth2 → URL Generator** : coche `bot` et `applications.commands`, puis les permissions
+   *View Channels*, *Send Messages*, *Embed Links*. Ouvre le lien généré en bas et invite le bot sur
+   ton serveur Discord.
+4. Dans Discord : **Paramètres → Avancés → Mode développeur** (active-le). Ensuite :
+   - clic droit sur ton nom → **Copier l'identifiant** : c'est ton **ID utilisateur** ;
+   - clic droit sur le salon où tu veux les alertes → **Copier l'identifiant** : c'est l'**ID du salon**.
+5. Double-clic sur **`configurer.bat`**, garde ou change ton mot de passe, réponds `O` à la question
+   Discord et colle le jeton, ton ID et l'ID du salon (clic droit dans la fenêtre noire = coller).
+6. Relance NEXUS : la fenêtre noire affiche `[Discord] Connecté : …`.
+
+Commandes (pour toi seul, dans ce salon seulement) : `/stats`, `/disques`, `/gpu`, `/deck <bouton>`,
+et `/command` qui les liste toutes.
+
+---
+
+## Utilisation au quotidien
+
+- **Ouvrir NEXUS :** double-clic sur le raccourci **NEXUS** du Bureau (ou sur `lancer.bat`).
+  Le navigateur s'ouvre tout seul sur `http://127.0.0.1:8000`. Clique sur **NEXUS** pour entrer.
+- **Fermer NEXUS :** ferme la fenêtre noire.
+- **Changer le mot de passe ou Discord :** `configurer.bat`, puis relance NEXUS.
+- **Changer de mode :** bouton **◐** en haut (Terminal rouge / Sentinelle orange et bleu).
+- **Changer de profil visuel :** bouton **🎨** en haut (voir « Profils visuels » ci-dessous).
+- **Mettre à jour :** remplace les fichiers par ceux d'une version plus récente **sans toucher** à
+  `config.json`, `deck.json` et au dossier `data\` (tes réglages et tes données).
+
+## Dépannage
+
+| Problème | Solution |
+|---|---|
+| La fenêtre noire se ferme tout de suite | Lance `installer.bat` ; s'il signale « Python introuvable », refais l'étape 2 en cochant bien *Add python.exe to PATH*. |
+| « Ce site est inaccessible » / `ERR_CONNECTION_REFUSED` | NEXUS ne tourne pas. Lance-le (raccourci NEXUS ou `lancer.bat`) et **garde la fenêtre noire ouverte** : le navigateur s'ouvre tout seul dès que NEXUS est prêt. Si la fenêtre noire affiche une erreur (texte rouge, « [ERREUR] », « Traceback »), fais-en une capture d'écran pour demander de l'aide. |
+| « Le port 8000 est déjà utilisé » | NEXUS est déjà ouvert dans une autre fenêtre noire (regarde la barre des tâches), ou un autre programme utilise ce port : redémarre le PC. |
+| Températures CPU « indisponibles » | Voir l'étape 5. LibreHardwareMonitor doit tourner (icône près de l'horloge Windows) et avoir été autorisé en administrateur. Test : <http://127.0.0.1:8085/data.json> doit afficher du texte. |
+| GPU « indisponible » ou incomplet | NEXUS détecte tout seul la carte graphique (NVIDIA, AMD ou Intel) et l'affiche dans la même carte « GPU ». Les cartes **NVIDIA** sont lues entièrement par leur pilote. Les cartes **AMD et Intel** sont lues entièrement par LibreHardwareMonitor (étape 5) ; sans lui, NEXUS affiche quand même la charge et la mémoire vidéo (via Windows), mais pas la température. La ligne « lu par … » sous la carte indique la source utilisée. Si rien n'apparaît, mets à jour le pilote de la carte graphique. |
+| Le bot Discord ne répond pas | Lis le message `[Discord]` dans la fenêtre noire ; relance `configurer.bat` et vérifie le jeton et les deux ID. |
+| La page a un affichage bizarre après une mise à jour | Ctrl+F5 dans le navigateur. |
+
+---
+
+## Média : lecture en cours
+
+L'onglet **Média** affiche et pilote (⏮ ⏯ ⏭, clic sur la barre pour avancer) tout ce qui joue dans le panneau
+multimédia de Windows :
+- **applications** : Spotify, Deezer, Apple Music, iTunes, Tidal, Amazon Music, Qobuz, VLC, foobar2000, MusicBee,
+  AIMP, Winamp, le Lecteur multimédia de Windows, Plex… ;
+- **tous les navigateurs** : Opera GX, Opera, Chrome, Edge, Firefox (et LibreWolf, Waterfox, Floorp, Zen…),
+  Brave, Vivaldi, Arc, Yandex… — avec le site deviné quand la page l'indique (Deezer, YouTube, SoundCloud…).
+
+Les boutons réagissent au clic, sans attendre l'application, et l'écran suit les changements (piste suivante
+lancée depuis Spotify, pause depuis le clavier…) dès que Windows les signale. Deezer, Apple Music, Tidal… sont
+comptés en « Musique » dans les statistiques, même dans un navigateur.
+
+## Agenda : évènements, anniversaires, rappels
+
+**Ajouter :** onglet **Agenda** → clique sur un jour du calendrier → remplis le formulaire de la fenêtre du
+jour (titre, date, heure, durée en minutes, description, répétition, date de fin, rappels) → **Ajouter**.
+Sans heure, l'évènement dure toute la journée. Coche **🎂 C'est un anniversaire** pour un anniversaire :
+il revient chaque année, toute la journée, avec l'âge si tu donnes l'année de naissance.
+
+**Modifier ou supprimer :** dans la fenêtre du jour, **✎** sur l'évènement (le formulaire se remplit) puis
+**Enregistrer**, ou **✕** pour supprimer. Si l'évènement se répète (un anniversaire aussi), NEXUS demande :
+
+| Choix | Effet |
+|---|---|
+| **Cet évènement seulement** | seule cette date change (ou disparaît) ; toutes les autres restent comme avant |
+| **Cet évènement et les suivants** | la série s'arrête la veille ; une nouvelle série commence à cette date avec tes changements. Le passé ne bouge pas |
+| **Tous les évènements de la série** | toute la série change (ou est supprimée). Changer la date décale toutes les occurrences |
+
+La répétition elle-même (tous les jours, semaines…) ne se change pas pour une seule date : choisis l'un des
+deux autres. Les champs mal remplis (date impossible, durée négative…) sont signalés en rouge sous le champ.
+
+**Fêtes et jours fériés :** le calendrier affiche tout seul les 11 jours fériés français (numéro du jour en
+couleur, comme un calendrier papier) et les dates classiques : Épiphanie, Chandeleur, Saint-Valentin, Mardi
+gras, Pâques, Pentecôte, fêtes des mères, pères et grands-parents, Fête de la musique, Halloween, réveillon,
+Saint-Sylvestre et changements d'heure. Les dates mobiles (Pâques, Ascension, fête des mères…) sont calculées
+sur ton PC, sans connexion. Le menu en haut du calendrier choisit **Fêtes et jours fériés**, **Jours fériés
+seulement** ou **Sans les fêtes** (retenu sur cet appareil). Ce ne sont pas des évènements : pas de rappel.
+
+**Rappels :** par défaut, 1 h puis 30 min avant chaque évènement. Ils s'affichent dans le panel (bannière en
+haut à droite, avec un petit son), en notification Windows si les notifications sont activées, et sur Discord
+si le bot est configuré. Ils sont calculés par NEXUS même si aucune page n'est ouverte.
+- **Pour un évènement :** dans le formulaire, « Rappels » → **Personnalisés** → par exemple `1440, 60, 10`
+  (1 jour, 1 h et 10 min avant). Vide = aucun rappel.
+- **Pour tous :** dans `config.json`, section `agenda` :
+  ```json
+  "agenda": { "rappels_minutes": [60, 30], "heure_reference": "09:00", "rappels_discord": true }
+  ```
+  `heure_reference` sert de « début » aux évènements sans heure et aux anniversaires (rappels à 08:00 et
+  08:30 avec les valeurs par défaut). Relance NEXUS après une modification.
+- **Son :** ⚙ Réglages → « Jouer un son à chaque rappel » (par appareil), et **♪ Tester le son**.
+- Un rappel n'est jamais envoyé deux fois, même si NEXUS redémarre. Si NEXUS était fermé à l'heure d'un
+  rappel, il envoie au redémarrage le plus récent rappel manqué, si l'évènement n'a pas encore commencé.
+  Un évènement créé 45 min avant son début ne reçoit que le rappel de 30 min. Si tu changes l'heure d'un
+  évènement, ses rappels sont recalculés.
+
+**Déplacer et redimensionner les fenêtres :** comme dans toutes les catégories, voir
+[Réorganiser l'interface](#réorganiser-linterface-toutes-les-catégories).
+
+**Sauvegarde :** au premier lancement de cette version, l'ancien agenda est copié dans
+`data\backups\agenda-avant-format2-….json` avant d'être converti. Les anniversaires deviennent des
+évènements « toute la journée » (l'ancienne heure est gardée dans le fichier, champ `ancienne_heure`).
+
+## Souvenirs, statistiques personnelles, journal
+
+Ces trois catégories gardent tout **sur ce PC**, dans `data\` : les photos dans `data\souvenirs\`, et le
+reste dans la base `data\nexus.db`. Rien n'est envoyé sur Internet, et le bot Discord n'y a pas accès.
+Une nouvelle installation démarre avec les trois catégories vides (et des dispositions par défaut propres).
+Les notes du mur et sa disposition sont dans la base, jamais dans l'export d'un profil visuel ni dans la
+copie à partager ; le bot Discord ne lit ni les notes, ni les photos, ni les dispositions, ni le détail des
+statistiques. Avant chaque mise à jour de la base, une copie est faite dans `data\backups\`.
+
+### Souvenirs (mur de photos)
+
+- **Ajouter des photos :** onglet **Souvenirs** → glisse tes photos sur le cadre « Ajouter des photos », ou
+  touche-le pour les choisir. Ça marche aussi depuis le **téléphone**, quand l'accès téléphone est activé :
+  la galerie ou l'appareil photo s'ouvre. Choisis le jour du souvenir (aujourd'hui par défaut) et, si tu
+  veux, une légende.
+- Formats : **JPG, PNG, WebP**, 25 Mo maximum. Le vrai contenu du fichier est vérifié.
+- **Métadonnées :** par défaut, NEXUS retire les informations cachées de la photo (appareil, date de prise
+  de vue, **position GPS**). Coche « Garder les métadonnées » pour conserver le fichier d'origine tel quel.
+- **Naviguer :** flèches ◀ ▶, « Aujourd'hui », choix d'une date, calendrier du mois (les jours avec des photos
+  sont numérotés), frise des derniers jours. **Ce jour-là** montre la même date les années précédentes.
+  **▶ Diaporama** fait défiler au hasard tes anciens souvenirs.
+- Sur une photo : **✎** pour la légende, **📅** pour la déplacer vers un autre jour, **🗑** pour la supprimer du PC.
+
+**Réorganiser le mur (chaque jour a le sien) :**
+- **Déplacer** une photo ou une note : attrape sa poignée **⠿** en haut et fais-la glisser (à la souris, tu
+  peux aussi glisser la photo elle-même ; un simple clic l'agrandit toujours).
+- **Redimensionner :** coin **◢** en bas à droite (taille minimale et maximale pour rester lisible).
+- Le dernier élément touché **passe devant** : photos et notes peuvent se superposer volontairement.
+  Un aimant léger les aligne sur une grille ; garde **Alt** enfoncée pour le couper.
+- **Au clavier :** Tab jusqu'à la poignée ⠿, puis flèches = déplacer, Maj + flèches = redimensionner.
+- La disposition est **enregistrée par jour** : revenir sur un ancien jour affiche le mur exactement comme tu
+  l'avais arrangé. Un jour jamais arrangé reçoit une grille propre ; une photo ajoutée se range sous les autres.
+- **▦ Réorganiser automatiquement** remet le mur du jour en grille ; **↶ Annuler la dernière modification**
+  revient en arrière (déplacements, tailles, rangement), tant que la page reste ouverte.
+- Sur le **téléphone**, le même mur s'affiche réduit (jamais sous 55 %) ; s'il est plus large que l'écran,
+  il défile de côté dans son cadre. Les poignées y sont plus grandes.
+
+**Ajouter une note (post-it) :** bouton **＋ Ajouter une note** : une note sans photo apparaît sur le mur du
+jour affiché, déjà ouverte en **édition** : écris directement dessus, c'est **enregistré pendant que tu écris**.
+En édition, en bas de la note : **✓** pour terminer, **🎨** pour les couleurs, la **police**, **A− / A+** pour la
+taille du texte, **📌** pour l'épingler et **🗑** pour la supprimer.
+- **🎨 Couleurs :** 16 **fonds** (6 pastels accordés au mode et au profil visuel, 6 pastels fixes — menthe, ciel,
+  lavande, corail, sable, blanc — et 4 papiers foncés — kraft, ardoise, nuit, bordeaux) et 9 couleurs
+  d'**écriture** (automatique = foncée sur fond clair, claire sur fond foncé ; noir, sépia, bleu marine, bordeaux,
+  vert forêt, violet, blanc, or).
+- **Police :** celle du thème, les titres du thème (Uncial pour Dés du destin, Cinzel pour Pluie d'étoiles…), ou
+  une police de Windows : sans empattement, avec empattement, manuscrite, plume, feutre, machine à écrire,
+  élégante (sur un téléphone qui ne l'a pas : une police proche).
+Une fois terminée (**✓**, **Échap**, **Ctrl + Entrée** ou un clic ailleurs), la note n'affiche plus que son texte
+et un petit **✎** dans l'angle en haut à droite : un clic dessus (ou un double-clic sur le texte) la rouvre en
+édition, avec toutes les options. Elle se déplace et se redimensionne comme une photo.
+- **Note épinglée :** la même note s'affiche aussi sur tous les jours **suivants** (« 📌 depuis le … »). La
+  modifier la change partout ; chaque jour garde sa propre place pour elle. Désépinglée, elle ne reste que
+  sur son jour d'origine. La supprimer depuis n'importe quel jour la supprime partout (NEXUS te prévient).
+
+### Statistiques personnelles
+
+NEXUS mesure toutes les 10 s, sans ralentir les jeux :
+- le temps actif et inactif, d'après le dernier évènement clavier ou souris ; un jeu au premier plan compte
+  comme actif, pour la manette ;
+- tes sessions, du début à la fin ;
+- le temps par jeu, par appli et par catégorie ;
+- la charge CPU et GPU, par heure.
+
+L'onglet **Statistiques** affiche aujourd'hui, 7 jours ou 30 jours : camembert par catégorie, classement des
+jeux, activité par heure ou par jour, et pics de CPU et GPU.
+
+**Consulter un ancien jour :** cadre **Détail du jour**, sous le graphique. Choisis le jour avec ◀ ▶, le
+calendrier (champ date) ou **en cliquant sur une barre** de « Activité par jour » (7 ou 30 jours) ;
+« Aujourd'hui » y revient. Tu y vois l'heure de début et de fin, le temps actif et inactif, une **frise par
+heure** (barres = temps actif, trait = charge CPU), la charge moyenne et les pics CPU et GPU, et le temps par
+catégorie, par jeu, en musique et médias, et par appli. Un jour sans mesure l'indique clairement.
+
+**Seuls des noms de processus et des durées sont enregistrés :** jamais de titre de fenêtre, d'historique de
+navigation, de frappe ni de contenu d'écran.
+
+**Configurer `jeux.json`** (créé au premier lancement à partir de `jeux.example.json`, à la racine de NEXUS) :
+
+```json
+{ "processus": {
+    "valorant-win64-shipping.exe": { "nom": "Valorant", "categorie": "jeu" },
+    "spotify.exe": { "nom": "Spotify", "categorie": "musique" } } }
+```
+
+- La clé est le nom du **.exe**, en minuscules ; tu le trouves dans le Gestionnaire des tâches, onglet Détails.
+- Catégories : `jeu`, `musique`, `video`, `navigation`, `travail`, `autre`.
+- Les changements sont pris en compte dans la minute, sans relancer NEXUS.
+- Les jeux reconnus par le mode jeu sont comptés même s'ils ne sont pas dans la liste.
+- Comment chaque catégorie est comptée :
+  - **jeu :** tant qu'il tourne ;
+  - **musique et vidéo :** seulement quand Windows indique qu'une lecture est en cours ;
+  - **autres catégories :** quand l'appli est au premier plan et que tu es actif ;
+  - **avec `"mode": "ouverte"` :** tant que l'appli est **ouverte** (même en arrière-plan) **et** que tu es actif
+    (rien pendant l'inactivité).
+
+**Déclarer une appli de travail (ex. Claude) :** ajoute une ligne dans `jeux.json` :
+
+```json
+"claude.exe": { "nom": "Claude", "categorie": "travail", "mode": "ouverte" },
+"notion.exe": { "nom": "Notion", "categorie": "travail", "mode": "ouverte" }
+```
+
+`claude.exe` est le vrai nom du processus de l'application de bureau Claude (vérifié dans le Gestionnaire
+des tâches) ; il est déjà dans `jeux.json`. La ligne Notion est un exemple à adapter : remplace-la par le .exe
+de ton appli. **Limite :** NEXUS ne voit que les **applications installées**. Claude utilisé dans un
+**onglet du navigateur** n'est pas détectable : il faudrait lire les titres des fenêtres, ce que NEXUS ne
+fait jamais. Ce temps-là compte en « navigation ».
+
+**Mettre en pause :** bouton **⏸ Mettre en pause** (puis ▶ Reprendre). **Conservation :** liste « Garder »,
+de 30 jours à 5 ans ; les données plus anciennes sont effacées toutes seules. **Tout effacer :**
+**🗑 Tout effacer**, puis tape `EFFACER` pour confirmer.
+
+### Journal quotidien
+
+- Chaque jour : une **humeur**, des **activités** à cocher et un texte libre. Tout est **enregistré
+  pendant que tu écris** (« enregistré ✔ »).
+- **Naviguer :** flèches, « Aujourd'hui », choix d'une date, **vue mois** (l'humeur de chaque jour écrit),
+  **recherche** dans les textes. Les anciennes entrées se relisent et se modifient.
+- **Activités proposées :** dans `config.json`, section `journal` → `activites` (liste de
+  `{"emoji": "🎮", "nom": "Jeu"}`). Relance NEXUS après une modification.
+- **Mot de passe :** coche « Demander le mot de passe du panel pour ouvrir le Journal » (c'est le mot de
+  passe du stream deck). Le Journal se reverrouille après 15 min sans activité ; 🔒 le reverrouille tout de suite.
+- **Exporter :** boutons **⤓ Markdown** et **⤓ Texte** : le fichier est téléchargé sur l'appareil qui le demande.
+- **Visage du jour :** en haut à droite du jour, l'humeur en grand, avec les émojis des activités cochées en
+  petit autour (en arc, ou en cercle s'il y en a beaucoup). Au-delà de 8 activités, un **+N** donne la liste
+  au survol (au doigt : touche-le). La **vue mois** montre le même visage en plus petit (4 activités, puis +N).
+- La vue mois est plus grande par défaut et suit la taille de son cadre : agrandis-le avec le coin ◢.
+
+## Réorganiser l'interface (toutes les catégories)
+
+Dans **chaque catégorie** (Sommaire, PC, Média et mélangeur, Deck, Lanceur, Réseau, Statistiques, Agenda,
+Souvenirs, Journal), chaque bloc se déplace et se redimensionne, avec le même fonctionnement partout :
+- **Déplacer :** attrape le bloc par son **titre** (ou par la poignée **⠿** des blocs sans titre) et fais-le glisser.
+- **Redimensionner :** coin **◢** en bas à droite. Taille minimale pour rester lisible.
+- **Au clavier :** Tab jusqu'au titre du bloc, puis **flèches** = déplacer, **Maj + flèches** = redimensionner
+  (Ctrl : pas fin).
+- **Pas de chevauchement accidentel :** un aimant léger aligne les blocs sur une grille et sur les bords des
+  autres (Alt : sans aimant) ; un bloc posé sur un autre pousse celui-ci vers le bas. (Seul le mur des
+  souvenirs permet de superposer exprès.)
+- **Jamais de barre de défilement sur les pages aux valeurs qui bougent** (Sommaire, PC, Média, Réseau,
+  Statistiques) : un bloc trop petit pour son contenu (police plus grande d'un profil, ligne en plus…) grandit
+  tout seul à la taille du contenu et pousse les blocs du dessous. Il ne peut pas être réduit sous son contenu.
+- Tant que tu ne bouges rien, chaque catégorie garde sa mise en page d'origine.
+- La disposition est retenue **par catégorie, sur cet appareil** (le PC et le téléphone ont chacun la leur)
+  **et par mode** (Terminal et Sentinelle ont chacun la leur).
+- **Bouton de verrouillage** (en haut de chaque catégorie) : il affiche l'**état actuel** de la mise en page.
+  **🔓 Déverrouillé** (vert) : les blocs se déplacent et se redimensionnent ; **🔒 Verrouillé** (ambre) : plus
+  aucun déplacement ni redimensionnement, pour éviter les accidents au doigt. Un clic passe d'un état à l'autre ;
+  l'état est retenu par catégorie, sur cet appareil. (Rien à voir avec le bouton du stream deck qui verrouille
+  la session Windows.) **↺ Réinitialiser la disposition** remet la catégorie dans sa mise en page d'origine
+  (pour ce mode, sur cet appareil).
+- Les profils visuels changent l'apparence des blocs, jamais leur place ; les tailles de ⚙ Réglages
+  (80 % à 150 %) agrandissent le contenu des blocs.
+- Sur téléphone, les poignées sont plus grandes. Astuce : passe la mise en page en **🔒 Verrouillé** pour faire
+  défiler la page sans attraper un bloc par erreur.
+
+## Tailles de l'interface
+
+**⚙ Réglages** (en haut) → un curseur par partie, de 80 % à 150 % : Lanceur (125 % par défaut), Stream deck
+(115 %), Mélangeur de son (115 %), Agenda (105 %). Le changement est immédiat et retenu sur cet appareil.
+**↺ Tailles par défaut** remet les valeurs d'origine. Les profils visuels ne peuvent pas annuler ces réglages.
+
+---
+
+## Profils visuels
+
+Un **profil** change l'apparence du mode en cours (couleurs, polices, fond, formes, effets) sans rien
+changer au fonctionnement ni aux données. Chaque mode (Terminal, Sentinelle) a son propre profil, et
+chaque appareil retient le sien : le PC et le téléphone peuvent avoir des profils différents.
+
+**Choisir un profil :** clique sur **🎨** en haut → choisis dans la liste. Le changement est immédiat,
+sans recharger la page. La liste ne montre que les profils compatibles avec le mode en cours, avec
+leurs couleurs. **Défaut** (l'apparence d'origine) est toujours là et ne peut pas être supprimé ; NEXUS y
+revient tout seul si un profil est cassé ou a disparu.
+
+Fournis en exemple : **Ardoise** (sombre sobre, les deux modes), **Néon Minuit** (néon années 80,
+Sentinelle), **Phosphore** (vieux terminal vert, Terminal), **Sakura** (cerisier en fleurs, les deux modes)
+, **Pluie d'étoiles** (ciel cosmique, voie lactée, étoiles filantes, nuages aux bords ambrés et montagnes
+dans la brume ; polices libres Cinzel et Inter incluses avec leurs licences ; les deux modes) et **Dés du
+destin** (salle de donjon rouge et or : murs de pierre, torches, braises et brume, grands dés rouges aux
+chiffres dorés, runes qui s'allument, jauges de lave ; polices libres Uncial Antiqua et Inter incluses ; les
+deux modes). Son intro : un dé rouge roule, s'arrête sur 20, la salle s'éclaire en écarlate, les runes
+s'allument et le logo NEXUS apparaît dans un éclat. Petit clin d'œil : quand toutes les alertes sont
+résolues, un 20 doré apparaît un instant dans le coin ; à une nouvelle alerte critique, un 1 rouge.
+Avec Sakura, la page de garde a sa propre intro : un cerisier pousse puis fleurit, et le logo NEXUS apparaît
+porté par les pétales. « Passer l'intro », un clic ou une touche la passe. Au clic sur NEXUS, on s'envole
+à travers les pétales jusqu'au sommaire.
+
+**Passage au sommaire :** au clic sur NEXUS, Sakura, Pluie d'étoiles et Dés du destin s'ouvrent EN ROND
+depuis le logo (anneau rose, bleu glacier ou de feu). ⚙ Réglages → « Passage au sommaire » permet de choisir
+une autre fin **pour le profil visuel en cours** : ouverture en rond, vieille télé qui s'allume, simple fondu,
+ou « celui du profil ». Chaque profil garde son propre choix (ex. Sakura en télé, Pluie d'étoiles en fondu),
+retenu sur cet appareil, même après un changement de profil ou un redémarrage. (Le profil Défaut a sa propre
+intro, sans ce réglage.)
+
+**Couper les intros des profils :** ⚙ Réglages → décoche « Jouer l'intro animée des profils visuels »
+(retenu sur cet appareil) : la page de garde s'affiche directement, avec le bouton NEXUS.
+
+**Changer de profil en douceur :** au choix d'un profil dans 🎨, NEXUS affiche un bref écran de transition
+(logo, « Chargement du profil … », version, barre) pendant qu'il précharge le profil et toutes ses images
+et polices ; le nouveau thème n'apparaît, en fondu, qu'une fois tout prêt (≈ 1,5 s la première fois, ≈ 1 s
+ensuite). Un clic pendant la transition est ignoré ; si tu en choisis plusieurs à la suite, c'est le dernier
+qui s'applique. Si un profil ne se charge pas, NEXUS revient au précédent et te le dit. Sans animation : un
+simple fondu court.
+
+**Du bouton NEXUS au sommaire :** avec Sakura, Pluie d'étoiles et Dés du destin, la fin de l'animation et
+l'apparition du sommaire se chevauchent (la page de garde s'efface pendant que le sommaire, préparé à
+l'avance, se révèle) : feuilles qui passent encore au premier plan, étoiles qui restent en fond, souffle chaud
+qui se dissipe.
+
+Un profil peut animer la page de garde sans JavaScript : le panel indique l'étape en cours sur
+`<body data-etat="intro | reconnexion | pret | veille | transition | arrivee | panel">`, et `profil.json`
+peut régler la durée de l'intro et de la transition (champ `animations`). Pendant un changement de profil :
+`<body data-profil-etat="changement | pret">` ; couleur d'accent d'un profil : variable `--accent-profil`.
+Pour les alertes, le panel pose aussi `<body data-alerte="aucune | normale | critique">` et, pendant 3 s,
+`data-alerte-evenement="nouvelle-critique | resolue"`. Tout est décrit dans `profils\FORMAT.md`, § 4.6.
+
+**Ajouter un profil à la main :** dépose son dossier dans `profils\`, puis 🎨 → **⟳ Actualiser**. Un
+profil invalide n'est pas proposé : il apparaît en bas du menu dans « profil(s) ignoré(s) » avec la liste
+de ses erreurs. Pour le vérifier :
+
+```bash
+.venv\Scripts\python.exe valider_profil.py profils\nom-du-profil
+```
+
+**Le créer avec Claude Code :** ouvre Claude Code dans le dossier de NEXUS et demande par exemple :
+« *Crée-moi un profil style océan calme en suivant profils/FORMAT.md* ». Le fichier `profils\FORMAT.md`
+décrit tout le format (fichiers, champs, variables CSS, sélecteurs, interdits, limites), et
+`profils\_modele\` est un point de départ à copier. Quand tu modifies le `style.css` du profil actif, la
+page se met à jour toute seule en quelques secondes.
+
+**Légèreté :** les fichiers d'un profil (CSS, images, polices) restent en cache dans le navigateur : au
+rechargement, seul le strict nécessaire repasse par le réseau, et une modification du profil est vue tout
+de suite (l'adresse change avec le contenu). Les pages et les données du panel ne sont jamais gardées en
+cache. Quand l'onglet du navigateur est caché, les animations sont mises en pause et le panel interroge le
+PC moins souvent.
+
+**Partager un profil :** 🎨 → bouton **⤓** sur le profil → un fichier `profil-xxx.zip`. De l'autre côté :
+🎨 → **⤒ Importer…** et choisir le .zip, ou glisser-déposer le .zip ou le dossier sur le menu. NEXUS vérifie
+le profil avant de l'installer ; si un profil du même nom existe, il demande s'il faut **remplacer**
+l'existant ou **garder les deux** (le nouveau prend un suffixe, ex. `-2`). 🗑 supprime un profil.
+
+**Sécurité :** un profil ne contient que du JSON, du CSS et des images ou polices (5 Mo maximum). NEXUS
+refuse à l'import, et retire au chargement : `@import`, toute adresse Internet, `data:`, les chemins
+absolus ou avec `..`, `expression()`, `javascript:`, les balises HTML, les SVG avec script. Rien n'est
+jamais chargé depuis Internet. Les profils sont soumis à la même protection que le reste du panel :
+ce PC, ou un téléphone appairé.
+
+---
+
+## Mises à jour
+
+NEXUS vérifie tout seul s'il existe une nouvelle version : au démarrage, puis toutes les 6 heures
+(**⚙ Réglages → Version et mises à jour** : intervalle, désactivation, dépôt surveillé, jeton). Il ne
+contacte que l'API des releases de GitHub (`api.github.com`) pour le dépôt configuré.
+
+- Une nouvelle version allume une **pastille** sur le bouton de version et affiche un **bandeau** : notes de
+  version, taille, **Installer la version X** ou **Plus tard** (rappel 24 h plus tard).
+- Rien ne s'installe sans **ton clic et le mot de passe du panel** (celui du deck). Le bot Discord ne peut
+  jamais lancer une installation ; il peut seulement te prévenir (option « Me prévenir sur Discord »).
+- L'installation : téléchargement depuis le dépôt configuré seulement → contrôle **SHA256** (archive refusée
+  si elle ne correspond pas) → **sauvegarde horodatée** du code, de `data\` et de `config.json` dans
+  `sauvegardes-maj\` → remplacement du code et des profils officiels (jamais `data\`, `config.json`, ni tes
+  profils personnels) → migrations (base et configuration, avec une sauvegarde avant chacune) →
+  redémarrage et **test de démarrage**. Si le test échoue, tout est **restauré automatiquement** et un
+  bandeau le dit clairement.
+- **Revenir à la version précédente** (fenêtre Version) remet le code d'avant la dernière mise à jour.
+- Dépôt **privé** : il faut un jeton GitHub en lecture seule limité à ce dépôt, voir `docs\JETON_GITHUB.md`.
+- Sans connexion, limite de requêtes atteinte ou jeton invalide : un message clair, rien n'est touché.
+
+Un profil peut indiquer `"panel_min_version"` dans `profil.json` : s'il demande une version plus récente,
+il est refusé avec un message au lieu de s'afficher de travers.
+
+## Publier une version (développeurs)
+
+Le fichier `VERSION` est la source de vérité, `CHANGELOG.md` suit le format *Keep a Changelog*.
+
+1. Note les changements sous `## [Non publié]` dans `CHANGELOG.md` et commite-les.
+2. Lance `.venv\Scripts\python.exe outils\release.py correctif` (ou `mineur`, `majeur`, ou un numéro précis).
+   Il vérifie que l'arbre Git est propre, lance les tests, `valider_profil.py --tous` et la détection de
+   secrets, fait avancer `VERSION`, date la section du CHANGELOG, commite, crée le tag `vX.Y.Z`, fabrique
+   `dist\NEXUS-X.Y.Z.zip` (code seulement : ni `data\`, ni configuration réelle, ni journaux, sauvegardes ou
+   références) et son `.sha256`, pousse, puis publie la release avec `gh release create`.
+   `--sans-publier` s'arrête avant l'envoi.
+3. GitHub Actions relance tests, lint, validation des profils et détection de secrets à chaque push et
+   pull request (`.github/workflows/ci.yml`) ; sur un tag `v*`, `release.yml` refabrique l'archive et son
+   SHA256 et les joint à la release si elle ne les a pas.
+
+## Partager NEXUS avec quelqu'un
+
+Double-clic sur **`preparer_partage.bat`**. Il crée `partage\NEXUS-x.y.z.zip`, une copie **sans
+aucune donnée personnelle** : il ne prend que le code et les fichiers d'exemple, puis vérifie la
+copie et annule tout s'il y trouve un de tes secrets (jeton, mot de passe, ID Discord, nom
+d'utilisateur Windows, nom du PC, chemins personnels, noms d'appareils). Envoie ce zip : la
+personne suit ce README depuis l'étape 1.
+
+La liste de ce qui ne doit jamais être partagé est dans **`NE_PAS_PARTAGER.md`**.
+
+---
+
+## Détails techniques
+
+### Fichiers
+
+| Fichier | Rôle |
+|---|---|
+| `installer.bat` | Installe NEXUS : environnement Python `.venv`, dépendances, configuration, raccourci |
+| `lancer.bat` | Démarre NEXUS (et LibreHardwareMonitor) ; redémarre le serveur s'il plante |
+| `configurer.bat` / `configurer.py` | Assistant de configuration (crée `config.json`) |
+| `preparer_partage.bat` / `outils\preparer_partage.py` | Prépare une copie propre à partager |
+| `restaurer_version.bat` | Revient à une version précédente (sauvegardes dans `versions\`) |
+| `app.py` | Serveur web (FastAPI) : routes, sécurité réseau, démarrage du bot |
+| `stats.py` | Capteurs : CPU, RAM, disques, GPU, températures, ventilateurs, réseau, processus |
+| `bot.py`, `deck.py`, `config.py` | Bot Discord, stream deck, lecture de la configuration |
+| `audio.py`, `media.py`, `launcher.py`, `lan.py`, `gamemode.py`, `remote.py`, `store.py`, `version.py` | Son, lecture en cours, lanceur, réseau, mode jeu, accès téléphone, stockage, versions |
+| `static\` | La page web (HTML, CSS, JavaScript) ; `static\js\profiles.js` et `static\profiles.css` : menu des profils |
+| `db.py` | Base SQLite locale `data\nexus.db` : création, migrations numérotées (sauvegarde avant chaque migration) |
+| `souvenirs.py`, `statistiques.py`, `journal.py` | Mur de souvenirs (photos, notes, disposition par jour), statistiques personnelles (service en arrière-plan, détail d'un jour), journal quotidien |
+| `mur.py` | Calculs du mur de souvenirs : grille automatique, tailles mini / maxi (sans base ni fichiers) |
+| `static\js\souvenirs.js`, `static\js\mur.js`, `static\js\statistiques.js`, `static\js\journal.js`, `static\perso.css` | Pages de ces trois catégories ; `mur.js` : mur libre et notes |
+| `jeux.example.json` | Modèle de `jeux.json` (association processus → nom et catégorie) |
+| `agenda.py` | Agenda : évènements, répétitions et exceptions, modification par portée, validation, migration |
+| `reminders.py` | Rappels de l'agenda (calcul, envoi panel + Discord, mémoire des rappels envoyés : `data\rappels.json`) |
+| `static\js\layout.js`, `static\js\blocs.js` | Blocs déplaçables et redimensionnables : le moteur unique (`layout.js`) et son application à toutes les catégories (`blocs.js`) |
+| `static\js\rappels.js`, `static\js\reglages.js`, `static\ui.css` | Bannières de rappel, menu ⚙ Réglages (tailles), styles des blocs et de l'agenda |
+| `profiles.py` | Profils visuels : lecture du dossier `profils\`, vérification et nettoyage du CSS, import et export .zip |
+| `valider_profil.py` | Vérifie un dossier ou un .zip de profil et explique les erreurs |
+| `profils\` | Les profils visuels ; `FORMAT.md` (le format), `_modele\` (modèle à copier) |
+| `config.example.json`, `deck.example.json` | Modèles sans aucune donnée réelle |
+| `outils\LibreHardwareMonitor.config` | Réglages copiés dans LibreHardwareMonitor (serveur web local, port 8085) |
+
+### `config.json` (créé par l'assistant)
+
+- `discord` : `enabled`, `token`, `user_id`, `alert_channel_id`.
+- `alerts` : seuils des alertes Discord — `cpu_temp`, `gpu_temp` (°C), `ram_percent`, `disk_percent` (%),
+  `cooldown_minutes` (une alerte par type au plus toutes les X minutes), `check_seconds`.
+- `agenda` : `rappels_minutes` (délais des rappels par défaut, en minutes), `heure_reference` (heure des
+  rappels pour les évènements sans heure et les anniversaires), `rappels_discord` (`true` / `false`).
+- `deck` : `password_hash` (empreinte PBKDF2 du mot de passe : le mot de passe lui-même n'est jamais
+  enregistré), `rate_limit_per_minute`.
+
+Sans `config.json`, NEXUS démarre quand même (deck et bot désactivés) et l'indique dans la fenêtre noire.
+
+### Stream deck (onglet « Deck »)
+
+Boutons dans `deck.json` (créé à partir de `deck.example.json`), modifiables dans l'onglet Deck
+(**✎ Modifier**). Types d'actions en liste fermée :
+
+| Type | Paramètres |
+|---|---|
+| `app` | `path` : chemin complet d'un `.exe`, `.lnk` ou `.url` ; `args` : liste optionnelle |
+| `url` | `url` : adresse `http(s)://` |
+| `media` | `key` : `play_pause`, `next`, `prev`, `volume_up`, `volume_down`, `mute` |
+| `lock` | aucun (verrouille la session Windows) |
+| `script` | `name` : fichier `.bat`, `.cmd`, `.ps1` ou `.py` du dossier `actions\` |
+| `power` | `op` : `shutdown`, `restart` (après 15 s), `sleep` — confirmation obligatoire |
+
+Le navigateur n'envoie que l'identifiant du bouton ; l'action est lue dans `deck.json`, vérifiée, et
+chaque exécution est notée dans `logs\deck.log`.
+
+### Accès depuis le téléphone
+
+Désactivé par défaut. Bouton **📱 Téléphone** sur le PC → autoriser → scanner le QR code avec le
+téléphone (même Wi-Fi). Windows demande d'autoriser Python sur les **réseaux privés** : accepte.
+Seuls les appareils appairés passent ; les adresses Internet sont toujours refusées.
+
+### Autres réglages
+
+- Seuils du bandeau d'alerte de la page : dictionnaire `ALERTS` en haut de `stats.py`.
+- Port de NEXUS (8000) : `PORT` en haut de `app.py`. Port de LibreHardwareMonitor (8085) : `LHM_URL`
+  dans `stats.py` et `outils\LibreHardwareMonitor.config`.
+- Mode jeu : détection automatique des jeux, panel allégé pendant les parties ; option de changement
+  de plan d'alimentation (désactivée par défaut) dans l'onglet PC. Carte « Mode jeu » : **⏸ Désactiver le
+  mode jeu** (le panel ne s'allège plus ; la détection continue pour les statistiques, retenu au
+  redémarrage) / **▶ Réactiver** ; **✖ Ce n'est pas un jeu** met le programme détecté dans les exceptions.
+  Les surcouches (Epic EOSOverlayRenderer, Steam, NVIDIA…) ne sont jamais prises pour des jeux.
+- Versions : bouton **vX.Y.Z** en haut (notes de version), sauvegarde automatique dans `versions\`,
+  retour arrière avec `restaurer_version.bat`. Mises à jour en ligne : voir « Mises à jour ».
+- Tiers : polices et bibliothèques, voir `THIRD_PARTY.md`.
+
+## Licence
+
+NEXUS est distribué sous licence **MIT** (voir `LICENSE`) : libre d'utilisation, de modification et de
+partage. LibreHardwareMonitor et les bibliothèques Python ont leurs propres licences.

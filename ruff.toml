@@ -1,0 +1,9 @@
+# Lint de NEXUS (lancé par la CI et par outils/release.py) : erreurs réelles seulement, pas de style imposé.
+target-version = "py311"
+line-length = 160
+extend-exclude = [".venv", "versions", "partage", "sauvegardes-maj", "maj", "dist", "data"]
+
+[lint]
+select = ["E9", "F", "B"]
+# B904 / B905 : style ; B023 / B007 : faux positifs (fonctions appelées dans la boucle même)
+ignore = ["B904", "B905", "B023", "B007"]

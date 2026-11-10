@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "nom": "Ardoise",
+  "auteur": "NEXUS",
+  "version": "1.0",
+  "panel_min_version": "1.0.0",
+  "modes": ["terminal", "sentinelle"],
+  "description": "Sombre et sobre : gris ardoise, bleu doux, coins arrondis, aucun effet lumineux ni animation de fond.",
+  "apercu": { "couleurs": ["#16181f", "#7aa2f7", "#73daca", "#e0af68"] }
+}

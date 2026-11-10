@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#010503">
+<title>NEXUS — appairage</title>
+<link rel="icon" href="/static/nexus-logo.svg" type="image/svg+xml">
+<style>
+  :root { --bg: #010503; --text: #eaf8ff; --muted: #8a87b0; --cyan: #00ff9c; --magenta: #ff2bd6; --green: #3dffa2; --hot: #ff2a55;
+          --mono: "Cascadia Mono", Consolas, ui-monospace, monospace; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: var(--mono); }
+  body { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px;
+    background: radial-gradient(ellipse at 50% 30%, #1a0a33, var(--bg) 70%); }
+  main { width: 100%; max-width: 420px; text-align: center; }
+  img { width: 110px; filter: drop-shadow(0 0 14px rgba(0, 255, 156,.6)); }
+  h1 { font-size: 43px; letter-spacing: .2em; margin: 10px 0 4px; margin-right: -.2em;
+    text-shadow: -2px 0 rgba(255,43,214,.8), 2px 0 rgba(0, 255, 156,.8), 0 0 20px rgba(0, 255, 156,.5); }
+  p { color: var(--muted); font-size: 16px; line-height: 1.6; margin: 8px 0 22px; }
+  label { display: block; text-align: left; font-size: 14px; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); margin: 16px 0 6px; }
+  input { width: 100%; font: inherit; font-size: 21px; color: var(--text); background: #030c07; border: 1px solid #2f2752;
+    padding: 14px; outline: none; }
+  input:focus { border-color: var(--cyan); box-shadow: 0 0 12px rgba(0, 255, 156,.3); }
+  #code { font-size: 37px; letter-spacing: .5em; text-align: center; padding-left: .5em; }
+  button { width: 100%; margin-top: 22px; font: inherit; font-size: 18px; font-weight: 700; letter-spacing: .25em; text-transform: uppercase;
+    color: var(--bg); background: linear-gradient(90deg, var(--magenta), var(--cyan)); border: 0; padding: 16px; cursor: pointer;
+    clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px); }
+  button:disabled { opacity: .5; }
+  .msg { min-height: 22px; margin-top: 16px; font-size: 16px; }
+  .err { color: var(--hot); } .ok { color: var(--green); }
+  a { color: var(--cyan); }
+  .hint { font-size: 14px; margin-top: 26px; }
+</style>
+</head>
+<body>
+<main>
+  <img src="/static/nexus-logo.svg" alt="">
+  <h1>NEXUS</h1>
+  <p id="intro">Appairer ce téléphone avec ton PC.</p>
+  <form id="f">
+    <div id="code-box">
+      <label for="code">Code affiché sur le PC</label>
+      <input id="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="000000">
+    </div>
+    <label for="name">Nom de cet appareil</label>
+    <input id="name" maxlength="40" autocomplete="off">
+    <button id="go">Appairer</button>
+  </form>
+  <div class="msg" id="msg" role="status"></div>
+  <p class="hint">Sur le PC : NEXUS → bouton <b>📱 Téléphone</b> → « Appairer un téléphone ».<br>Le code est valable 2 minutes.</p>
+</main>
+<script>
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const secret = location.hash.length > 1 ? decodeURIComponent(location.hash.slice(1)) : null;
+  const ua = navigator.userAgent;
+  $("name").value = /iPhone/.test(ua) ? "iPhone" : /iPad/.test(ua) ? "iPad" : /Android/.test(ua) ? "Téléphone Android" : "Mon appareil";
+  if (secret) {
+    // Arrivé par le QR code : pas besoin de taper le code
+    $("code-box").hidden = true;
+    $("intro").textContent = "QR code reconnu. Confirme pour autoriser ce téléphone à accéder à NEXUS.";
+  } else {
+    $("code").focus();
+  }
+  $("f").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    const code = $("code").value.replace(/\D/g, "");
+    if (!secret && code.length !== 6) { $("msg").className = "msg err"; $("msg").textContent = "Le code fait 6 chiffres."; return; }
+    $("go").disabled = true;
+    $("msg").className = "msg"; $("msg").textContent = "Connexion…";
+    try {
+      const r = await fetch("/api/pair/claim", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ secret, code: secret ? null : code, name: $("name").value.trim() }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || "HTTP " + r.status);
+      history.replaceState(null, "", "/pair");            // le secret disparaît de l'adresse
+      $("msg").className = "msg ok"; $("msg").textContent = "✔ Téléphone appairé. Ouverture de NEXUS…";
+      setTimeout(() => { location.href = "/"; }, 900);
+    } catch (e) {
+      $("msg").className = "msg err"; $("msg").textContent = e.message;
+      $("go").disabled = false;
+    }
+  });
+</script>
+</body>
+</html>

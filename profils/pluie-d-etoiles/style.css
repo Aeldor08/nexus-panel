@@ -1,0 +1,310 @@
+/* ==========================================================================
+   Profil « Pluie d'étoiles » — ciel cosmique, modes Terminal et Sentinelle.
+   CSS pur + SVG originaux et polices libres (OFL, licences à la racine du profil) dans assets/.
+   Couches du fond, de la plus lointaine à la plus proche (toutes DERRIÈRE les données) :
+     html (dégradé du ciel) → html::before (voie lactée + étoiles lointaines) → html::after (étoiles proches
+     + étoiles filantes) → body::before (nuages) → body::after (montagnes et brume) → contenu du panel.
+   Seuls transform, translate et opacity sont animés. États de la page de garde : body[data-etat=…].
+   ========================================================================== */
+
+@font-face { font-family: "NX Etoiles Titre"; src: url("assets/cinzel-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "NX Etoiles Texte"; src: url("assets/inter-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "NX Etoiles Texte"; src: url("assets/inter-600.woff2") format("woff2"); font-weight: 600 700; font-display: swap; }
+
+/* ---------- 1. Couleurs et polices : indigo, bleu nuit, violet profond, bleu glacier, ambre ---------- */
+:root[data-profile] {
+  --note-titre: "NX Etoiles Titre", Georgia, serif;   /* police « Titres du thème » des post-it */
+  --neon-rgb: 143, 211, 255;  --mag-rgb: 180, 146, 255;  --yel-rgb: 255, 196, 120;  --ok-rgb: 127, 224, 192;
+  --neon3-rgb: 220, 240, 255; --glow2-rgb: 70, 60, 160;
+  --cyan: #8fd3ff;  --neon-2: #b8e4ff;  --neon-3: #e1f3ff;
+  --magenta: #b492ff;  --yellow: #ffc478;  --green: #9aa8ff;
+  --ok: #7fe0c0;  --warn: #ffb45a;  --hot: #ff6b7d;
+  --text: #eef2ff;  --text-2: #cdd5f5;  --muted: #8f9acb;
+  --mono: "NX Etoiles Texte", "Segoe UI", system-ui, sans-serif;
+  --display: "NX Etoiles Texte", "Segoe UI", system-ui, sans-serif;
+  --aberr: 0 0 14px rgba(143, 211, 255, .35);
+  --chrome: linear-gradient(180deg, #ffffff 0%, #e1f3ff 45%, #b8c9ff 75%, #f3e9ff 100%);
+  --tab-grad: linear-gradient(180deg, rgba(143, 211, 255, .55), rgba(110, 120, 230, .55));
+  --hex-img: none;
+  font-variant-numeric: tabular-nums;
+  background:
+    radial-gradient(1200px 700px at 70% 10%, rgba(90, 70, 190, .35), transparent 70%),
+    radial-gradient(900px 600px at 15% 30%, rgba(40, 70, 170, .30), transparent 70%),
+    linear-gradient(180deg, #05071a 0%, #0b0c2c 45%, #1c1550 80%, #2a1d5e 100%);
+  background-attachment: fixed;
+}
+:root[data-profile][data-theme="terminal"] {   /* Terminal : un peu plus violet */
+  --bg: #0a081f;  --card: rgba(16, 13, 44, .74);  --deep-rgb: 14, 11, 38;  --splash-rgb: 10, 8, 31;
+  --track: #241f52;  --edge: #39337a;  --edge-2: #2c2763;  --deep-1: #120f34;  --deep-2: #0e0c2a;  --deep-3: #0a0820;
+}
+:root[data-profile][data-theme="sentinelle"] { /* Sentinelle : un peu plus bleu */
+  --bg: #060a22;  --card: rgba(11, 16, 44, .74);  --deep-rgb: 9, 13, 38;  --splash-rgb: 6, 10, 34;
+  --track: #1b2552;  --edge: #2c3a7a;  --edge-2: #233063;  --deep-1: #0d1334;  --deep-2: #0a0f2a;  --deep-3: #070b20;
+}
+
+/* ---------- 2. Ciel du panel (fixe, derrière tout) ---------- */
+:root[data-profile] body { background: transparent; }
+:root[data-profile]::before, :root[data-profile]::after {
+  content: ""; position: fixed; inset: -60px 0 0 0; pointer-events: none;
+}
+/* Ordre des couches imposé (sans z-index, les pseudo-éléments de <html> se peignaient PAR-DESSUS les cartes) */
+:root[data-profile]::before { z-index: -3; }
+:root[data-profile]::after { z-index: -2; }
+:root[data-profile]::before {             /* voie lactée qui « respire » + étoiles lointaines */
+  background: url("assets/voie-lactee.svg") 50% 40% / cover no-repeat, url("assets/etoiles-loin.svg") 0 0 / 520px 520px repeat;
+}
+:root[data-profile]::after {              /* nuages lointains (petits, flous, bleutés) devant les étoiles proches + filantes */
+  inset: -60px -4% 0 -4%;                 /* plus large que l'écran : la dérive ne découvre jamais de bord */
+  background: url("assets/nuages-loin.webp") 50% 58% / cover no-repeat,
+    url("assets/filantes.svg") 50% 30% / cover no-repeat, url("assets/etoiles-pres.svg") 0 0 / 760px 760px repeat;
+}
+:root[data-profile] body::before {        /* cumulus proches au clair de lune (dômes, bords vaporeux) : dérive + lente déformation */
+  left: -8%; right: -8%; top: -4vh; bottom: auto; height: 78vh; width: auto;
+  background: url("assets/nuages.webp") 50% 60% / cover no-repeat;
+  transform: none; -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent); mask-image: linear-gradient(to bottom, #000 70%, transparent);
+  opacity: .86; z-index: -1;
+  animation: pe-derive 140s ease-in-out infinite alternate, pe-souffle 47s ease-in-out infinite alternate;
+}
+/* Parallaxe : les nuages lointains dérivent bien plus lentement que les proches (propriétés indépendantes
+   translate / scale : elles s'ajoutent à la parallaxe du défilement, posée sur transform) */
+@media (min-width: 701px) {
+  :root[data-profile]::after { animation: pe-derive-loin 260s ease-in-out infinite alternate; }
+}
+@keyframes pe-derive-loin { from { translate: 1.5% 0; } to { translate: -1.5% 0; } }
+@keyframes pe-souffle { 0% { scale: 1 1; } 50% { scale: 1.02 .985; } 100% { scale: .99 1.015; } }
+:root[data-profile] body::after {         /* montagnes en couches + brume (animée dans le SVG) */
+  top: auto; bottom: -90px; left: 0; right: 0; height: calc(min(44vh, 440px) + 90px); z-index: -1;
+  background: url("assets/montagnes.svg") 50% 100% / cover no-repeat; opacity: 1;
+}
+@keyframes pe-derive { from { translate: -3% 0; } to { translate: 3% 0; } }
+/* Parallaxe au défilement de la page : plus la couche est proche, plus elle bouge */
+@supports (animation-timeline: scroll()) {
+  :root[data-profile]::before { animation: pe-plx-1 linear both; animation-timeline: scroll(root); }
+  :root[data-profile]::after { animation: pe-plx-2 linear both; animation-timeline: scroll(root); }
+  :root[data-profile] body::after { animation: pe-plx-4 linear both; animation-timeline: scroll(root); }
+  :root[data-profile] body::before { animation: pe-derive 140s ease-in-out infinite alternate, pe-plx-3 linear both,
+    pe-souffle 47s ease-in-out infinite alternate; animation-timeline: auto, scroll(root), auto; }
+  @media (min-width: 701px) {
+    :root[data-profile]::after { animation: pe-derive-loin 260s ease-in-out infinite alternate, pe-plx-2 linear both;
+      animation-timeline: auto, scroll(root); }
+  }
+}
+@keyframes pe-plx-1 { to { transform: translateY(-12px); } }
+@keyframes pe-plx-2 { to { transform: translateY(-24px); } }
+@keyframes pe-plx-3 { to { transform: translateY(-40px); } }
+@keyframes pe-plx-4 { to { transform: translateY(-70px); } }
+
+/* ---------- 3. Typographie : titre net (Cinzel), texte et chiffres très lisibles (Inter) ---------- */
+:root[data-profile] h1, :root[data-profile] .card h2, :root[data-profile] .home-title, :root[data-profile] .home-hello,
+:root[data-profile] .sp-title, :root[data-profile] .sv-date {
+  font-family: "NX Etoiles Titre", Georgia, serif; font-weight: 600; letter-spacing: .08em;
+}
+:root[data-profile] h1 .home-link span, :root[data-profile] .home-hello, :root[data-profile] .home-title {
+  filter: drop-shadow(0 0 2px rgba(6, 10, 34, .9)) drop-shadow(0 0 10px rgba(143, 211, 255, .35));
+}
+/* Lisibilité : textes posés directement sur le ciel (un cumulus clair peut passer derrière) -> halo de nuit */
+:root[data-profile] h1 .sub, :root[data-profile] .status, :root[data-profile] .nx-hint, :root[data-profile] #h-date,
+:root[data-profile] #h-time, :root[data-profile] #clock {
+  text-shadow: 0 0 3px rgba(6, 10, 34, .95), 0 0 10px rgba(6, 10, 34, .8), 0 0 14px rgba(143, 211, 255, .25);
+}
+:root[data-profile] h1 em { color: var(--yellow); text-shadow: 0 0 12px rgba(255, 196, 120, .5); }
+:root[data-profile] h1.glitch .t::before, :root[data-profile] h1.glitch .t::after { display: none; }
+:root[data-profile] .hdr-logo { filter: grayscale(1) brightness(1.6) drop-shadow(0 0 6px rgba(143, 211, 255, .7)); }
+:root[data-profile] h1 .sub, :root[data-profile] .card h2 small, :root[data-profile] .home-title small {   /* petits textes discrets */
+  letter-spacing: .18em; color: var(--muted); font-weight: 400;
+}
+:root[data-profile] header::after { height: 1px; background: linear-gradient(90deg, transparent, rgba(143, 211, 255, .7), transparent);
+  box-shadow: 0 0 12px rgba(143, 211, 255, .5); animation: none; }
+:root[data-profile] .gauge .val, :root[data-profile] .temp .big, :root[data-profile] .rate .v, :root[data-profile] .home-time,
+:root[data-profile] .ping-big, :root[data-profile] #clock, :root[data-profile] .sv-clock {
+  font-family: "NX Etoiles Texte", "Segoe UI", sans-serif; font-weight: 600; letter-spacing: 0; text-shadow: 0 0 14px rgba(143, 211, 255, .3);
+}
+
+/* ---------- 4. Cartes en verre sombre, bordure fine bleu clair, étoiles à quatre branches aux coins ---------- */
+:root[data-profile] .card {
+  isolation: isolate; clip-path: none; border-radius: 14px; border: 1px solid rgba(160, 205, 255, .30);
+  background: var(--card); box-shadow: 0 0 0 1px rgba(143, 211, 255, .05), 0 0 22px rgba(120, 170, 255, .10), 0 12px 34px rgba(0, 0, 0, .35);
+  -webkit-backdrop-filter: blur(10px) saturate(1.15); backdrop-filter: blur(10px) saturate(1.15);
+}
+:root[data-profile] .card::before, :root[data-profile] .card::after {
+  content: ""; position: absolute; width: 14px; height: 14px; border: 0; filter: none; opacity: .9; z-index: -1; pointer-events: none;
+  box-shadow: none; border-radius: 0;
+  background: url("assets/etoile-4.svg") center / contain no-repeat; display: block; animation: none;
+}
+:root[data-profile] .card::before { top: 6px; left: 6px; right: auto; bottom: auto; }
+:root[data-profile] .card::after { bottom: 6px; right: 6px; top: auto; left: auto; transform: scale(.7); }
+:root[data-profile] .card h2 { text-shadow: 0 0 10px rgba(143, 211, 255, .25); padding-left: 10px; }
+:root[data-profile] .card h2::before { content: none; }
+:root[data-profile] .temp, :root[data-profile] .rate, :root[data-profile] .home-live, :root[data-profile] .in, :root[data-profile] .day,
+:root[data-profile] .game, :root[data-profile] .app, :root[data-profile] .cover, :root[data-profile] .home-ico, :root[data-profile] .dk-btn,
+:root[data-profile] .mx-row, :root[data-profile] .sv-cday, :root[data-profile] .jn-mday, :root[data-profile] .jn-mood, :root[data-profile] .jn-act {
+  border-radius: 10px; clip-path: none;
+}
+:root[data-profile] .temp, :root[data-profile] .rate, :root[data-profile] .home-live {
+  background: rgba(8, 11, 32, .55); border: 1px solid rgba(160, 205, 255, .18);
+}
+:root[data-profile] .temp::before, :root[data-profile] .rate::before { display: none; }
+:root[data-profile] .gauge canvas { filter: drop-shadow(0 0 8px rgba(143, 211, 255, .35)); }
+
+/* ---------- 5. Boutons en verre, éclat glacé au survol ---------- */
+:root[data-profile] .btn, :root[data-profile] .tabs a, :root[data-profile] .home-parts a {
+  clip-path: none; border-radius: 10px; transform: none; overflow: hidden;
+  background: rgba(14, 20, 52, .55); border: 1px solid rgba(160, 205, 255, .35);
+  box-shadow: 0 0 10px rgba(143, 211, 255, .08);
+}
+:root[data-profile] .tabs a::before, :root[data-profile] .tabs a::after { content: none; }
+:root[data-profile] .btn::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  background: linear-gradient(105deg, transparent 35%, rgba(215, 240, 255, .55) 50%, transparent 65%);
+  transform: translateX(-120%);
+}
+:root[data-profile] .btn:hover::before, :root[data-profile] .btn:focus-visible::before {
+  opacity: 1; transform: translateX(120%); transition: transform .8s ease, opacity .2s;
+}
+:root[data-profile] .btn:hover, :root[data-profile] .tabs a:hover { border-color: rgba(185, 225, 255, .75); box-shadow: 0 0 14px rgba(143, 211, 255, .28); }
+:root[data-profile] .tabs a[aria-selected="true"] { color: #fff; border-color: rgba(185, 225, 255, .85); text-shadow: 0 0 8px rgba(143, 211, 255, .6);
+  box-shadow: 0 0 16px rgba(143, 211, 255, .35), inset 0 0 12px rgba(143, 211, 255, .2); }
+
+/* ---------- 6. Jauges et barres : remplissage avec halo bleuté ---------- */
+:root[data-profile] .bar { border-radius: 7px; background: rgba(255, 255, 255, .07); overflow: visible; }
+:root[data-profile] .bar i { border-radius: 7px; -webkit-mask: none; mask: none; background-image: linear-gradient(90deg, #6f86ff, #8fd3ff);
+  box-shadow: 0 0 10px rgba(143, 211, 255, .55); }
+:root[data-profile] .bar i::after { display: none; }
+:root[data-profile] .st-track i, :root[data-profile] .st-col i { box-shadow: 0 0 10px rgba(143, 211, 255, .35); }
+
+/* ---------- 7. Alertes : pulse ambré doux, rouge discret si critique ---------- */
+:root[data-profile] .alert { isolation: isolate; clip-path: none; border-radius: 12px; background: rgba(40, 24, 18, .72); border: 1px solid rgba(255, 180, 90, .45); }
+:root[data-profile] .alert.crit { background: rgba(48, 14, 26, .78); border-color: rgba(255, 107, 125, .55); }
+:root[data-profile] .alert::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 22px rgba(255, 180, 90, .55); animation: pe-pulse 3.2s ease-in-out infinite;
+}
+:root[data-profile] .alert.crit::after { box-shadow: 0 0 22px rgba(255, 107, 125, .55); animation-duration: 2.2s; }
+@keyframes pe-pulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+
+/* ==========================================================================
+   PAGE DE GARDE
+   Couches (z-index dans la page de garde) : ciel → voie lactée (.sp-grid) → étoiles (.sp-glow)
+   → filantes (.sp-sweep) → nuages (#splash::before) → montagnes (.sp-screen::after) → voile de l'intro
+   (#splash::after) → logo et textes (.sp-center)
+   ========================================================================== */
+:root[data-profile] #splash {
+  background: radial-gradient(1100px 600px at 65% 15%, rgba(90, 70, 190, .4), transparent 70%),
+              linear-gradient(180deg, #05071a 0%, #0b0c2c 45%, #1c1550 80%, #2a1d5e 100%);
+}
+:root[data-profile] #splash .sp-screen { background: transparent; }
+:root[data-profile] #splash .sp-grid {
+  left: 0; right: 0; top: 0; bottom: 0; height: auto; transform: none; animation: none; z-index: 1;
+  -webkit-mask-image: none; mask-image: none;
+  background: url("assets/voie-lactee.svg") 50% 40% / cover no-repeat, url("assets/etoiles-loin.svg") 0 0 / 520px 520px repeat;
+}
+:root[data-profile] #splash .sp-glow {
+  inset: 0; width: auto; height: auto; border-radius: 0; z-index: 2; animation: none;
+  background: url("assets/etoiles-pres.svg") 0 0 / 760px 760px repeat;
+}
+:root[data-profile] #splash .sp-sweep {
+  inset: 0; top: 0; height: auto; z-index: 3; animation: none;
+  background: url("assets/filantes.svg") 50% 30% / cover no-repeat;
+}
+:root[data-profile] #splash::before {
+  content: ""; position: absolute; left: -8%; right: -8%; top: -4vh; height: 74vh; z-index: 4; pointer-events: none;
+  background: url("assets/nuages.webp") 50% 60% / cover no-repeat, url("assets/nuages-loin.webp") 50% 70% / cover no-repeat; opacity: .9;
+  -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent); mask-image: linear-gradient(to bottom, #000 70%, transparent);
+  /* lente dérive (translate, sur la carte graphique) : les nuages restent sur leur propre calque, dessinés UNE fois,
+     au lieu d'être recalculés avec les étoiles qui scintillent autour */
+  animation: pe-derive 140s ease-in-out infinite alternate;
+}
+:root[data-profile] #splash .sp-screen::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: min(46vh, 460px); z-index: 5; pointer-events: none;
+  background: url("assets/montagnes.svg") 50% 100% / cover no-repeat;
+}
+:root[data-profile] #splash::after {      /* voile de nuit qui se lève pendant l'intro */
+  content: ""; position: absolute; inset: 0; z-index: 7; pointer-events: none; background: #02030d; opacity: 0;
+}
+:root[data-profile] #splash .sp-center { z-index: 8; }
+:root[data-profile] #splash .sp-log, :root[data-profile] #splash .sp-skip { z-index: 8; }
+:root[data-profile] #splash .sp-center::before {       /* halo qui garde le logo lisible, et éclat d'apparition */
+  content: ""; position: absolute; left: 50%; top: 40%; width: 760px; height: 560px; margin: -280px 0 0 -380px; z-index: -1; pointer-events: none;
+  background: radial-gradient(ellipse closest-side, rgba(5, 7, 26, .78), rgba(5, 7, 26, .45) 55%, transparent);
+}
+:root[data-profile] #splash .sp-center::after {
+  content: ""; position: absolute; left: 50%; top: 95px; width: 420px; height: 420px; margin: -210px 0 0 -210px; z-index: -1; pointer-events: none;
+  background: radial-gradient(circle, rgba(225, 243, 255, .9) 0, rgba(143, 211, 255, .45) 18%, transparent 60%); opacity: 0;
+}
+
+/* Intro (≈ 4,6 s) : le ciel s'illumine, les étoiles apparaissent, quelques filantes, puis le logo avec un éclat */
+:root[data-profile] body[data-etat="intro"] #splash::after { animation: pe-leve 2.4s ease-out both; }
+:root[data-profile] body[data-etat="intro"] #splash .sp-grid { animation: pe-apparait 2s ease-out .4s both; }
+:root[data-profile] body[data-etat="intro"] #splash .sp-glow { animation: pe-apparait 1.6s ease-out 1s both; }
+:root[data-profile] body[data-etat="intro"] #splash .sp-sweep { background-image: url("assets/filantes-intro.svg"); }
+:root[data-profile] body[data-etat="intro"] #splash::before { animation: pe-apparait 1.8s ease-out .6s both; }
+:root[data-profile] body[data-etat="intro"] #splash .sp-enter { animation: pe-logo 1.2s cubic-bezier(.2, .8, .2, 1) 3.1s both; }
+:root[data-profile] body[data-etat="intro"] #splash .sp-center::after { animation: pe-eclat 1.3s ease-out 3.15s both; }
+:root[data-profile] body[data-etat="intro"] #splash .sp-tag, :root[data-profile] body[data-etat="intro"] #splash .sp-bar,
+:root[data-profile] body[data-etat="intro"] #splash .sp-log { animation: pe-apparait .8s ease-out 3.8s both; }
+@keyframes pe-leve { from { opacity: 1; } to { opacity: 0; } }
+@keyframes pe-apparait { from { opacity: 0; } }
+@keyframes pe-logo { 0% { opacity: 0; transform: scale(.82); } 55% { opacity: 1; transform: scale(1.05); } 100% { opacity: 1; transform: none; } }
+@keyframes pe-eclat { 0% { opacity: 0; transform: scale(.3); } 30% { opacity: 1; } 100% { opacity: 0; transform: scale(1.6); } }
+
+/* Logo NEXUS du panel, recoloré glacier et lavande */
+:root[data-profile] #splash .sp-logo { filter: drop-shadow(0 0 12px rgba(143, 211, 255, .75)) drop-shadow(0 0 30px rgba(180, 146, 255, .35)); }
+:root[data-profile] #splash .sp-logo stop:first-child { stop-color: #e1f3ff; }
+:root[data-profile] #splash .sp-logo stop:last-child { stop-color: #b492ff; }
+:root[data-profile] #splash .sp-traces { stroke: #8fd3ff; }
+:root[data-profile] #splash .sp-nodes { fill: #ffc478; }
+:root[data-profile] #splash .sp-title { color: #f4f8ff; text-shadow: 0 0 22px rgba(143, 211, 255, .7), 0 0 60px rgba(180, 146, 255, .35);
+  letter-spacing: .2em; margin-right: -.2em; }
+:root[data-profile] #splash .sp-title::before, :root[data-profile] #splash .sp-title::after { display: none; }
+:root[data-profile] #splash .sp-title .ch.scr { color: #b8e4ff; }
+:root[data-profile] #splash .sp-tag, :root[data-profile] #splash .sp-granted, :root[data-profile] #splash .sp-prompt {
+  text-shadow: 0 1px 3px rgba(2, 3, 13, .95), 0 0 14px rgba(2, 3, 13, .9); }
+:root[data-profile] #splash .sp-tag { color: #cdd5f5; } :root[data-profile] #splash .sp-tag b { color: #ffc478; }
+:root[data-profile] #splash .sp-granted { color: #e1f3ff; font-family: "NX Etoiles Titre", Georgia, serif; }
+:root[data-profile] #splash .sp-prompt { color: #ffc478; }
+:root[data-profile] #splash .sp-bar { height: 3px; border-radius: 3px; background: rgba(255, 255, 255, .12); }
+:root[data-profile] #splash .sp-bar i { border-radius: 3px; background: linear-gradient(90deg, #6f86ff, #8fd3ff); box-shadow: 0 0 10px rgba(143, 211, 255, .6); }
+:root[data-profile] #splash .sp-log { color: #a9b3dc; text-shadow: none; opacity: .75; }
+:root[data-profile] #splash .sp-skip {
+  font-size: 0; cursor: pointer; padding: 9px 18px; border-radius: 10px; animation: none;
+  background: rgba(14, 20, 52, .6); border: 1px solid rgba(160, 205, 255, .45);
+}
+:root[data-profile] #splash .sp-skip::after { content: "Passer l'intro ▸"; font-size: 12px; letter-spacing: .2em; color: #e1f3ff; }
+:root[data-profile] #splash .sp-standby { background: #04061a; }
+
+/* Transition au clic sur NEXUS (1,5 s) : on file vers les étoiles ; le logo s'efface, puis le ciel s'ouvre EN ROND
+   depuis le logo (profil.json : "ouverture": "cercle") sur le sommaire, bordé d'un anneau de lumière d'étoile.
+   Nuages, montagnes et filantes restent en place autour de l'ouverture. */
+/* (« transition » ET « arrivee » : les étoiles continuent de filer pendant toute l'ouverture ; le cercle disperse
+   nuages, montagnes et étoiles filantes vers les bords — scale du panel) */
+:root[data-profile] #splash { --sp-anneau: rgba(178, 224, 255, .95); --sp-disperse: 1.55; }
+:root[data-profile] body:is([data-etat="transition"], [data-etat="arrivee"]) #splash .sp-grid { animation: pe-file 3.7s cubic-bezier(.5, 0, .8, .4) forwards; }
+:root[data-profile] body:is([data-etat="transition"], [data-etat="arrivee"]) #splash .sp-glow { animation: pe-file 3.7s cubic-bezier(.5, 0, .8, .4) .1s forwards; }
+:root[data-profile] body:is([data-etat="transition"], [data-etat="arrivee"]) #splash .sp-center,
+:root[data-profile] body:is([data-etat="transition"], [data-etat="arrivee"]) #splash .sp-log { animation: pe-efface .9s ease-in forwards; }
+@keyframes pe-file { 0% { transform: none; opacity: 1; } 80% { opacity: 1; } 100% { transform: scale(2.6); opacity: 0; } }
+@keyframes pe-efface { to { opacity: 0; transform: scale(1.06); } }
+
+/* ---------- Téléphone : moins d'éléments animés ---------- */
+@media (max-width: 700px) {
+  :root[data-profile]::after { background: url("assets/filantes-mobile.svg") 50% 30% / cover no-repeat, url("assets/etoiles-pres-mobile.svg") 0 0 / 760px 760px repeat; }
+  :root[data-profile]::before { background-size: cover, 700px 700px; }
+  :root[data-profile] body::before { animation: none; opacity: .75; }
+  :root[data-profile] body::after { height: calc(30vh + 90px); }
+  :root[data-profile] #splash .sp-glow { background-image: url("assets/etoiles-pres-mobile.svg"); }
+  :root[data-profile] #splash .sp-screen::after { height: 30vh; }
+  :root[data-profile] #splash .sp-center::before { width: 440px; height: 420px; margin: -210px 0 0 -220px; }
+  :root[data-profile] #splash .sp-center::after { top: 65px; width: 280px; height: 280px; margin: -140px 0 0 -140px; }
+  :root[data-profile] .card { -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+}
+
+/* ---------- Sans animation : tout s'affiche directement ---------- */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-profile]::before, :root[data-profile]::after, :root[data-profile] body::before, :root[data-profile] body::after,
+  :root[data-profile] #splash::before, :root[data-profile] #splash::after, :root[data-profile] .alert::after,
+  :root[data-profile] *:not(#splash) { animation: none !important; transition: none !important; }
+  :root[data-profile] #splash::after { display: none; }
+  :root[data-profile] body[data-etat="intro"] #splash .sp-sweep { background-image: none; }
+  :root[data-profile] body[data-etat] #splash .sp-enter, :root[data-profile] body[data-etat] #splash .sp-tag,
+  :root[data-profile] body[data-etat] #splash .sp-bar { opacity: 1; transform: none; }
+}

@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="fr" data-theme="terminal">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEXUS</title>
+<script>/* thème choisi (avant l'affichage, pour éviter un flash de l'autre thème) */
+try { const t = localStorage.getItem("nexus-theme"); if (t === "sentinelle") document.documentElement.dataset.theme = t; } catch (e) {}
+/* changement de thème en cours : écran noir jusqu'à la 2de moitié de l'animation (js/theme.js) */
+try { if (sessionStorage.getItem("nexus-tx")) document.documentElement.classList.add("tx-pending"); } catch (e) {}
+/* nxImage(cb) : comme requestAnimationFrame, mais bridé à 60 images/s (inutile de dessiner plus sur un écran
+   144/165 Hz) ; l'avance est reportée d'une image à l'autre, la moyenne reste 60 */
+(() => { const PAS = 1000 / 60; let dernier = 0, file = [], id = 0;
+  const tic = now => { id = 0; const ecart = now - dernier;
+    if (ecart < PAS - 1) { id = requestAnimationFrame(tic); return; }
+    dernier = ecart > PAS * 3 ? now : dernier + PAS * Math.max(1, Math.floor((ecart + 1) / PAS));
+    const f = file; file = []; for (const cb of f) { try { cb(now); } catch (e) { console.error(e); } } };
+  window.nxImage = cb => { file.push(cb); if (!id) id = requestAnimationFrame(tic); }; })();</script>
+<link rel="icon" href="/static/nexus-logo.svg" type="image/svg+xml">
+<link rel="alternate icon" href="/static/favicon.ico">
+<link rel="stylesheet" href="/static/tabs.css">
+<style>
+  :root {
+    --bg: #06060a;
+    --card: #0b0b12;
+    --line: rgba(0, 255, 156, .22);
+    --text: #e8f6ff;
+    --muted: #6f7f93;
+    --track: #1a1d2a;
+    --cyan: #00ff9c;
+    --magenta: #ff2bd6;
+    --yellow: #f6e600;
+    --green: #39ff88;
+    --ok: #39ff88;
+    --warn: #ffb000;
+    --hot: #ff2a4d;
+    --mono: "Cascadia Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--mono); }
+  body {
+    padding: 20px 28px 28px; min-height: 100vh;
+    background:
+      linear-gradient(rgba(var(--neon-rgb),.035) 1px, transparent 1px) 0 0 / 100% 32px,
+      linear-gradient(90deg, rgba(var(--neon-rgb),.035) 1px, transparent 1px) 0 0 / 32px 100%,
+      var(--bg);
+  }
+  header { display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap; margin-bottom: 18px; padding-bottom: 12px;
+    border-bottom: 1px solid var(--line); }
+  h1 { margin: 0; font-size: 23px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; }
+  h1 span { color: var(--cyan); text-shadow: 0 0 10px rgba(var(--neon-rgb),.6); }
+  h1 em { font-style: normal; color: var(--magenta); }
+  .status { display: flex; gap: 18px; font-size: 14px; color: var(--muted);
+    flex-wrap: wrap; text-transform: uppercase; letter-spacing: 1px; }
+  .dot { display: inline-block; width: 8px; height: 8px; margin-right: 6px;
+    background: var(--muted); vertical-align: middle; }
+  .dot.on { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  .dot.off { background: var(--hot); box-shadow: 0 0 8px var(--hot); }
+  #clock { color: var(--cyan); }
+
+  .grid { display: grid; gap: 18px; }
+  .row3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .row3 + .row3 { margin-top: 18px; }
+  @media (max-width: 1100px) { .row3 { grid-template-columns: 1fr; } }
+
+  .card { position: relative; background: var(--card); border: 1px solid var(--line);
+    padding: 16px 20px 18px; min-width: 0;
+    clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%); }
+  .card::before { content: ""; position: absolute; left: -1px; top: -1px; width: 44px; height: 3px;
+    background: var(--accent, var(--cyan)); box-shadow: 0 0 10px var(--accent, var(--cyan)); }
+  .card h2 { margin: 0 0 10px; font-size: 15px; font-weight: 700; color: var(--accent, var(--cyan));
+    text-transform: uppercase; letter-spacing: 3px; display: flex; align-items: baseline; gap: 10px; }
+  .card h2::before { content: "//"; color: var(--muted); letter-spacing: 0; }
+  .card h2 small { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-left: auto; }
+  .c-cpu { --accent: var(--cyan); } .c-ram { --accent: var(--magenta); }
+  .c-gpu { --accent: var(--green); } .c-temp { --accent: var(--hot); }
+  .c-net { --accent: var(--yellow); } .c-disk { --accent: var(--cyan); }
+
+  .gauge-row { display: flex; align-items: center; gap: 18px; }
+  .gauge { position: relative; width: 170px; height: 104px; flex: none; }
+  .gauge canvas { width: 170px; height: 104px; display: block; }
+  .gauge .val { position: absolute; left: 0; right: 0; bottom: 2px; text-align: center;
+    font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 12px var(--accent, var(--cyan)); }
+  /* Valeurs à côté de la jauge ; carte trop étroite → elles passent SOUS la jauge (largeur pleine) au lieu
+     de se couper. Chaque ligne (.fl) reste sur une ligne ; seuls les détails <small> passent à la ligne. */
+  .gauge-row { flex-wrap: wrap; row-gap: 8px; }
+  .facts { font-size: 15px; color: var(--muted); line-height: 1.8; min-width: 0; flex: 1 1 200px; }
+  .facts .fl { white-space: nowrap; }
+  .facts .fl small, .facts .fl.libre { white-space: normal; }
+  .facts b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .spark { width: 100%; height: 84px; display: block; margin-top: 12px; }
+  .spark-legend { display: flex; justify-content: space-between; font-size: 12px;
+    color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+
+  .cores { display: grid; grid-template-columns: repeat(auto-fill, minmax(22px, 1fr));
+    gap: 3px; margin-top: 12px; }
+  .core { height: 30px; background: var(--track); position: relative; overflow: hidden; }
+  .core i { position: absolute; left: 0; right: 0; bottom: 0; background: var(--cyan);
+    box-shadow: 0 0 6px var(--cyan); }
+
+  .temps { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .temp { text-align: center; padding: 10px 6px; border: 1px solid var(--track); background: #08080d; }
+  .temp .label { font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 3px; }
+  .temp .big { font-size: 60px; font-weight: 700; line-height: 1.15;
+    font-variant-numeric: tabular-nums; color: var(--muted); }
+  .temp .big.na { font-size: 21px; line-height: 3.8; font-weight: 500; letter-spacing: 1px; }
+  .temp .src { font-size: 12px; color: var(--muted); min-height: 13px; letter-spacing: .5px; }
+  .rows { margin-top: 14px; font-size: 15px; }
+  .rows div { display: flex; justify-content: space-between; padding: 5px 0;
+    border-bottom: 1px dashed var(--track); gap: 10px; }
+  .rows span:first-child { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rows b { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+  .t-ok { color: var(--ok) !important; text-shadow: 0 0 14px rgba(57,255,136,.55); }
+  .t-warn { color: var(--warn) !important; text-shadow: 0 0 14px rgba(255,176,0,.55); }
+  .t-hot { color: var(--hot) !important; text-shadow: 0 0 14px rgba(255,42,77,.65); }
+
+  .net-rates { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .rate { border: 1px solid var(--track); background: #08080d; padding: 8px 12px; }
+  .rate .label { font-size: 13px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+  .rate .v { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .rate.down .v { color: var(--cyan); text-shadow: 0 0 10px rgba(var(--neon-rgb),.5); }
+  .rate.up .v { color: var(--yellow); text-shadow: 0 0 10px rgba(246,230,0,.45); }
+  .iface-main { margin-top: 10px; font-size: 14px; color: var(--muted); line-height: 1.7; }
+  .iface-main b { color: var(--text); font-weight: 600; }
+
+  .disk { margin-top: 12px; }
+  .disk:first-of-type { margin-top: 0; }
+  .disk-head { display: flex; justify-content: space-between; font-size: 15px; margin-bottom: 6px; gap: 10px; }
+  .disk-head .name { font-weight: 700; white-space: nowrap; }
+  .disk-head .sub { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 14px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .disk-head .pct { color: var(--text); font-weight: 700; white-space: nowrap; }
+  .bar { height: 10px; background: var(--track); overflow: hidden; }
+  .bar i { display: block; height: 100%; transition: width .4s;
+    background-image: repeating-linear-gradient(90deg, transparent 0 6px, rgba(0,0,0,.45) 6px 8px); }
+  .na-msg { color: var(--muted); font-size: 16px; padding: 26px 0; text-align: center; letter-spacing: 1px; }
+  .row-wide { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); margin-top: 18px; }
+  @media (max-width: 1100px) { .row-wide { grid-template-columns: 1fr; } }
+  .c-proc { --accent: var(--magenta); } .c-fan { --accent: var(--green); }
+
+  /* Alertes */
+  .alerts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .alert { display: flex; align-items: center; gap: 12px; padding: 9px 14px; font-size: 15px;
+    letter-spacing: .5px; border: 1px solid; }
+  .alert b { letter-spacing: 2px; font-size: 13px; padding: 2px 6px; }
+  .alert.crit { color: #ffd0d8; border-color: var(--hot); background: rgba(255,42,77,.10); }
+  /* pulsation : halo FIXE sur un calque dont seule l'opacité varie (les profils peuvent remplacer ce ::after) */
+  .alert.crit::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+    box-shadow: 0 0 18px rgba(255,42,77,.45); opacity: 0; animation: pulse 1.6s ease-in-out infinite; }
+  .alert.crit b { background: var(--hot); color: #06060a; }
+  .alert.warn { color: #ffe2b0; border-color: var(--warn); background: rgba(255,176,0,.08); }
+  .alert.warn b { background: var(--warn); color: #06060a; }
+  @keyframes pulse { 50% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .alert.crit::after { animation: none; } }
+  .btn { font: inherit; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
+    color: var(--cyan); background: transparent; border: 1px solid var(--line); padding: 3px 8px; }
+  .btn:hover { background: rgba(var(--neon-rgb),.08); }
+  .btn.on { color: var(--ok); border-color: var(--ok); }
+
+  /* Processus */
+  .proc-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  @media (max-width: 700px) { .proc-cols { grid-template-columns: 1fr; } }
+  .proc-title { font-size: 13px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase;
+    margin-bottom: 6px; }
+  .proc { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 5px 0;
+    border-bottom: 1px dashed var(--track); font-size: 15px; }
+  .proc .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .proc .n small { color: var(--muted); }
+  .proc .v { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+  .proc .mini { grid-column: 1 / -1; height: 3px; background: var(--track); }
+  .proc .mini i { display: block; height: 100%; }
+
+  /* Ventilation & énergie */
+  .fan { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 10px; padding: 5px 0;
+    font-size: 15px; }
+  .fan .n { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fan .v { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .fan .mini { grid-column: 1 / -1; height: 4px; background: var(--track); }
+  .fan .mini i { display: block; height: 100%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .fan-off { font-size: 14px; color: var(--muted); margin-top: 8px; line-height: 2; }
+  .fan .lbl { color: var(--text); font-weight: 600; }
+  .fan .n small { color: var(--muted); font-size: 13px; }
+  .chip { display: inline-block; border: 1px solid var(--track); padding: 0 6px; margin-right: 4px; white-space: nowrap; }
+  .edit { font: inherit; font-size: 14px; cursor: pointer; color: var(--muted); background: none;
+    border: none; padding: 0 3px; opacity: .55; }
+  .edit:hover, .edit:focus-visible { color: var(--green); opacity: 1; }
+  .power { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+  .power .rate .v { font-size: 25px; color: var(--yellow); text-shadow: 0 0 10px rgba(246,230,0,.4); }
+  .power .rate small { font-size: 13px; color: var(--muted); }
+
+  .error-banner { display: none; background: rgba(255,42,77,.08); color: #ff8fa3;
+    border: 1px solid var(--hot); padding: 10px 14px; margin-bottom: 16px; font-size: 15px; letter-spacing: .5px; }
+</style>
+<!-- Thème cyberpunk : chargé après les styles de base pour les surcharger -->
+<link rel="stylesheet" href="/static/theme.css">
+<link rel="stylesheet" href="/static/splash.css">
+<link rel="stylesheet" href="/static/mobile.css">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<meta name="theme-color" content="#010503">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NEXUS">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+<link rel="stylesheet" href="/static/profiles.css">
+<link rel="stylesheet" href="/static/ui.css">
+<link rel="stylesheet" href="/static/perso.css">
+<script>/* tailles de l'interface choisies sur cet appareil (js/reglages.js), posées avant l'affichage */
+try {
+  const t = JSON.parse(localStorage.getItem("nexus-tailles") || "{}");
+  for (const k of ["lanceur", "deck", "melangeur", "agenda"])
+    if (Number(t[k]) >= 80 && Number(t[k]) <= 150) document.documentElement.style.setProperty("--nx-z-" + k, String(t[k] / 100), "important");
+} catch (e) {}
+</script>
+<script>/* profil visuel du mode en cours, mémorisé sur cet appareil (js/profiles.js) : chargé en dernier,
+   par-dessus tous les styles, pour éviter un flash de l'apparence par défaut */
+try {
+  const mode = document.documentElement.dataset.theme || "terminal";
+  const id = localStorage.getItem("nexus-profil-" + mode);
+  if (id && /^[a-z0-9][a-z0-9-]{0,39}$/.test(id) && id !== "defaut") {
+    document.documentElement.dataset.profile = id;
+    // adresse versionnée retenue par js/profiles.js : la même que celle du profil → une seule copie, en cache
+    const v = localStorage.getItem("nexus-profil-css-" + id) || "";
+    const l = document.createElement("link");
+    l.rel = "stylesheet"; l.id = "nx-profile-css";
+    l.href = /^\/profils\/[a-z0-9-]+\/style\.css\?v=[a-f0-9]+$/.test(v) && v.startsWith("/profils/" + id + "/") ? v : "/profils/" + id + "/style.css";
+    document.head.appendChild(l);
+  }
+} catch (e) {}
+</script>
+</head>
+<body>
+<!-- ===== Page de garde (animée par splash.js) ===== -->
+<div id="splash" role="dialog" aria-label="Page de garde NEXUS" aria-live="polite">
+ <div class="sp-screen" id="sp-screen">
+  <div class="sp-grid" aria-hidden="true"></div>
+  <div class="sp-glow" aria-hidden="true"></div>
+  <div class="sp-sweep" aria-hidden="true"></div>
+  <div class="sp-center">
+   <button class="sp-enter" id="sp-enter" aria-label="Entrer dans NEXUS">
+    <svg class="sp-logo" viewBox="0 0 120 120" aria-hidden="true">
+      <defs>
+        <linearGradient id="sp-g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#00ff9c"/><stop offset="1" stop-color="#ff2bd6"/>
+        </linearGradient>
+      </defs>
+      <g fill="none" stroke="url(#sp-g)" stroke-linecap="square">
+        <path class="sp-hex" pathLength="1" d="M60 6 L107 33 L107 87 L60 114 L13 87 L13 33 Z" stroke-width="3.5"/>
+        <path class="sp-hex2" d="M60 20 L95 40 L95 80 L60 100 L25 80 L25 40 Z" stroke-width="1.4" stroke-dasharray="4 5"/>
+        <path class="sp-n" pathLength="1" d="M42 80 V40 L78 80 V40" stroke-width="8"/>
+      </g>
+      <g class="sp-traces" stroke="#00ff9c" stroke-width="2" fill="none">
+        <path d="M107 33 L116 28"/><path d="M13 87 L4 92"/><path d="M60 6 V1"/><path d="M60 114 V119"/>
+      </g>
+      <g class="sp-nodes" fill="#fcee0a"><circle cx="116" cy="28" r="2.6"/><circle cx="4" cy="92" r="2.6"/></g>
+    </svg>
+    <div class="sp-title" id="sp-title" data-text="NEXUS">NEXUS</div>
+   </button>
+    <div class="sp-tag" id="sp-tag"></div>
+    <div class="sp-bar" aria-hidden="true"><i id="sp-bar"></i></div>
+    <div class="sp-granted" id="sp-granted">ACCÈS AUTORISÉ</div>
+    <div class="sp-prompt" id="sp-prompt"><span class="sp-fleche" aria-hidden="true">▶</span> Clique sur NEXUS pour entrer</div>
+  </div>
+  <pre class="sp-log" id="sp-log" aria-hidden="true"></pre>
+  <div class="sp-skip" id="sp-skip">Clic pour accélérer</div>
+ </div>
+ <!-- Veille : écran « éteint » après une période sans activité -->
+ <div class="sp-standby" id="sp-standby" aria-hidden="true">
+  <img src="/static/nexus-logo.svg" alt="">
+  <div class="sp-sb-clock" id="sp-sb-clock"></div>
+  <div class="sp-sb-text"><span class="sp-led"></span>NEXUS · en veille</div>
+  <small>Bouge la souris ou appuie sur une touche pour rallumer</small>
+ </div>
+ <!-- Plongée dans le réseau (après le clic sur NEXUS) -->
+ <canvas class="sp-dive" id="sp-dive" aria-hidden="true"></canvas>
+</div>
+<script>
+  // Déjà vue dans cet onglet : on la masque avant même le premier affichage (pas de flash)
+  (function () {
+    var sp = document.getElementById("splash"), seen = false;
+    try { seen = sessionStorage.getItem("nexus-intro") === "1" && !location.search.includes("intro"); } catch (e) {}
+    sp.dataset.state = seen ? "gone" : "boot";
+    // Secours : si splash.js ne se charge pas, un clic masque quand même la page de garde
+    setTimeout(function () { if (!window.NexusCover) sp.addEventListener("click", function () { sp.dataset.state = "gone"; }); }, 4000);
+  })();
+</script>
+<header>
+  <h1 class="glitch"><a href="#accueil" class="home-link" title="Retour au sommaire"><img class="hdr-logo" src="/static/nexus-logo.svg" alt=""><span class="t" data-text="NEX"><span>NEX</span></span><em>/</em><span class="t" data-text="US">US</span></a>
+    <span class="sub sub-sent">SYSTÈME AUTONOME <b>//</b> PROTOCOLE SENTINELLE <b>//</b> CONSCIENCE EN LIGNE<span class="nx-cursor" aria-hidden="true"></span></span>
+    <span class="sub sub-term"><b class="pr">root@nexus</b>:<i>~</i>#&nbsp;./centre_de_controle --live <b>//</b> NEURAL LINK ONLINE<span class="nx-cursor" aria-hidden="true"></span></span></h1>
+  <div class="status">
+    <span><span class="dot" id="dot-api"></span>API</span>
+    <span><span class="dot" id="dot-gpu"></span>GPU</span>
+    <span><span class="dot" id="dot-lhm"></span>LHM</span>
+    <span class="gm-badge" id="gm-badge" hidden></span>
+    <span id="clock"></span>
+    <button class="btn phone" id="btn-phone" title="Accès depuis le téléphone" hidden>📱 Téléphone</button>
+    <div class="pf-wrap" id="pf-wrap">
+      <button class="btn pf-btn" id="btn-profil" aria-haspopup="listbox" aria-expanded="false" title="Profil visuel de ce mode">🎨 <span id="pf-cur">Défaut</span> ▾</button>
+      <div class="pf-menu" id="pf-menu" hidden></div>
+    </div>
+    <div class="rg-wrap" id="rg-wrap">
+      <button class="btn rg-btn" id="btn-reglages" aria-haspopup="true" aria-expanded="false" title="Réglages : tailles de l'interface, son des rappels">⚙</button>
+      <div class="rg-menu" id="rg-menu" hidden></div>
+    </div>
+    <button class="btn theme-btn" id="btn-theme" title="Changer de thème (Terminal / Sentinelle)">◐ Thème</button>
+    <button class="btn ver" id="btn-ver" title="Notes de version">v–</button>
+    <button class="btn claude" id="btn-claude" title="Ouvrir l'application Claude (clic droit : claude.ai dans le navigateur)">✦ Claude</button>
+    <button class="btn" id="btn-notif" title="Recevoir une notification Windows quand une alerte apparaît">Notifications : off</button>
+  </div>
+</header>
+<nav class="tabs" id="tabs" role="tablist">
+  <button class="btn nav-back" id="nav-back" hidden title="Retour au sommaire (Échap)">◀ Retour</button>
+  <a href="#accueil" role="tab" data-tab="accueil">⌂ Sommaire</a>
+  <a href="#pc" role="tab" data-tab="pc">PC</a>
+  <a href="#media" role="tab" data-tab="media">Média</a>
+  <a href="#deck" role="tab" data-tab="deck">Deck</a>
+  <a href="#lanceur" role="tab" data-tab="lanceur">Lanceur</a>
+  <a href="#reseau" role="tab" data-tab="reseau">Réseau</a>
+  <a href="#statistiques" role="tab" data-tab="statistiques">Statistiques</a>
+  <a href="#agenda" role="tab" data-tab="agenda">Agenda</a>
+  <a href="#souvenirs" role="tab" data-tab="souvenirs">Souvenirs</a>
+  <a href="#journal" role="tab" data-tab="journal">Journal</a>
+  <button class="np" id="np" hidden title="Lecture en cours — ouvrir l'onglet Média"></button>
+</nav>
+<div class="alerts" id="alerts"></div>
+<main class="tab" id="tab-pc">
+<div class="error-banner" id="error-banner">&gt; ERREUR : le serveur ne répond pas. Relancez lancer.bat (la fenêtre noire doit rester ouverte).</div>
+
+<section class="grid row3">
+  <div class="card c-cpu">
+    <h2>CPU <small id="cpu-sub"></small></h2>
+    <div class="gauge-row">
+      <div class="gauge"><canvas id="g-cpu" width="340" height="208"></canvas><div class="val" id="v-cpu">–</div></div>
+      <div class="facts" id="cpu-facts"></div>
+    </div>
+    <canvas class="spark" id="s-cpu"></canvas>
+    <div class="spark-legend"><span>−60 s</span><span>maintenant</span></div>
+    <div class="cores" id="cores"></div>
+  </div>
+
+  <div class="card c-ram">
+    <h2>RAM</h2>
+    <div class="gauge-row">
+      <div class="gauge"><canvas id="g-ram" width="340" height="208"></canvas><div class="val" id="v-ram">–</div></div>
+      <div class="facts" id="ram-facts"></div>
+    </div>
+    <canvas class="spark" id="s-ram"></canvas>
+    <div class="spark-legend"><span>−60 s</span><span>maintenant</span></div>
+  </div>
+
+  <div class="card c-gpu">
+    <h2>GPU <small id="gpu-sub"></small></h2>
+    <div id="gpu-body">
+      <div class="gauge-row">
+        <div class="gauge"><canvas id="g-gpu" width="340" height="208"></canvas><div class="val" id="v-gpu">–</div></div>
+        <div class="facts" id="gpu-facts"></div>
+      </div>
+      <canvas class="spark" id="s-gpu"></canvas>
+      <div class="spark-legend"><span>−60 s</span><span>maintenant</span></div>
+    </div>
+    <div class="na-msg" id="gpu-na" hidden>Carte graphique indisponible</div>
+  </div>
+</section>
+
+<section class="grid row3">
+  <div class="card c-temp">
+    <h2>Températures</h2>
+    <div class="temps">
+      <div class="temp"><div class="label">CPU</div><div class="big" id="t-cpu">–</div><div class="src" id="t-cpu-src"></div></div>
+      <div class="temp"><div class="label">GPU</div><div class="big" id="t-gpu">–</div><div class="src" id="t-gpu-src"></div></div>
+    </div>
+    <div class="rows" id="disk-temps"></div>
+  </div>
+
+  <div class="card c-net">
+    <h2>Réseau <small id="net-sub"></small></h2>
+    <div class="net-rates">
+      <div class="rate down"><div class="label">▼ Réception</div><div class="v" id="net-rx">–</div></div>
+      <div class="rate up"><div class="label">▲ Envoi</div><div class="v" id="net-tx">–</div></div>
+    </div>
+    <canvas class="spark" id="s-net"></canvas>
+    <div class="spark-legend"><span>−60 s</span><span id="net-scale"></span><span>maintenant</span></div>
+    <div class="iface-main" id="net-main"></div>
+    <div class="rows" id="net-others"></div>
+  </div>
+
+  <div class="card c-disk">
+    <h2>Disques</h2>
+    <div id="disks"></div>
+  </div>
+</section>
+
+<section class="grid row-wide">
+  <div class="card c-proc">
+    <h2>Processus <small id="proc-sub"></small></h2>
+    <div class="proc-cols">
+      <div><div class="proc-title">▸ Top CPU</div><div id="proc-cpu"></div></div>
+      <div><div class="proc-title">▸ Top RAM</div><div id="proc-ram"></div></div>
+    </div>
+  </div>
+
+  <div class="card c-fan">
+    <h2>Ventilation &amp; énergie</h2>
+    <div class="power">
+      <div class="rate"><div class="label">CPU</div><div class="v" id="pw-cpu">–</div></div>
+      <div class="rate"><div class="label">GPU</div><div class="v" id="pw-gpu">–</div><small id="pw-gpu-lim"></small></div>
+      <div class="rate"><div class="label">Total</div><div class="v" id="pw-tot">–</div><small>CPU + GPU</small></div>
+    </div>
+    <div id="fans"></div>
+    <div class="fan-off" id="fans-off"></div>
+  </div>
+</section>
+</main>
+
+<main class="tab" id="tab-accueil" hidden></main>
+<main class="tab" id="tab-media" hidden></main>
+<main class="tab" id="tab-deck" hidden></main>
+<main class="tab" id="tab-lanceur" hidden></main>
+<main class="tab" id="tab-reseau" hidden></main>
+<main class="tab" id="tab-agenda" hidden></main>
+<main class="tab" id="tab-souvenirs" hidden></main>
+<main class="tab" id="tab-statistiques" hidden></main>
+<main class="tab" id="tab-journal" hidden></main>
+
+<script>
+"use strict";
+const HISTORY = 60;
+const hist = { cpu: [], ram: [], gpu: [], rx: [], tx: [] };
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const C = { cpu: css("--cyan"), ram: css("--magenta"), gpu: css("--green"), rx: css("--cyan"),
+            tx: css("--yellow"), track: css("--track"), warn: css("--warn"), hot: css("--hot") };
+// Changement de profil visuel : les courbes et jauges reprennent les nouvelles couleurs sans recharger
+addEventListener("nexus:profile", () => Object.assign(C, { cpu: css("--cyan"), ram: css("--magenta"), gpu: css("--green"),
+  rx: css("--cyan"), tx: css("--yellow"), track: css("--track"), warn: css("--warn"), hot: css("--hot") }));
+const $ = id => document.getElementById(id);
+
+function fmtBytes(b) {
+  if (b == null) return "–";
+  const u = ["o", "Ko", "Mo", "Go", "To"];
+  let i = 0;
+  while (b >= 1024 && i < u.length - 1) { b /= 1024; i++; }
+  return b.toFixed(b >= 100 || i === 0 ? 0 : 1) + " " + u[i];
+}
+// Débit réseau en bits/s (unité habituelle des connexions)
+function fmtRate(Bps) {
+  let b = Bps * 8;
+  const u = ["b/s", "Kb/s", "Mb/s", "Gb/s"];
+  let i = 0;
+  while (b >= 1000 && i < u.length - 1) { b /= 1000; i++; }
+  return b.toFixed(b >= 100 || i === 0 ? 0 : 1) + " " + u[i];
+}
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function tempClass(t, warn, hot) {
+  if (t == null) return "";
+  return t >= hot ? "t-hot" : t >= warn ? "t-warn" : "t-ok";
+}
+function usageColor(p) { return p >= 90 ? C.hot : p >= 75 ? C.warn : null; }
+
+// Valeur d'une jauge exposée aux profils visuels (CSS seul, voir profils/FORMAT.md § 4.8) :
+// --valeur (nombre de 0 à 100) et data-niveau (bas, moyen, haut, critique). Sans profil : aucun effet visible.
+function nxNiveau(el, v, haut = 75, critique = 90, moyen = 50) {
+  if (!el) return;
+  if (v == null || !isFinite(v)) { el.style.removeProperty("--valeur"); delete el.dataset.niveau; return; }
+  const n = Math.max(0, Math.min(100, v));
+  el.style.setProperty("--valeur", n.toFixed(1));
+  el.dataset.niveau = v >= critique ? "critique" : v >= haut ? "haut" : v >= moyen ? "moyen" : "bas";
+}
+
+// Jauge en arc segmenté
+function drawGauge(id, pct, color) {
+  nxNiveau($(id).parentElement, pct);
+  const c = $(id), ctx = c.getContext("2d");
+  const w = c.width, h = c.height, cx = w / 2, cy = h - 14, r = Math.min(w / 2, h) - 26;
+  const N = 32, gap = 0.035, span = Math.PI / N;
+  const lit = pct == null ? 0 : Math.round(Math.max(0, Math.min(100, pct)) / 100 * N);
+  const col = (pct != null && usageColor(pct)) || color;
+  ctx.clearRect(0, 0, w, h);
+  ctx.lineWidth = 24;
+  for (let i = 0; i < N; i++) {
+    const a0 = Math.PI + i * span + gap, a1 = Math.PI + (i + 1) * span - gap;
+    ctx.strokeStyle = i < lit ? col : C.track;
+    ctx.shadowColor = col; ctx.shadowBlur = i < lit ? 12 : 0;
+    ctx.beginPath(); ctx.arc(cx, cy, r, a0, a1); ctx.stroke();
+  }
+  ctx.shadowBlur = 0;
+}
+
+// Courbe : series = [{data, color}], max = valeur haute de l'axe
+function drawSpark(id, series, max) {
+  const c = $(id), dpr = window.devicePixelRatio || 1;
+  const w = c.clientWidth, h = c.clientHeight;
+  if (c.width !== w * dpr || c.height !== h * dpr) { c.width = w * dpr; c.height = h * dpr; }
+  const ctx = c.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.strokeStyle = C.track; ctx.lineWidth = 1; ctx.setLineDash([2, 4]);
+  [0, 0.5, 1].forEach(f => { const y = Math.round(2 + (h - 4) * f) + 0.5;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); });
+  ctx.setLineDash([]);
+  const step = w / (HISTORY - 1);
+  const y = v => 2 + (h - 4) * (1 - Math.min(v, max) / max);
+  series.forEach(({ data, color }) => {
+    if (data.length < 2) return;
+    const x0 = w - (data.length - 1) * step;
+    ctx.beginPath();
+    data.forEach((v, i) => i ? ctx.lineTo(x0 + i * step, y(v)) : ctx.moveTo(x0, y(v)));
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineJoin = "round";
+    ctx.shadowColor = color; ctx.shadowBlur = 8; ctx.stroke(); ctx.shadowBlur = 0;
+    ctx.lineTo(x0 + (data.length - 1) * step, h); ctx.lineTo(x0, h); ctx.closePath();
+    ctx.fillStyle = color + "18"; ctx.fill();
+  });
+}
+
+function push(arr, v) { arr.push(v); if (arr.length > HISTORY) arr.shift(); }
+
+function setTemp(elId, srcId, t, warn, hot, srcText) {
+  const el = $(elId);
+  nxNiveau(el.closest(".temp"), t, warn, hot, warn - 15);      // --valeur = °C (bornée à 100)
+  if (t == null) { el.textContent = "indisponible"; el.className = "big na"; }
+  else { el.textContent = Math.round(t) + "°"; el.className = "big " + tempClass(t, warn, hot); }
+  $(srcId).textContent = srcText || "";
+}
+
+function render(s) {
+  // ---- CPU
+  push(hist.cpu, s.cpu.percent);
+  $("v-cpu").textContent = Math.round(s.cpu.percent) + "%";
+  drawGauge("g-cpu", s.cpu.percent, C.cpu);
+  drawSpark("s-cpu", [{ data: hist.cpu, color: C.cpu }], 100);
+  // une ligne de valeurs = un bloc qui ne se coupe pas (voir .facts .fl) ; la ligne « source » peut passer à la ligne
+  function lignes(html) { return html.split("<br>").map(l => `<div class="fl${l.startsWith("<small") ? " libre" : ""}">${l}</div>`).join(""); }
+  $("cpu-sub").textContent = `${s.cpu.physical_cores} cœurs / ${s.cpu.logical_cores} threads`;
+  $("cpu-facts").innerHTML = lignes(`Charge &nbsp;<b>${s.cpu.percent.toFixed(1)} %</b><br>` +
+    `Pic cœur <b>${Math.max(...s.cpu.per_core).toFixed(0)} %</b><br>` +
+    `Temp. &nbsp;&nbsp;<b class="${tempClass(s.cpu.temperature, 65, 80)}">${s.cpu.temperature == null ? "indisponible" : s.cpu.temperature.toFixed(1) + " °C"}</b>` +
+    (s.cpu.power_w != null ? `<br>Conso. &nbsp;<b>${s.cpu.power_w.toFixed(0)} W</b>` : "") +
+    (s.cpu.clock_avg_mhz ? `<br>Fréq. &nbsp;&nbsp;<b>${fmtGhz(s.cpu.clock_avg_mhz)}</b> <small>(max ${fmtGhz(s.cpu.clock_max_mhz)})</small>` : ""));
+  const cores = $("cores");
+  if (cores.children.length !== s.cpu.per_core.length) {
+    cores.innerHTML = s.cpu.per_core.map(() => `<div class="core"><i></i></div>`).join("");
+  }
+  s.cpu.per_core.forEach((p, i) => {
+    const bar = cores.children[i];
+    bar.firstChild.style.height = p + "%";
+    bar.title = `Thread ${i} : ${p.toFixed(0)} %`;
+  });
+
+  // ---- RAM
+  push(hist.ram, s.ram.percent);
+  $("v-ram").textContent = Math.round(s.ram.percent) + "%";
+  drawGauge("g-ram", s.ram.percent, C.ram);
+  drawSpark("s-ram", [{ data: hist.ram, color: C.ram }], 100);
+  $("ram-facts").innerHTML = lignes(`Utilisée <b>${fmtBytes(s.ram.used)}</b><br>` +
+    `Totale &nbsp;&nbsp;<b>${fmtBytes(s.ram.total)}</b><br>Libre &nbsp;&nbsp;&nbsp;<b>${fmtBytes(s.ram.available)}</b>`);
+
+  // ---- GPU
+  const g = s.gpu.available ? s.gpu.devices[0] : null;
+  $("dot-gpu").className = "dot " + (g ? "on" : "off");
+  $("gpu-body").hidden = !g; $("gpu-na").hidden = !!g;
+  if (g) {
+    // Même carte pour toutes les marques : chaque ligne n'apparaît que si la source la fournit
+    const load = g.load_percent == null ? null : g.load_percent;
+    push(hist.gpu, load || 0);
+    $("gpu-sub").textContent = g.name;
+    $("v-gpu").textContent = load == null ? "–" : Math.round(load) + "%";
+    drawGauge("g-gpu", load || 0, C.gpu);
+    drawSpark("s-gpu", [{ data: hist.gpu, color: C.gpu }], 100);
+    const fan = g.fan_percent != null ? (g.fan_percent === 0 ? "arrêt (0 dB)" : g.fan_percent + " %")
+      : g.fan_rpm != null ? (g.fan_rpm === 0 ? "arrêt (0 dB)" : Math.round(g.fan_rpm) + " tr/min") : null;
+    $("gpu-facts").innerHTML = lignes(`Charge <b>${load == null ? "–" : load.toFixed(0) + " %"}</b>` +
+      (g.vram_used != null || g.vram_total ? `<br>VRAM &nbsp;&nbsp;<b>${g.vram_used != null ? fmtBytes(g.vram_used) : "–"}</b>` +
+        (g.vram_total ? ` / <b>${fmtBytes(g.vram_total)}</b>` : "") : "") +
+      `<br>Temp. &nbsp;<b class="${tempClass(g.temperature, 70, 83)}">${g.temperature == null ? "indisponible" : g.temperature.toFixed(0) + " °C"}</b>` +
+      (g.hotspot != null ? ` <small>· point chaud ${g.hotspot.toFixed(0)} °C</small>` : "") +
+      (g.power_w != null ? `<br>Conso. <b>${g.power_w.toFixed(0)} W</b>${g.power_limit_w ? ` / ${g.power_limit_w} W` : ""}` : "") +
+      (g.clock_core_mhz != null ? `<br>Fréq. &nbsp;<b>${g.clock_core_mhz} MHz</b>${g.clock_mem_mhz != null ? ` <small>· mém. ${g.clock_mem_mhz} MHz</small>` : ""}` : "") +
+      (fan ? `<br>Ventilo <b>${fan}</b>` : "") +
+      (g.throttle ? `<br><b class="t-warn">⚠ Bridé : ${esc(g.throttle)}</b>` : "") +
+      `<br><small class="muted">${esc(g.vendor || "")} · lu par ${esc(s.gpu.source_label || "?")}</small>` +
+      (s.gpu.hint ? `<br><small class="t-warn">${esc(s.gpu.hint)}</small>` : ""));
+  } else {
+    $("gpu-sub").textContent = s.gpu.adapters && s.gpu.adapters.length ? s.gpu.adapters[0].name : "";
+    $("gpu-na").textContent = "Carte graphique indisponible" + (s.gpu.error ? " — " + s.gpu.error : "");
+  }
+
+  // ---- Températures (CPU : vert < 65, orange < 80 ; GPU : vert < 70, orange < 83)
+  setTemp("t-cpu", "t-cpu-src", s.cpu.temperature, 65, 80,
+    s.lhm.available ? (s.cpu.temperature_source || "aucun capteur CPU") : "LibreHardwareMonitor ne répond pas");
+  setTemp("t-gpu", "t-gpu-src", g ? g.temperature : null, 70, 83,
+    g ? (g.temperature == null && s.gpu.source === "windows" ? "installe LibreHardwareMonitor" : g.vendor || "") : "");
+  $("dot-lhm").className = "dot " + (s.lhm.available ? "on" : "off");
+  $("dot-lhm").parentElement.title = s.lhm.available ? s.lhm.url : (s.lhm.error || "");
+  const dt = $("disk-temps");
+  if (!s.lhm.available) dt.innerHTML = `<div><span>Disques</span><b>indisponible</b></div>`;
+  else if (!s.disk_temperatures.length) dt.innerHTML = `<div><span>Disques</span><b>aucun capteur</b></div>`;
+  else dt.innerHTML = s.disk_temperatures.map(d =>
+    `<div><span>${esc(d.name)}</span><b class="${tempClass(d.temperature, 50, 60)}">${d.temperature.toFixed(0)} °C</b></div>`).join("");
+
+  // ---- Réseau
+  const n = s.network;
+  push(hist.rx, n.rx_rate); push(hist.tx, n.tx_rate);
+  $("net-rx").textContent = fmtRate(n.rx_rate);
+  $("net-tx").textContent = fmtRate(n.tx_rate);
+  // Échelle automatique : arrondie au palier « joli » supérieur (min 1 Mb/s)
+  const peak = Math.max(125000, ...hist.rx, ...hist.tx);
+  const nice = [1, 2, 5, 10]; let scale = 125000;
+  outer: for (let e = 125000; ; e *= 10) for (const k of nice) if (k * e >= peak) { scale = k * e; break outer; }
+  $("net-scale").textContent = "max " + fmtRate(scale);
+  drawSpark("s-net", [{ data: hist.rx, color: C.rx }, { data: hist.tx, color: C.tx }], scale);
+  const main = n.interfaces.find(i => i.name === n.primary);
+  $("net-sub").textContent = main ? main.name : "aucune interface";
+  $("net-main").innerHTML = main
+    ? `IP <b>${esc(main.ipv4 || "–")}</b> · Lien <b>${main.speed_mbps ? (main.speed_mbps >= 1000 ? main.speed_mbps / 1000 + " Gb/s" : main.speed_mbps + " Mb/s") : "–"}</b><br>` +
+      `Total reçu <b>${fmtBytes(main.rx_total)}</b> · envoyé <b>${fmtBytes(main.tx_total)}</b>`
+    : `<span class="na-msg">Aucune interface réseau active</span>`;
+  $("net-others").innerHTML = n.interfaces.filter(i => i.name !== n.primary).map(i =>
+    `<div><span>${esc(i.name)}</span><b>▼ ${fmtRate(i.rx_rate)} &nbsp;▲ ${fmtRate(i.tx_rate)}</b></div>`).join("");
+
+  // ---- Disques
+  $("disks").innerHTML = s.disks.map(d => {
+    const col = usageColor(d.percent) || C.cpu;
+    const niv = d.percent >= 90 ? "critique" : d.percent >= 75 ? "haut" : d.percent >= 50 ? "moyen" : "bas";
+    return `<div class="disk" style="--valeur:${d.percent.toFixed(1)}" data-niveau="${niv}"><div class="disk-head">
+      <span class="name">${esc(d.mountpoint)}</span>
+      <span class="sub">${fmtBytes(d.used)} / ${fmtBytes(d.total)} · ${fmtBytes(d.free)} libres</span>
+      <span class="pct" style="color:${col}">${d.percent.toFixed(1)}%</span>
+      </div><div class="bar"><i style="width:${d.percent}%;background-color:${col};box-shadow:0 0 10px ${col}"></i></div></div>`;
+  }).join("") || `<div class="na-msg">Aucun disque détecté</div>`;
+
+  // ---- Mode jeu (badge + allègement visuel)
+  const gm = s.gamemode || {};
+  document.body.classList.toggle("gamemode", !!gm.in_game);
+  $("gm-badge").hidden = !gm.in_game;
+  if (gm.in_game) $("gm-badge").textContent = "▶ MODE JEU · " + gameLabel(gm.game);
+
+  // ---- Processus
+  const pr = s.processes;
+  $("proc-sub").textContent = (pr.count ? `${pr.count} processus` : "") + (pr.paused ? " · en pause (mode jeu)" : "");
+  const procRows = (list, val, bar, color) => list.map(p =>
+    `<div class="proc"><span class="n">${esc(p.name)}${p.count > 1 ? ` <small>×${p.count}</small>` : ""}</span>` +
+    `<span class="v">${val(p)}</span><span class="mini"><i style="width:${Math.min(100, bar(p))}%;background:${color};box-shadow:0 0 6px ${color}"></i></span></div>`
+  ).join("") || `<div class="na-msg">Analyse en cours…</div>`;
+  $("proc-cpu").innerHTML = procRows(pr.top_cpu, p => p.cpu.toFixed(1) + " %", p => p.cpu, C.cpu);
+  $("proc-ram").innerHTML = procRows(pr.top_ram, p => fmtBytes(p.ram), p => p.ram / s.ram.total * 100, C.ram);
+
+  // ---- Ventilation & énergie
+  const cpuW = s.cpu.power_w, gpuW = g ? g.power_w : null;
+  $("pw-cpu").textContent = cpuW != null ? cpuW.toFixed(0) + " W" : "–";
+  $("pw-gpu").textContent = gpuW != null ? gpuW.toFixed(0) + " W" : "–";
+  $("pw-gpu-lim").textContent = g && g.power_limit_w ? `limite ${g.power_limit_w} W` : "";
+  $("pw-tot").textContent = cpuW != null || gpuW != null ? ((cpuW || 0) + (gpuW || 0)).toFixed(0) + " W" : "–";
+  const hwLabel = { board: "Carte mère", gpu: "GPU", cpu: "CPU", disk: "Disque", other: "" };
+  const fans = s.fans || [];
+  fanById = new Map(fans.map(f => [f.id, f]));
+  const on = fans.filter(f => f.rpm > 0), off = fans.filter(f => !(f.rpm > 0));
+  const rawName = f => `${hwLabel[f.kind] || f.hardware} · ${f.name}`;
+  const edit = f => `<button class="edit" data-fan="${esc(f.id)}" title="Renommer (${esc(rawName(f))})">✎</button>`;
+  $("fans").innerHTML = !s.lhm.available
+    ? `<div class="na-msg">Ventilateurs indisponibles (LibreHardwareMonitor ne répond pas)</div>`
+    : on.map(f => `<div class="fan"><span class="n">${f.label
+          ? `<span class="lbl">${esc(f.label)}</span> <small>${esc(f.name)}</small>` : esc(rawName(f))} ${edit(f)}</span>` +
+        `<span class="v">${Math.round(f.rpm)} tr/min${f.percent != null ? ` <small style="color:var(--muted)">${Math.round(f.percent)} %</small>` : ""}</span>` +
+        `<span class="mini"><i style="width:${Math.min(100, f.rpm / Math.max(2000, ...on.map(x => x.rpm)) * 100)}%"></i></span></div>`).join("")
+      || `<div class="na-msg">Aucun ventilateur détecté</div>`;
+  $("fans-off").innerHTML = s.lhm.available && off.length
+    ? `À l'arrêt ou sans signal de vitesse : ` + off.map(f =>
+        `<span class="chip">${esc(f.label || (f.kind === "gpu" ? "GPU " : "") + f.name)} ${edit(f)}</span>`).join(" ")
+    : "";
+
+  renderAlerts(s.alerts || []);
+}
+
+// ---- Renommer un ventilateur (enregistré côté serveur dans fan_names.json)
+let fanById = new Map();
+document.addEventListener("click", async ev => {
+  const btn = ev.target.closest("button.edit[data-fan]");
+  if (!btn) return;
+  const f = fanById.get(btn.dataset.fan);
+  if (!f) return;
+  const label = prompt(`Nom pour « ${f.hardware} · ${f.name} »\n(ex. « Pompe AIO », « Façade ×3 » ; vide = nom d'origine)`, f.label || "");
+  if (label === null) return;
+  try {
+    const r = await fetch("/api/fan-name", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: f.id, label }) });
+    if (!r.ok) throw new Error(r.status);
+    tick();
+  } catch (e) { alert("Impossible d'enregistrer le nom : " + e.message); }
+});
+
+// « VALORANT-Win64-Shipping.exe » -> « VALORANT »
+function gameLabel(exe) {
+  return String(exe || "").replace(/\.exe$/i, "").replace(/-Win64-Shipping$|-Win64-Test$|_x64$|64$/i, "");
+}
+
+function fmtGhz(mhz) { return mhz == null ? "–" : (mhz / 1000).toFixed(2) + " GHz"; }
+
+// ---- Alertes + notifications Windows (via le navigateur)
+const notified = new Map();          // id -> horodatage de la dernière notification
+const NOTIF_COOLDOWN = 10 * 60 * 1000;
+let notifOn = false;
+try { notifOn = localStorage.getItem("notif") === "1" && "Notification" in window && Notification.permission === "granted"; } catch (e) {}
+function updNotifBtn() {
+  const b = $("btn-notif");
+  b.textContent = "Notifications : " + (notifOn ? "on" : "off");
+  b.className = "btn" + (notifOn ? " on" : "");
+}
+$("btn-notif").addEventListener("click", async () => {
+  if (!("Notification" in window)) { alert("Ce navigateur ne gère pas les notifications."); return; }
+  if (!notifOn) {
+    const perm = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
+    notifOn = perm === "granted";
+    if (!notifOn) alert("Notifications refusées par le navigateur. Autorisez-les dans les paramètres du site.");
+  } else {
+    notifOn = false;
+  }
+  try { localStorage.setItem("notif", notifOn ? "1" : "0"); } catch (e) {}
+  updNotifBtn();
+});
+updNotifBtn();
+
+// État des alertes lisible par les profils visuels (CSS seulement, voir profils/FORMAT.md § 4.6) :
+//   body[data-alerte="aucune|normale|critique"] en continu ;
+//   body[data-alerte-evenement="nouvelle-critique|resolue"] pendant 3 s quand une alerte critique apparaît
+//   ou quand toutes les alertes disparaissent.
+let alertPrev = null, alertEvtTimer = null;
+function alertState(list) {
+  const now = list.some(a => a.level === "crit") ? "critique" : list.length ? "normale" : "aucune";
+  const ids = new Set(list.filter(a => a.level === "crit").map(a => a.id));
+  let evt = null;
+  if (alertPrev) {
+    if (now === "aucune" && alertPrev.state !== "aucune") evt = "resolue";
+    else if ([...ids].some(id => !alertPrev.crit.has(id))) evt = "nouvelle-critique";
+  }
+  alertPrev = { state: now, crit: ids };
+  document.body.dataset.alerte = now;
+  if (evt) {
+    document.body.dataset.alerteEvenement = evt;
+    clearTimeout(alertEvtTimer);
+    alertEvtTimer = setTimeout(() => { delete document.body.dataset.alerteEvenement; }, 3000);
+  }
+}
+function renderAlerts(list) {
+  $("alerts").innerHTML = list.map(a =>
+    `<div class="alert ${a.level}"><b>${a.level === "crit" ? "CRITIQUE" : "ALERTE"}</b>${esc(a.text)}</div>`).join("");
+  document.title = (list.some(a => a.level === "crit") ? "⚠ " : "") + "NEXUS";
+  alertState(list);
+  const now = Date.now(), active = new Set(list.map(a => a.id));
+  for (const id of [...notified.keys()]) if (!active.has(id)) notified.delete(id);
+  if (!notifOn) return;
+  for (const a of list) {
+    const last = notified.get(a.id);
+    if (last && now - last < NOTIF_COOLDOWN) continue;
+    notified.set(a.id, now);
+    try { new Notification(a.level === "crit" ? "⚠ NEXUS — critique" : "NEXUS — alerte", { body: a.text, tag: a.id }); } catch (e) {}
+  }
+}
+
+let busy = false, tickN = 0;
+async function tick() {
+  if (busy) return;
+  // (mode jeu : l'onglet PC continue d'être rafraîchi chaque seconde, rien n'y est mis en pause)
+  // Onglet caché : une mesure toutes les 5 s suffit (alertes et notifications continuent), rien n'est affiché
+  if (document.hidden && (tickN++ % 5)) return;
+  busy = true;
+  try {
+    const r = await fetch("/api/stats", { cache: "no-store" });
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    window.lastStats = data;          // réutilisé par le sommaire
+    render(data);
+    $("dot-api").className = "dot on";
+    $("error-banner").style.display = "none";
+  } catch (e) {
+    $("dot-api").className = "dot off";
+    $("error-banner").style.display = "block";
+  } finally {
+    busy = false;
+    $("clock").textContent = new Date().toLocaleTimeString("fr-FR");
+  }
+}
+tick();
+setInterval(tick, 1000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) tick(); });   // retour : à jour tout de suite
+</script>
+<script src="/static/js/tabs.js"></script>
+<script src="/static/js/media.js"></script>
+<script src="/static/js/mixer.js"></script>
+<script src="/static/js/deck.js"></script>
+<script src="/static/js/launcher.js"></script>
+<script src="/static/js/network.js"></script>
+<script src="/static/js/layout.js"></script>
+<script src="/static/js/fetes.js"></script>
+<script src="/static/js/agenda.js"></script>
+<script src="/static/js/mur.js"></script>
+<script src="/static/js/souvenirs.js"></script>
+<script src="/static/js/statistiques.js"></script>
+<script src="/static/js/journal.js"></script>
+<script src="/static/js/gamemode.js"></script>
+<script src="/static/js/version.js"></script>
+<script src="/static/js/home.js"></script>
+<script src="/static/js/splash.js"></script>
+<script src="/static/js/phone.js"></script>
+<script src="/static/js/theme.js"></script>
+<script src="/static/js/profiles.js"></script>
+<script src="/static/js/rappels.js"></script>
+<script src="/static/js/reglages.js"></script>
+<script src="/static/js/blocs.js"></script>
+</body>
+</html>

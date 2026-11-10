@@ -1,0 +1,34 @@
+{
+  "discord": {
+    "enabled": true,
+    "token": "COLLE_ICI_LE_JETON_DU_BOT",
+    "user_id": "TON_ID_UTILISATEUR_DISCORD",
+    "alert_channel_id": "ID_DU_SALON_DES_ALERTES"
+  },
+  "alerts": {
+    "cpu_temp": 85,
+    "gpu_temp": 83,
+    "ram_percent": 92,
+    "disk_percent": 95,
+    "cooldown_minutes": 30,
+    "check_seconds": 30
+  },
+  "agenda": {
+    "rappels_minutes": [
+      60,
+      30
+    ],
+    "heure_reference": "09:00",
+    "rappels_discord": true
+  },
+  "deck": {
+    "password": "CHOISIS_UN_MOT_DE_PASSE",
+    "rate_limit_per_minute": 30
+  },
+  "mises_a_jour": {
+    "depot": "proprietaire/nexus-panel",
+    "actif": true,
+    "intervalle_heures": 6,
+    "discord": false
+  }
+}

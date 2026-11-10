@@ -1,0 +1,52 @@
+/* ==========================================================================
+   MODÈLE DE PROFIL NEXUS — copie ce dossier, renomme-le (minuscules, chiffres, tirets),
+   puis modifie profil.json et ce fichier. Format complet : profils/FORMAT.md
+   Règle d'or : chaque sélecteur commence par :root[data-profile]
+   ========================================================================== */
+
+/* 1. Couleurs et polices (variables) : c'est souvent suffisant pour un nouveau look */
+:root[data-profile] {
+  /* couleurs « r, g, b » utilisées pour les transparences (lueurs, fonds translucides) */
+  --neon-rgb: 0, 194, 255;      /* = --cyan */
+  --mag-rgb: 255, 92, 138;      /* = --magenta */
+  --yel-rgb: 255, 204, 0;       /* = --yellow */
+  --ok-rgb: 90, 220, 140;
+  --deep-rgb: 12, 16, 20;       /* fond des encadrés */
+  --glow2-rgb: 0, 80, 120;      /* halo du fond */
+  --neon3-rgb: 200, 240, 255;
+
+  --bg: #101418;                /* fond de la page */
+  --card: rgba(20, 26, 32, .9); /* fond des cartes */
+  --text: #e8f1f8;  --text-2: #c2d0db;  --muted: #7d8c99;
+  --track: #22303b;             /* fond des barres et des jauges */
+  --edge: #2e3e4b;  --edge-2: #253440;
+  --deep-1: #141a20;  --deep-2: #11161b;  --deep-3: #0d1115;
+
+  --cyan: #00c2ff;              /* couleur principale (nom historique) */
+  --neon-2: #66daff;  --neon-3: #b3ecff;
+  --magenta: #ff5c8a;           /* couleur secondaire */
+  --yellow: #ffcc00;            /* horloge, réseau, bouton Profil */
+  --green: #5adc8c;             /* courbe du GPU */
+  --ok: #5adc8c;  --warn: #ffb000;  --hot: #ff3b3b;
+
+  --mono: "Cascadia Mono", Consolas, monospace;
+  --display: "Bahnschrift SemiBold", "Segoe UI", sans-serif;
+  --chrome: linear-gradient(180deg, #ffffff, #b3ecff 50%, #00c2ff);   /* gros titres */
+  --tab-grad: linear-gradient(180deg, #66daff, #00c2ff);              /* onglet actif */
+  --hex-img: none;                                                    /* motif du fond (mode Sentinelle) */
+}
+
+/* 2. Fond de la page (facultatif) — images uniquement depuis assets/ */
+:root[data-profile] body {
+  background: radial-gradient(900px 500px at 50% 0%, rgba(var(--neon-rgb), .12), transparent 70%), var(--bg);
+  background-attachment: fixed;
+}
+/* :root[data-profile] body::before { display: none; }   sol en perspective */
+/* :root[data-profile] body::after  { display: none; }   lignes de balayage */
+
+/* 3. Formes (facultatif) */
+/* :root[data-profile] .card { border-radius: 12px; clip-path: none; } */
+/* :root[data-profile] .btn, :root[data-profile] .tabs a { border-radius: 8px; clip-path: none; } */
+
+/* 4. Réglages propres à un seul mode (facultatif) */
+/* :root[data-profile][data-theme="sentinelle"] { --cyan: #ff8c1a; } */

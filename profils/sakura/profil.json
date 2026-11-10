@@ -1,0 +1,11 @@
+{
+  "format": 1,
+  "nom": "Sakura",
+  "auteur": "NEXUS",
+  "version": "1.11",
+  "panel_min_version": "1.0.0",
+  "modes": ["terminal", "sentinelle"],
+  "description": "Cerisier en fleurs : nuit prune (Terminal) ou bleu nuit (Sentinelle), roses sakura, blanc crème et vert tendre. Intro où l'arbre pousse et fleurit, envol à travers les pétales au clic sur NEXUS.",
+  "apercu": { "couleurs": ["#1b1024", "#f48fb1", "#fff1d6", "#a8d88c"], "miniature": "assets/apercu.svg" },
+  "animations": { "intro_ms": 6200, "transition_ms": 3400, "remplace_transition": true, "ouverture": "cercle" }
+}

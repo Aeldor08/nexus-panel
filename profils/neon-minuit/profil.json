@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "nom": "Néon Minuit",
+  "auteur": "NEXUS",
+  "version": "1.0.1",
+  "panel_min_version": "1.0.0",
+  "modes": ["sentinelle"],
+  "description": "Néon des années 80 : rose et cyan électriques, ciel violet, soleil couchant rayé et sol quadrillé.",
+  "apercu": { "couleurs": ["#0d0221", "#ff3ea5", "#2de2e6", "#f9f871"] }
+}

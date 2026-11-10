@@ -1,0 +1,51 @@
+/* Profil « Ardoise » — sombre sobre, pour les deux modes.
+   Principe : on remplace les couleurs (variables), puis on coupe les lueurs, la grille, les lignes
+   de balayage et les découpes en biseau. Toutes les règles commencent par :root[data-profile]. */
+
+:root[data-profile] {
+  --neon-rgb: 122, 162, 247;  --mag-rgb: 115, 218, 202;  --yel-rgb: 224, 175, 104;  --ok-rgb: 158, 206, 106;
+  --deep-rgb: 22, 24, 32;     --glow2-rgb: 40, 44, 60;   --neon3-rgb: 195, 212, 252;
+  --bg: #16181f;  --card: #1d2029;  --line: #323849;
+  --text: #d6dae4;  --text-2: #b7bdcc;  --muted: #7c8396;
+  --track: #2a2f3c;  --edge: #323849;  --edge-2: #2a2f3c;
+  --deep-1: #1a1d25;  --deep-2: #171920;  --deep-3: #13151b;
+  --cyan: #7aa2f7;  --neon-2: #9ab8fa;  --neon-3: #c3d4fc;
+  --magenta: #73daca;  --yellow: #e0af68;  --green: #bb9af7;
+  --ok: #9ece6a;  --warn: #e0af68;  --hot: #f7768e;
+  --display: "Segoe UI Semibold", "Segoe UI", system-ui, sans-serif;
+  --aberr: 0 0 transparent;
+  --chrome: linear-gradient(var(--text), var(--text));
+  --tab-grad: var(--cyan);
+  --hex-img: none;
+}
+
+/* Fond uni, sans sol en perspective ni lignes de balayage */
+:root[data-profile] body { background: var(--bg); }
+:root[data-profile] body::before, :root[data-profile] body::after { display: none; }
+
+/* Aucune lueur */
+:root[data-profile] * { text-shadow: none !important; }
+:root[data-profile] .hdr-logo { filter: none; }
+:root[data-profile] h1.glitch .t::before, :root[data-profile] h1.glitch .t::after { display: none; }
+:root[data-profile] header::after { height: 1px; background: var(--edge); box-shadow: none; animation: none; }
+
+/* Titres en texte plein (pas de chrome) */
+:root[data-profile] h1 .home-link span, :root[data-profile] .home-hello, :root[data-profile] .home-title {
+  background: none; color: var(--text); -webkit-text-fill-color: var(--text); filter: none; }
+:root[data-profile] h1 em { color: var(--cyan); }
+
+/* Cartes arrondies, bordure fine */
+:root[data-profile] .card {
+  background: var(--card); border: 1px solid var(--edge); border-radius: 10px; clip-path: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .3); -webkit-backdrop-filter: none; backdrop-filter: none; }
+:root[data-profile] .card::before, :root[data-profile] .card::after { display: none; }
+:root[data-profile] .card h2 { font-family: var(--display); letter-spacing: 1px; }
+
+/* Boutons et onglets arrondis */
+:root[data-profile] .btn, :root[data-profile] .tabs a, :root[data-profile] .home-parts a,
+:root[data-profile] .dk-btn, :root[data-profile] .game, :root[data-profile] .cover, :root[data-profile] .home-ico {
+  clip-path: none; border-radius: 6px; }
+:root[data-profile] .tabs a { background: var(--deep-1); border: 1px solid var(--edge); transform: none; }
+:root[data-profile] .tabs a::before, :root[data-profile] .tabs a::after { content: none; }
+:root[data-profile] .tabs a[aria-selected="true"] { background: var(--cyan); color: var(--bg); box-shadow: none; }
+:root[data-profile] .bar { border-radius: 4px; overflow: hidden; }

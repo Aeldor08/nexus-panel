@@ -1,0 +1,59 @@
+/* Profil « Phosphore » — mode Terminal uniquement.
+   Écran cathodique vert : une seule couleur principale, texte qui « bave » légèrement,
+   police à chasse fixe partout, lignes de balayage marquées. */
+
+:root[data-profile] {
+  --neon-rgb: 51, 255, 102;   --mag-rgb: 255, 176, 0;   --yel-rgb: 212, 255, 92;  --ok-rgb: 51, 255, 102;
+  --deep-rgb: 2, 12, 4;       --glow2-rgb: 0, 90, 30;   --neon3-rgb: 200, 255, 210;
+  --bg: #020a02;  --card: rgba(4, 18, 6, .9);
+  --text: #b8ffc8;  --text-2: #8fe0a2;  --muted: #4f8f5f;
+  --track: #0b2a12;  --edge: #1a4a24;  --edge-2: #12361a;
+  --deep-1: #051507;  --deep-2: #041105;  --deep-3: #030b04;
+  --cyan: #33ff66;  --neon-2: #7dff9a;  --neon-3: #c8ffd2;
+  --magenta: #ffb000;  --yellow: #d4ff5c;  --green: #7dff9a;
+  --ok: #33ff66;  --warn: #ffb000;  --hot: #ff5533;
+  --display: var(--mono);
+  --aberr: 0 0 6px rgba(51, 255, 102, .55);
+  --chrome: linear-gradient(#c8ffd2, #33ff66);
+  --tab-grad: #33ff66;
+  --hex-img: none;
+}
+
+/* Fond : quadrillage fin (fichier local) et halo vert au centre de l'écran */
+:root[data-profile] body {
+  background:
+    radial-gradient(ellipse at center, rgba(51, 255, 102, .07), transparent 70%),
+    url("assets/grille.svg") 0 0 / 24px 24px,
+    var(--bg);
+  background-attachment: fixed;
+  text-shadow: 0 0 2px rgba(51, 255, 102, .55);
+}
+:root[data-profile] body::before { display: none; }
+/* Lignes de balayage épaisses + léger scintillement (coupé en mode jeu et si Windows réduit les animations) */
+:root[data-profile] body::after {
+  background:
+    repeating-linear-gradient(to bottom, rgba(0, 0, 0, .28) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, .7) 100%);
+  animation: pf-crt 6s steps(1) infinite;
+}
+@keyframes pf-crt { 0%, 96%, 100% { opacity: 1; } 97% { opacity: .82; } 98% { opacity: .95; } }
+
+/* Police à chasse fixe partout, pas de titres chromés */
+:root[data-profile] body, :root[data-profile] h1, :root[data-profile] .card h2, :root[data-profile] .gauge .val,
+:root[data-profile] .home-hello, :root[data-profile] .home-title, :root[data-profile] .home-time, :root[data-profile] #clock {
+  font-family: var(--mono); }
+:root[data-profile] h1 .home-link span, :root[data-profile] .home-hello, :root[data-profile] .home-title {
+  background: none; color: var(--cyan); -webkit-text-fill-color: var(--cyan); filter: none;
+  text-shadow: 0 0 8px rgba(51, 255, 102, .7); }
+:root[data-profile] .hdr-logo { filter: grayscale(1) sepia(1) hue-rotate(70deg) saturate(5); }
+
+/* Onglets de terminal : [ PC ] */
+:root[data-profile] .tabs a { clip-path: none; transform: none; background: transparent; border: 1px solid var(--edge); }
+:root[data-profile] .tabs a::before { content: "[ "; color: var(--muted); }
+:root[data-profile] .tabs a::after { content: " ]"; color: var(--muted); }
+:root[data-profile] .tabs a[aria-selected="true"] { background: var(--cyan); color: var(--bg); text-shadow: none; }
+:root[data-profile] .tabs a[aria-selected="true"]::before, :root[data-profile] .tabs a[aria-selected="true"]::after { color: var(--bg); }
+
+/* Cartes : simple cadre vert, titre précédé d'une invite */
+:root[data-profile] .card { background: var(--card); border: 1px solid var(--edge); box-shadow: inset 0 0 30px rgba(51, 255, 102, .05); }
+:root[data-profile] .card h2::before { content: "> "; color: var(--cyan); }

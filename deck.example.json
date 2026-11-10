@@ -1,0 +1,26 @@
+{
+  "buttons": [
+    { "id": "play", "label": "Lecture / pause", "icon": "⏯️", "color": "#ff2bd6", "type": "media",
+      "params": { "key": "play_pause" }, "confirm": false, "discord": true },
+    { "id": "prev", "label": "Précédent", "icon": "⏮️", "color": "#ff2bd6", "type": "media",
+      "params": { "key": "prev" }, "confirm": false, "discord": true },
+    { "id": "next", "label": "Suivant", "icon": "⏭️", "color": "#ff2bd6", "type": "media",
+      "params": { "key": "next" }, "confirm": false, "discord": true },
+    { "id": "vol-down", "label": "Volume −", "icon": "🔉", "color": "#00f0ff", "type": "media",
+      "params": { "key": "volume_down" }, "confirm": false, "discord": false },
+    { "id": "vol-up", "label": "Volume +", "icon": "🔊", "color": "#00f0ff", "type": "media",
+      "params": { "key": "volume_up" }, "confirm": false, "discord": false },
+    { "id": "mute", "label": "Muet", "icon": "🔇", "color": "#00f0ff", "type": "media",
+      "params": { "key": "mute" }, "confirm": false, "discord": true },
+    { "id": "lock", "label": "Verrouiller", "icon": "🔒", "color": "#fcee0a", "type": "lock",
+      "params": {}, "confirm": false, "discord": true },
+    { "id": "youtube", "label": "YouTube", "icon": "📺", "color": "#ff2a55", "type": "url",
+      "params": { "url": "https://www.youtube.com" }, "confirm": false, "discord": false },
+    { "id": "notepad", "label": "Bloc-notes", "icon": "📝", "color": "#3dffa2", "type": "app",
+      "params": { "path": "C:\\Windows\\System32\\notepad.exe", "args": [] }, "confirm": false, "discord": false },
+    { "id": "script-demo", "label": "Script démo", "icon": "📜", "color": "#9b8cff", "type": "script",
+      "params": { "name": "exemple.bat" }, "confirm": false, "discord": false },
+    { "id": "sleep", "label": "Veille", "icon": "🌙", "color": "#ffb000", "type": "power",
+      "params": { "op": "sleep" }, "confirm": true, "discord": false }
+  ]
+}

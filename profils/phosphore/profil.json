@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "nom": "Phosphore",
+  "auteur": "NEXUS",
+  "version": "1.0.1",
+  "panel_min_version": "1.0.0",
+  "modes": ["terminal"],
+  "description": "Vieux terminal à écran vert : texte phosphorescent, police à chasse fixe partout, lignes de balayage marquées, onglets [ entre crochets ].",
+  "apercu": { "couleurs": ["#020a02", "#33ff66", "#ffb000"] }
+}

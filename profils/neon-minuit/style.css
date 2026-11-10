@@ -1,0 +1,38 @@
+/* Profil « Néon Minuit » — mode Sentinelle uniquement.
+   Couleurs rose / cyan, ciel violet et soleil rayé (fichier local assets/soleil.svg). */
+
+:root[data-profile] {
+  --neon-rgb: 255, 62, 165;   --mag-rgb: 45, 226, 230;  --yel-rgb: 249, 248, 113;  --ok-rgb: 45, 226, 230;
+  --deep-rgb: 20, 6, 40;      --glow2-rgb: 120, 20, 160; --neon3-rgb: 255, 200, 235;
+  --bg: #0d0221;  --card: rgba(26, 8, 52, .82);
+  --text: #fdf0ff;  --text-2: #e6c8f5;  --muted: #a98bc4;
+  --track: #2c1150;  --edge: #4a1f7a;  --edge-2: #36165e;
+  --deep-1: #1a0838;  --deep-2: #14062c;  --deep-3: #0e0420;
+  --cyan: #ff3ea5;  --neon-2: #ff7eb3;  --neon-3: #ffc4e1;
+  --magenta: #2de2e6;  --yellow: #f9f871;  --green: #b967ff;
+  --ok: #2de2e6;  --warn: #ffb347;  --hot: #ff2a2a;
+  --chrome: linear-gradient(180deg, #ffffff 0%, #ffd1ec 40%, #ff3ea5 52%, #b967ff 70%, #2de2e6 100%);
+  --tab-grad: linear-gradient(180deg, #ff7eb3, #ff3ea5 55%, #9b1d6a);
+}
+
+/* Ciel violet et soleil couchant derrière tout le panel */
+:root[data-profile] body {
+  background:
+    url("assets/soleil.svg") 50% 72% / min(46vw, 460px) no-repeat,
+    radial-gradient(900px 400px at 50% 100%, rgba(255, 62, 165, .25), transparent 70%),
+    linear-gradient(180deg, #0d0221 0%, #1f0a3d 45%, #3b1360 75%, #5a1a6e 100%);
+  background-attachment: fixed;
+}
+/* Sol quadrillé plus lumineux */
+:root[data-profile] body::before {
+  background:
+    linear-gradient(rgba(255, 62, 165, .45) 1px, transparent 1px) 0 0 / 100% 40px,
+    linear-gradient(90deg, rgba(45, 226, 230, .35) 1px, transparent 1px) 0 0 / 40px 100%;
+}
+
+/* Lueurs néon renforcées */
+:root[data-profile] .card { box-shadow: 0 0 24px rgba(255, 62, 165, .18), inset 0 0 0 1px rgba(45, 226, 230, .12); }
+:root[data-profile] .card h2 { text-shadow: 0 0 10px rgba(255, 62, 165, .8); }
+:root[data-profile] .gauge .val, :root[data-profile] .home-time {
+  text-shadow: -2px 0 rgba(45, 226, 230, .8), 2px 0 rgba(255, 62, 165, .8), 0 0 22px rgba(255, 62, 165, .7); }
+:root[data-profile] header::after { box-shadow: 0 0 16px #ff3ea5, 0 0 40px rgba(45, 226, 230, .5); }

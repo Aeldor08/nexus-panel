@@ -1,0 +1,220 @@
+﻿/* Petit logo dans l'en-tête */
+h1 .home-link { display: inline-flex; align-items: center; gap: 12px; cursor: pointer; }
+.hdr-logo { width: 38px; height: 38px; filter: drop-shadow(0 0 6px rgba(var(--neon-rgb), .5)); transition: transform .2s; }
+h1 .home-link:hover .hdr-logo { transform: rotate(-12deg) scale(1.1); }
+
+/* =====================================================================
+   PAGE DE GARDE NEXUS — états (attribut data-state, piloté par splash.js) :
+   boot (démarrage) → ready (attend le clic sur NEXUS) → off (veille) → dive (plongée) → gone
+   ===================================================================== */
+#splash {
+  position: fixed; inset: 0; z-index: 90;            /* sous les lignes de balayage (z 100) : effet CRT conservé */
+  overflow: hidden; background: rgb(var(--splash-rgb));
+  color: var(--text, #eaf8ff); font-family: var(--mono, monospace);
+}
+#splash[data-state="gone"] { display: none; }
+/* Fin d'une transition de profil : la page de garde s'efface pendant que le sommaire se révèle dessous */
+#splash.sp-fondu { opacity: 0; pointer-events: none; transition: opacity var(--sp-fondu, .7s) cubic-bezier(.45, 0, .55, 1); }
+/* … ou ouverture EN ROND (animations.ouverture = "cercle") : un trou aux bords doux part du logo et s'agrandit
+   jusqu'aux coins ; un anneau lumineux (couleur --sp-anneau du profil) suit le bord. Le profil continue d'animer
+   ce qui reste de la page de garde autour de l'ouverture. */
+@property --sp-r { syntax: "<length>"; inherits: true; initial-value: 0px; }
+#splash.sp-iris { pointer-events: none;
+  -webkit-mask-image: radial-gradient(circle at var(--sp-ix, 50%) var(--sp-iy, 50%), transparent calc(var(--sp-r) - 170px), #000 var(--sp-r));
+  mask-image: radial-gradient(circle at var(--sp-ix, 50%) var(--sp-iy, 50%), transparent calc(var(--sp-r) - 170px), #000 var(--sp-r));
+  animation: sp-iris var(--sp-fondu, 1.3s) cubic-bezier(.62, .02, .28, 1) forwards; }
+@keyframes sp-iris { from { --sp-r: 0px; } to { --sp-r: var(--sp-rmax, 2600px); } }
+#splash .sp-anneau { position: absolute; inset: 0; z-index: 500; pointer-events: none;
+  background: radial-gradient(circle at var(--sp-ix, 50%) var(--sp-iy, 50%), transparent calc(var(--sp-r) - 3px),
+    var(--sp-anneau, rgba(255, 255, 255, .85)) var(--sp-r),
+    color-mix(in srgb, var(--sp-anneau, #fff) 30%, transparent) calc(var(--sp-r) + 16px), transparent calc(var(--sp-r) + 80px));
+  animation: sp-anneau var(--sp-fondu, 1.3s) ease-in forwards; }
+@keyframes sp-anneau { 0% { opacity: 0; } 14% { opacity: 1; } 72% { opacity: .85; } 100% { opacity: 0; } }
+/* Dispersion : pendant l'ouverture en rond, la scène et les calques d'effet du profil (#splash::before / ::after)
+   grossissent depuis le logo, comme soufflés par le cercle. Propriété « scale » (indépendante de « transform ») :
+   les animations du profil continuent dessous, sans à-coup. --sp-disperse : force (1 = aucune). */
+#splash[data-transition="profil"] .sp-screen { transform-origin: var(--sp-ix, 50%) var(--sp-iy, 45%); }
+#splash[data-transition="profil"] .sp-screen, #splash[data-transition="profil"]::before, #splash[data-transition="profil"]::after {
+  transition: scale var(--sp-fondu, 1.3s) cubic-bezier(.5, 0, .75, .45); }
+#splash.sp-iris .sp-screen, #splash.sp-iris::before, #splash.sp-iris::after { scale: var(--sp-disperse, 1.45); }
+#splash.sp-cache { visibility: hidden; }
+/* … ou VIEILLE TÉLÉ qui s'allume (animations.ouverture = "tele") : noir, ligne lumineuse qui s'étire au milieu,
+   l'image s'ouvre verticalement dans un éclair puis se stabilise. Seuls transform et opacity sont animés. */
+.sp-tele { position: fixed; inset: 0; z-index: 1000; pointer-events: none; }
+.sp-tele i { position: absolute; left: 0; right: 0; display: block; }
+.sp-tele .h, .sp-tele .b { height: 50.5%; background: #000; animation: tele-volet 1.15s cubic-bezier(.55, 0, .3, 1) forwards; }
+.sp-tele .h { top: 0; transform-origin: 50% 0; }
+.sp-tele .b { bottom: 0; transform-origin: 50% 100%; }
+.sp-tele .ligne { top: 50%; height: 3px; margin-top: -1.5px; background: #fff;
+  box-shadow: 0 0 14px 3px var(--sp-anneau, #bfe6ff), 0 0 42px 8px color-mix(in srgb, var(--sp-anneau, #bfe6ff) 55%, transparent);
+  transform: scaleX(0); opacity: 0; animation: tele-ligne 1.15s ease-out forwards; }
+.sp-tele .eclair { inset: 0; background: radial-gradient(ellipse at center, rgba(255, 255, 255, .8), rgba(255, 255, 255, .18) 55%, transparent 80%);
+  opacity: 0; animation: tele-eclair 1.15s ease-out forwards; }
+@keyframes tele-volet { 0% { opacity: 0; transform: none; } 22% { opacity: 1; } 44% { transform: none; } 84%, 100% { opacity: 1; transform: scaleY(0); } }
+@keyframes tele-ligne { 0%, 20% { opacity: 0; transform: scaleX(0); } 36% { opacity: 1; transform: scaleX(1); }
+  50% { opacity: .95; transform: scaleX(1) scaleY(5); } 72%, 100% { opacity: 0; transform: scaleX(1) scaleY(26); } }
+@keyframes tele-eclair { 0%, 42% { opacity: 0; } 54% { opacity: .75; } 82%, 100% { opacity: 0; } }
+body.sp-lock { overflow: hidden; }
+/* <html> a overflow-x: clip (mobile.css) : le verrou de <body> ne remonte pas à la fenêtre, et la barre de
+   défilement de la page restait visible à droite de la page de garde (bande coupée). On verrouille <html>. */
+html:has(> body.sp-lock) { overflow: hidden; }
+
+.sp-screen { position: absolute; inset: 0; display: grid; place-items: center;
+  background: radial-gradient(ellipse at center, #120726 0%, var(--bg) 70%); }
+
+/* Grille en perspective qui défile vers le spectateur */
+.sp-grid { position: absolute; left: -50%; right: -50%; bottom: -5%; height: 60%;
+  background:
+    linear-gradient(rgba(var(--mag-rgb), .35) 2px, transparent 2px) 0 0 / 100% 60px,
+    linear-gradient(90deg, rgba(var(--neon-rgb), .25) 2px, transparent 2px) 0 0 / 60px 100%;
+  transform: perspective(380px) rotateX(64deg); transform-origin: bottom;
+  -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 90%); mask-image: linear-gradient(to top, #000 0%, transparent 90%);
+  animation: sp-grid-move 1.2s linear infinite; }
+/* défilement par transform (une ligne de grille = 60 px, la boucle ne se voit pas) : plus de repeinture à chaque image */
+@keyframes sp-grid-move { from { transform: perspective(380px) rotateX(64deg) translateY(0); }
+  to { transform: perspective(380px) rotateX(64deg) translateY(60px); } }
+.sp-glow { position: absolute; width: 900px; height: 900px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(var(--mag-rgb), .22), rgba(var(--neon-rgb), .08) 40%, transparent 70%);
+  animation: sp-pulse 2.6s ease-in-out infinite; }
+@keyframes sp-pulse { 50% { transform: scale(1.08); opacity: .75; } }
+.sp-sweep { position: absolute; left: 0; right: 0; height: 140px; top: 0; pointer-events: none; transform: translateY(-140px);
+  background: linear-gradient(transparent, rgba(var(--neon-rgb), .10), transparent); animation: sp-sweep 2.4s linear infinite; }
+@keyframes sp-sweep { from { transform: translateY(-140px); } to { transform: translateY(100vh); } }   /* transform, pas top */
+
+.sp-center { position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+/* Le bouton NEXUS (logo + titre) : c'est la porte d'entrée */
+.sp-enter { all: unset; display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer;
+  transition: transform .2s ease-out; }
+.sp-enter:focus-visible { outline: 2px dashed var(--cyan, var(--cyan)); outline-offset: 14px; }
+#splash[data-state="ready"] .sp-enter:hover { transform: scale(1.04); }
+#splash[data-state="ready"] .sp-enter:hover .sp-logo { filter: drop-shadow(0 0 16px rgba(var(--neon-rgb), .9)) drop-shadow(0 0 40px rgba(var(--mag-rgb), .6)); }
+
+/* Logo : tracé progressif puis lueur */
+.sp-logo { width: 190px; height: 190px; overflow: visible;
+  filter: drop-shadow(0 0 10px rgba(var(--neon-rgb), .55)) drop-shadow(0 0 26px rgba(var(--mag-rgb), .35));
+  animation: sp-logo-in .5s ease-out both, sp-logo-flicker 3s 1.6s infinite; transition: filter .2s; }
+.sp-hex { stroke-dasharray: 1; stroke-dashoffset: 1; animation: sp-draw .9s .15s cubic-bezier(.6, .1, .3, 1) forwards; }
+.sp-n { stroke-dasharray: 1; stroke-dashoffset: 1; animation: sp-draw .7s .75s cubic-bezier(.6, .1, .3, 1) forwards; }
+.sp-hex2 { opacity: 0; transform-origin: 60px 60px; animation: sp-spin-in 1s .5s ease-out forwards; }
+.sp-traces, .sp-nodes { opacity: 0; animation: sp-fade .3s 1.3s forwards; }
+.sp-nodes circle { animation: sp-blink 1s 1.6s infinite steps(2); }
+@keyframes sp-draw { to { stroke-dashoffset: 0; } }
+@keyframes sp-spin-in { from { opacity: 0; transform: rotate(-90deg) scale(.6); } to { opacity: .7; transform: none; } }
+@keyframes sp-fade { to { opacity: 1; } }
+@keyframes sp-blink { 50% { opacity: .2; } }
+@keyframes sp-logo-in { from { transform: scale(.85); opacity: 0; } }
+@keyframes sp-logo-flicker { 0%, 94%, 100% { opacity: 1; } 95% { opacity: .5; } 96% { opacity: 1; } 97% { opacity: .7; } }
+
+/* Titre NEXUS : lettres brouillées puis verrouillées, avec glitch */
+.sp-title { position: relative; font-family: var(--display, sans-serif); font-weight: 700; font-size: clamp(64px, 11vw, 150px);
+  letter-spacing: .18em; line-height: 1; margin-right: -.18em; color: #fff;
+  text-shadow: -3px 0 rgba(var(--mag-rgb), .85), 3px 0 rgba(var(--neon-rgb), .85), 0 0 34px rgba(var(--neon-rgb), .55); }
+.sp-title .ch { display: inline-block; min-width: .62em; text-align: center; }
+.sp-title .ch.scr { color: var(--magenta, #ff2bd6); opacity: .8; }
+.sp-title::before, .sp-title::after { content: attr(data-text); position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+.sp-title.locked::before { color: var(--cyan, var(--cyan)); animation: sp-glitch 2.2s .2s infinite steps(1); }
+.sp-title.locked::after { color: var(--magenta, #ff2bd6); animation: sp-glitch 2.2s .35s infinite steps(1) reverse; }
+@keyframes sp-glitch {
+  0%, 82%, 100% { opacity: 0; transform: none; clip-path: none; }
+  84% { opacity: .9; transform: translate(-6px, 2px); clip-path: inset(15% 0 55% 0); }
+  87% { opacity: .9; transform: translate(6px, -2px); clip-path: inset(60% 0 10% 0); }
+  90% { opacity: .9; transform: translate(-3px, 0); clip-path: inset(40% 0 35% 0); }
+}
+.sp-tag { min-height: 1.4em; font-size: 14px; letter-spacing: .45em; color: var(--muted, #7d7aa3); text-transform: uppercase; margin-right: -.45em; }
+.sp-tag b { color: var(--yellow, #fcee0a); font-weight: 400; }
+.sp-tag .cur { display: inline-block; width: .6em; background: var(--cyan, var(--cyan)); animation: sp-blink .8s infinite steps(2); }
+
+.sp-bar { width: min(420px, 70vw); height: 4px; margin-top: 18px; background: rgba(255, 255, 255, .08); position: relative; }
+.sp-bar i { position: absolute; inset: 0 auto 0 0; width: 0; transition: width .25s ease-out;
+  background: linear-gradient(90deg, var(--magenta, #ff2bd6), var(--cyan, var(--cyan))); box-shadow: 0 0 12px var(--cyan, var(--cyan)); }
+
+.sp-granted { font-family: var(--display, sans-serif); font-size: 24px; letter-spacing: .5em; margin: 14px -.5em 0 0;
+  color: var(--green, #3dffa2); opacity: 0; text-shadow: 0 0 18px rgba(var(--ok-rgb), .8); }
+#splash[data-state="ready"] .sp-granted { animation: sp-granted .5s steps(2) forwards; }
+@keyframes sp-granted { 0% { opacity: 0; } 30% { opacity: 1; } 45% { opacity: .2; } 60%, 100% { opacity: 1; } }
+.sp-prompt { font-size: 13px; letter-spacing: .35em; margin-right: -.35em; text-transform: uppercase; color: var(--cyan, var(--cyan));
+  opacity: 0; text-shadow: 0 0 10px rgba(var(--neon-rgb), .6); }
+/* « Clique sur NEXUS pour entrer » : apparition en fondu, puis respiration douce (plus de clignotement
+   saccadé) et flèche qui avance vers le texte en glissant ; opacité et translation seulement (carte graphique) */
+#splash[data-state="ready"] .sp-prompt { animation: sp-fade .7s ease-out .5s forwards, sp-respire 2.8s ease-in-out 1.2s infinite; will-change: opacity; }
+.sp-prompt .sp-fleche { display: inline-block; margin-right: .15em; will-change: transform; }
+#splash[data-state="ready"] .sp-prompt .sp-fleche { animation: sp-avance 1.4s cubic-bezier(.45, 0, .55, 1) .5s infinite; }
+@keyframes sp-respire { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+@keyframes sp-avance { 0%, 100% { transform: translateX(-.2em); opacity: .65; } 50% { transform: translateX(.35em); opacity: 1; } }
+
+.sp-log { position: absolute; left: 28px; bottom: 26px; margin: 0; font-size: 12px; line-height: 1.75; color: #9b98c4;
+  max-width: min(640px, calc(100vw - 56px)); white-space: pre-wrap; text-shadow: 0 0 6px rgba(var(--neon-rgb), .25); }
+.sp-log .ok { color: var(--green, #3dffa2); } .sp-log .warn { color: var(--warn, #ffb000); }
+.sp-log .err { color: var(--hot, #ff2a55); } .sp-log .dim { color: #55527a; }
+.sp-skip { position: absolute; right: 28px; bottom: 26px; font-size: 11px; letter-spacing: .3em; text-transform: uppercase;
+  color: #55527a; animation: sp-blink 1.6s infinite steps(2); }
+#splash:not([data-state="boot"]) .sp-skip { display: none; }
+
+/* ---------- Écran éteint / rallumé (effet tube cathodique) ---------- */
+#splash[data-state="off"] .sp-screen { animation: crt-off .75s cubic-bezier(.6, 0, .9, .4) forwards; }
+#splash.powering-on .sp-screen { animation: crt-on .9s cubic-bezier(.1, .6, .3, 1) both; }
+@keyframes crt-off {
+  0% { transform: scale(1, 1); filter: brightness(1); opacity: 1; }
+  45% { transform: scale(1, .006); filter: brightness(4) saturate(0); }
+  75% { transform: scale(.25, .004); filter: brightness(6); opacity: 1; }
+  100% { transform: scale(0, 0); filter: brightness(8); opacity: 0; }
+}
+@keyframes crt-on {
+  0% { transform: scale(0, .004); filter: brightness(8); opacity: 0; }
+  20% { transform: scale(1, .006); filter: brightness(5) saturate(0); opacity: 1; }
+  45% { transform: scale(1, 1); filter: brightness(2.2); }
+  55% { filter: brightness(.6); } 62% { filter: brightness(1.6); } 70% { filter: brightness(.9); }
+  100% { transform: scale(1, 1); filter: brightness(1); opacity: 1; }
+}
+.sp-standby { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; background: #010103; color: #3b3856; cursor: none; }
+#splash[data-state="off"] .sp-standby { display: flex; animation: sp-fade 1.2s .8s both; }
+/* veille (peut durer des heures) : filtre FIXE, seule l'opacité respire */
+.sp-standby img { width: 70px; opacity: .25; filter: grayscale(.3) drop-shadow(0 0 8px rgba(var(--neon-rgb), .4)); animation: sp-breathe 4s ease-in-out infinite; }
+@keyframes sp-breathe { 50% { opacity: .5; } }
+.sp-sb-clock { font-family: var(--display, sans-serif); font-size: 72px; color: #2c2946; letter-spacing: .08em; }
+.sp-sb-text { display: flex; align-items: center; gap: 10px; font-size: 12px; letter-spacing: .4em; text-transform: uppercase; }
+.sp-led { width: 8px; height: 8px; border-radius: 50%; background: var(--warn, #ffb000); box-shadow: 0 0 8px var(--warn, #ffb000);
+  animation: sp-breathe-led 2.4s ease-in-out infinite; }
+@keyframes sp-breathe-led { 50% { opacity: .2; } }          /* le halo (box-shadow) suit l'opacité : rien à recalculer */
+.sp-standby small { font-size: 11px; letter-spacing: .2em; color: #2a2840; }
+
+/* ---------- Plongée dans le code ---------- */
+/* La pluie est SOUS la page de garde : celle-ci s'efface par-dessus un fond déjà opaque,
+   le sommaire n'est donc jamais visible avant l'ouverture finale. */
+.sp-dive { position: absolute; inset: 0; width: 100%; height: 100%; display: none; pointer-events: none; z-index: 1; }
+#splash[data-state="dive"] .sp-screen { z-index: 2; }
+#splash[data-state="dive"] { background: transparent; }
+#splash[data-state="dive"] .sp-dive { display: block; }
+/* La page de garde recule doucement (zoom léger, flou, fondu) pendant que la pluie apparaît */
+#splash[data-state="dive"] .sp-screen { animation: dive-zoom .95s cubic-bezier(.45, 0, .2, 1) forwards; }
+@keyframes dive-zoom {
+  0% { transform: scale(1); opacity: 1; filter: blur(0) brightness(1); }
+  60% { opacity: .55; filter: blur(4px) brightness(1.4); }
+  100% { transform: scale(2.4); opacity: 0; filter: blur(12px) brightness(1.8); }
+}
+/* Transition fournie par un profil visuel (profil.json → animations.remplace_transition) : pas de pluie de code */
+#splash[data-transition="profil"] .sp-dive { display: none !important; }
+#splash[data-transition="profil"][data-state="dive"] .sp-screen { animation: none; }
+/* Animations réduites : la page de garde disparaît en simple fondu */
+#splash.sp-fade { opacity: 0; transition: opacity .45s ease; pointer-events: none; }
+/* Tuiles du sommaire qui apparaissent en cascade pendant l'ouverture */
+.cascade { animation: home-cascade .65s cubic-bezier(.2, .8, .2, 1) backwards !important; }
+@keyframes home-cascade {                 /* transform + opacity seulement (un flou animé sur 9 tuiles coûtait cher) */
+  from { opacity: 0; transform: translateY(22px) scale(.97); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 700px) {
+  .sp-log { display: none; }
+  .sp-logo { width: 130px; height: 130px; }
+}
+/* Animations réduites : version calme (pas de tracé, glitch, ni plongée) */
+@media (prefers-reduced-motion: reduce) {
+  #splash *, #splash *::before, #splash *::after { animation: none !important; transition: none !important; }
+  .sp-hex, .sp-n { stroke-dashoffset: 0; }
+  .sp-hex2 { opacity: .7; } .sp-traces, .sp-nodes { opacity: 1; }
+  #splash[data-state="ready"] .sp-granted, #splash[data-state="ready"] .sp-prompt { opacity: 1; }
+  #splash[data-state="off"] .sp-screen { opacity: 0; }
+}

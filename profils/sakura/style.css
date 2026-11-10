@@ -1,0 +1,357 @@
+/* ==========================================================================
+   Profil « Sakura » — cerisier en fleurs, pour les modes Terminal et Sentinelle.
+   CSS pur + SVG locaux (assets/). Aucune animation ne touche autre chose que transform et opacity.
+   États de la page de garde lus sur <body data-etat="…"> (voir profils/FORMAT.md) :
+     intro → pret → (veille) → transition → panel
+   La déco est toujours DERRIÈRE les données (z-index négatif dans des blocs isolés).
+   ========================================================================== */
+
+/* ---------- 1. Couleurs : roses sakura, blanc crème, vert tendre ---------- */
+:root[data-profile] {
+  --note-titre: "Palatino Linotype", "Book Antiqua", Georgia, serif;   /* police « Titres du thème » des post-it */
+  --neon-rgb: 244, 143, 177;  --mag-rgb: 168, 216, 140;  --yel-rgb: 255, 232, 194;  --ok-rgb: 155, 227, 160;
+  --neon3-rgb: 253, 228, 236; --glow2-rgb: 120, 60, 110;
+  --cyan: #f48fb1;  --neon-2: #f8bbd0;  --neon-3: #fde4ec;
+  --magenta: #a8d88c;  --yellow: #ffe8c2;  --green: #c9a7ff;
+  --ok: #9be3a0;  --warn: #ffc46b;  --hot: #ff4d6d;
+  --text: #fdf3f6;  --text-2: #ecd6df;  --muted: #b9a0b2;
+  --display: "Bahnschrift", "Segoe UI", system-ui, sans-serif;
+  --aberr: 0 0 12px rgba(244, 143, 177, .35);
+  --chrome: linear-gradient(180deg, #ffffff 0%, #ffe6ef 45%, #f7a8c8 72%, #fde4ec 100%);
+  --tab-grad: linear-gradient(180deg, #f9c5d8, #f48fb1 60%, #d9729b);
+  --hex-img: none;
+}
+/* Terminal : nuit prune */
+:root[data-profile][data-theme="terminal"] {
+  --bg: #170d1b;  --card: rgba(38, 21, 41, .9);  --deep-rgb: 26, 14, 30;  --splash-rgb: 23, 13, 27;
+  --track: #3a2438;  --edge: #5c3b57;  --edge-2: #48304a;  --deep-1: #241528;  --deep-2: #1d1121;  --deep-3: #150c18;
+}
+/* Sentinelle : bleu nuit */
+:root[data-profile][data-theme="sentinelle"] {
+  --bg: #0d1224;  --card: rgba(22, 28, 52, .9);  --deep-rgb: 14, 19, 38;  --splash-rgb: 13, 18, 36;
+  --track: #28304f;  --edge: #3d4673;  --edge-2: #303860;  --deep-1: #161c36;  --deep-2: #121830;  --deep-3: #0d1226;
+}
+
+/* ---------- 2. Fond du panel : ciel de nuit et pétales qui tombent lentement (derrière tout) ---------- */
+:root[data-profile] body {
+  background:
+    radial-gradient(700px 420px at 85% -5%, rgba(255, 241, 214, .10), transparent 70%),
+    radial-gradient(900px 600px at 10% 110%, rgba(244, 143, 177, .12), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
+}
+/* Les pétales sont des images FIXES que l'on déplace (transform) : rien n'est redessiné, la chute reste fluide. */
+:root[data-profile] body::before {
+  left: 0; right: auto; top: -420px; bottom: auto; width: calc(100% + 420px); height: calc(100% + 420px);
+  background: url("assets/petales.svg") 0 0 / 420px 420px repeat;
+  transform: none; -webkit-mask-image: none; mask-image: none; opacity: .34; z-index: -1;
+  animation: pf-chute 46s linear infinite;
+}
+:root[data-profile] body::after {                           /* pétales proches, plus grands et plus doux (profondeur) */
+  content: ""; display: block; position: fixed; left: 0; top: -900px; width: calc(100% + 900px); height: calc(100% + 900px);
+  z-index: -1; pointer-events: none; opacity: .2;
+  background: url("assets/petales-proches.svg") 0 0 / 900px 900px repeat;
+  animation: pf-chute-proche 70s linear infinite;
+}
+/* chute en biais avec un léger balancement (les pétales planent) */
+@keyframes pf-chute { 0% { transform: translate(0, 0); } 25% { transform: translate(-80px, 105px); } 50% { transform: translate(-230px, 210px); }
+  75% { transform: translate(-310px, 315px); } 100% { transform: translate(-420px, 420px); } }
+@keyframes pf-chute-proche { 0% { transform: translate(0, 0); } 30% { transform: translate(-200px, 270px); } 60% { transform: translate(-500px, 540px); }
+  100% { transform: translate(-900px, 900px); } }
+
+/* ---------- 3. Titres, en-tête ---------- */
+:root[data-profile] h1, :root[data-profile] .card h2, :root[data-profile] .home-title, :root[data-profile] .home-hello {
+  font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif; letter-spacing: 1px;
+}
+:root[data-profile] h1 .home-link span, :root[data-profile] .home-hello, :root[data-profile] .home-title {
+  filter: drop-shadow(0 0 8px rgba(244, 143, 177, .45));
+}
+:root[data-profile] h1 em { color: var(--magenta); text-shadow: none; }
+:root[data-profile] h1.glitch .t::before, :root[data-profile] h1.glitch .t::after { display: none; }
+:root[data-profile] .hdr-logo { filter: grayscale(1) sepia(1) hue-rotate(290deg) saturate(2.6) brightness(1.15) drop-shadow(0 0 6px rgba(244, 143, 177, .6)); }
+:root[data-profile] header::after {
+  height: 16px; bottom: -6px; background: url("assets/branche-h.svg") 0 50% / 120px 16px repeat-x;
+  box-shadow: none; animation: none; opacity: .85;
+}
+:root[data-profile] .home-hello::before {
+  content: ""; display: inline-block; width: .75em; height: .75em; margin-right: .3em; vertical-align: -.05em;
+  background: url("assets/fleur.svg") center / contain no-repeat; -webkit-text-fill-color: initial;
+  animation: pf-tourne 14s linear infinite;
+}
+@keyframes pf-tourne { to { transform: rotate(360deg); } }
+
+/* ---------- 4. Cartes ornées d'une branche fleurie (derrière le contenu) ---------- */
+:root[data-profile] .card {
+  isolation: isolate; clip-path: none; border-radius: 14px; border: 1px solid transparent;
+  background:
+    linear-gradient(var(--card), var(--card)) padding-box,
+    linear-gradient(160deg, rgba(244, 143, 177, .6), rgba(168, 216, 140, .22) 45%, rgba(255, 232, 194, .18) 70%, rgba(244, 143, 177, .45)) border-box;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
+}
+:root[data-profile] .card::before { display: none; }
+:root[data-profile] .card::after {
+  content: ""; position: absolute; top: 0; right: 0; left: auto; bottom: auto; width: 96px; height: 56px;
+  border: 0; filter: none; opacity: .55; z-index: -1; pointer-events: none;
+  background: url("assets/branche-coin.svg") right top / contain no-repeat;
+  transform-origin: 100% 0; animation: pf-brise 9s ease-in-out infinite;
+}
+@keyframes pf-brise { 50% { transform: rotate(3deg); } }   /* (vers l'intérieur de la carte : ne dépasse pas à droite) */
+:root[data-profile] .card h2 { text-shadow: none; }
+:root[data-profile] .card h2::before { content: "❀ "; color: var(--cyan); font-family: var(--mono); }
+
+/* Petits encadrés, champs, tableaux : coins arrondis */
+:root[data-profile] .temp, :root[data-profile] .rate, :root[data-profile] .home-live, :root[data-profile] .in,
+:root[data-profile] .day, :root[data-profile] .game, :root[data-profile] .app, :root[data-profile] .cover,
+:root[data-profile] .home-ico, :root[data-profile] .dk-btn, :root[data-profile] .mx-row { border-radius: 10px; clip-path: none; }
+:root[data-profile] .temp::before, :root[data-profile] .rate::before { display: none; }
+
+/* Chiffres : lisibles, simple halo doux */
+:root[data-profile] .gauge .val, :root[data-profile] .temp .big, :root[data-profile] .rate .v, :root[data-profile] .home-time,
+:root[data-profile] .ping-big { text-shadow: 0 0 14px rgba(244, 143, 177, .35); }
+:root[data-profile] .temp .big.t-hot { text-shadow: 0 0 18px rgba(255, 77, 109, .6); }
+
+/* ---------- 5. Boutons : une fleur s'épanouit au survol ---------- */
+:root[data-profile] .btn, :root[data-profile] .tabs a, :root[data-profile] .home-parts a { clip-path: none; border-radius: 999px; transform: none; }
+:root[data-profile] .tabs a::before, :root[data-profile] .tabs a::after { content: none; }
+:root[data-profile] .btn::before {
+  content: ""; position: absolute; left: -7px; top: -7px; width: 16px; height: 16px; pointer-events: none;
+  background: url("assets/fleur.svg") center / contain no-repeat;
+  opacity: 0; transform: scale(.2) rotate(-60deg); transition: opacity .3s, transform .45s cubic-bezier(.3, 1.6, .5, 1);
+}
+:root[data-profile] .btn:hover::before, :root[data-profile] .btn:focus-visible::before { opacity: 1; transform: scale(1) rotate(0); }
+:root[data-profile] .tabs a[aria-selected="true"] { color: #2a1328; text-shadow: none; box-shadow: 0 0 16px rgba(244, 143, 177, .45); }
+
+/* ---------- 6. Barres : la branche pousse, un bourgeon au bout ---------- */
+:root[data-profile] .bar { border-radius: 7px; overflow: visible; background: rgba(255, 255, 255, .06); }
+:root[data-profile] .bar i {
+  border-radius: 7px; -webkit-mask: none; mask: none; overflow: visible;
+  background: url("assets/branche-barre.svg") 0 50% / 40px 100% repeat-x; background-color: var(--cyan);
+}
+:root[data-profile] .bar i::after {
+  content: ""; position: absolute; right: -8px; top: 50%; left: auto; width: 16px; height: 16px; inset-block: auto;
+  margin-top: -8px; background: url("assets/fleur.svg") center / contain no-repeat;
+  transform: none; animation: pf-bourgeon 3.5s ease-in-out infinite;
+}
+@keyframes pf-bourgeon { 50% { transform: scale(1.18) rotate(20deg); } }
+
+/* ---------- 7. Alertes : éclat doux ---------- */
+:root[data-profile] .alert { isolation: isolate; clip-path: none; border-radius: 12px; }
+:root[data-profile] .alert::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 22px rgba(255, 77, 109, .55), inset 0 0 18px rgba(255, 77, 109, .25);
+  animation: pf-eclat 2.6s ease-in-out infinite;
+}
+@keyframes pf-eclat { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+
+/* ==========================================================================
+   PAGE DE GARDE
+   Couches (même cadre pour les trois couches de l'arbre, alignées au pixel) :
+   ciel étoilé + collines (#splash) → lune (.sp-glow) → fleurs à l'ombre (.sp-screen::before)
+   → branches (.sp-grid) → fleurs éclairées (.sp-grid::before) → pétales (.sp-sweep) → feuilles (.sp-screen::after)
+   → logo (.sp-center). Seules les branches poussent DANS leur image (peu d'éléments) ; les fleurs éclosent
+   par le CSS (opacity + transform, calculés par la carte graphique) : l'intro reste fluide.
+   ========================================================================== */
+/* Sol (sol.svg) : bande aussi large que l'écran (son image se rogne, « slice », au lieu de rétrécir) ; il ne fait
+   plus partie de l'image de l'arbre, dont la largeur est limitée : plus de coupure sur les bords. */
+:root[data-profile] #splash {
+  background: url("assets/sol.svg") 50% 100% / 100% 26vh no-repeat, url("assets/ciel.svg") center / cover no-repeat,
+    radial-gradient(ellipse at 50% 32%, #3a2245 0%, #1b1024 55%, #0d0812 100%);
+}
+:root[data-profile][data-theme="sentinelle"] #splash {
+  background: url("assets/sol.svg") 50% 100% / 100% 26vh no-repeat, url("assets/ciel.svg") center / cover no-repeat,
+    radial-gradient(ellipse at 50% 32%, #223058 0%, #121a36 55%, #090d1c 100%);
+}
+:root[data-profile] #splash .sp-screen { background: transparent; }
+
+/* L'arbre : branches (version qui pousse pendant l'intro), fleurs à l'ombre derrière, fleurs éclairées devant */
+/* (l'arbre est remonté de 6vh : son pied se pose DANS la butte d'herbe de pied.webp au lieu d'être coupé par le
+   bas de l'écran ; pied.webp est dessiné dans le même repère que l'arbre : 18,31vh = 149 unités sur 700) */
+:root[data-profile] #splash .sp-grid, :root[data-profile] #splash .sp-screen::before, :root[data-profile] #splash .sp-grid::before {
+  background-position: 50% calc(100% - 6vh); background-size: auto 86vh; background-repeat: no-repeat;
+}
+:root[data-profile] #splash .sp-grid {
+  left: 0; right: 0; top: 0; bottom: 0; height: auto; animation: none;
+  -webkit-mask-image: none; mask-image: none; background-image: url("assets/arbre.webp");
+  /* transform: none : sans animation (mode jeu, animations réduites), l'arbre ne doit pas reprendre la
+     perspective 3D de la grille du thème de base (il était écrasé au bas de l'écran) */
+  transform: none; transform-origin: 50% 100%; animation: pf-brise-arbre 9s ease-in-out infinite;
+}
+:root[data-profile] #splash .sp-screen::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; background-image: url("assets/fleurs-fond.webp");
+  transform-origin: 50% 100%; animation: pf-brise-arbre 9s ease-in-out infinite;
+}
+:root[data-profile] #splash .sp-grid::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; background-image: url("assets/fleurs-avant.webp");
+  transform-origin: 49% 56%;     /* centre de la couronne : la floraison en part */
+}
+/* Sol au pied du cerisier : butte, herbe rose en touffes, tapis de pétales tombés ; les racines s'y enfoncent */
+:root[data-profile] #splash .sp-grid::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: url("assets/pied.webp") 50% 100% / auto 18.31vh no-repeat;
+}
+:root[data-profile] body[data-etat="intro"] #splash .sp-grid::after { animation: pf-apparait .9s ease-out .25s both; }
+@keyframes pf-brise-arbre { 0%, 100% { transform: none; } 50% { transform: rotate(.45deg); } }
+
+/* La lune (.sp-glow), avec son relief et son halo ; .sp-glow::after précharge l'arbre final pendant l'intro */
+:root[data-profile] #splash .sp-glow {
+  width: 170px; height: 170px; top: 8%; right: 10%; left: auto; bottom: auto; border-radius: 50%;
+  background: url("assets/lune.svg") center / 56% no-repeat,
+    radial-gradient(circle, rgba(255, 246, 228, .5) 24%, rgba(255, 236, 214, .16) 40%, transparent 70%);
+  animation: pf-lune 8s ease-in-out infinite;
+}
+:root[data-profile] #splash .sp-glow::after { content: ""; position: absolute; width: 1px; height: 1px; opacity: 0; background: url("assets/arbre.webp"); }
+@keyframes pf-lune { 50% { transform: scale(1.04); opacity: .9; } }
+
+/* Pétales qui virevoltent (.sp-sweep) et feuilles au premier plan (.sp-screen::after) : images fixes déplacées */
+:root[data-profile] #splash .sp-sweep {
+  top: -420px; left: 0; right: auto; bottom: auto; width: calc(100% + 420px); height: calc(100% + 420px);
+  background: url("assets/petales.svg") 0 0 / 420px 420px repeat; opacity: .95;
+  animation: pf-chute 16s linear infinite;
+}
+:root[data-profile] #splash .sp-screen::after {
+  content: ""; position: absolute; top: -560px; left: 0; width: calc(100% + 560px); height: calc(100% + 560px);
+  background: url("assets/feuilles.svg") 0 0 / 560px 560px repeat; pointer-events: none; opacity: .55;
+  animation: pf-chute-vite 11s linear infinite;
+}
+@keyframes pf-chute-vite { 0% { transform: translate(0, 0); } 30% { transform: translate(-120px, 170px); } 65% { transform: translate(-330px, 365px); }
+  100% { transform: translate(-560px, 560px); } }
+@keyframes pf-apparait { from { opacity: 0; } }
+
+/* Intro (6,2 s) : la lune se lève ; la butte, le tronc torsadé puis les branches poussent (0 → 2,8 s) ; le lavis
+   rose et les fleurs lointaines apparaissent (2 s), puis la floraison EXPLOSE depuis le centre de la couronne
+   (2,5 s) ; les pétales s'envolent, et le logo NEXUS apparaît, porté par les pétales (4,1 s) */
+:root[data-profile] body[data-etat="intro"] #splash .sp-grid {
+  background-image: url("assets/arbre-pousse.svg"); animation: pf-brise-arbre 9s ease-in-out 4.6s infinite; }
+:root[data-profile] body[data-etat="intro"] #splash .sp-glow { animation: pf-apparait 1.6s ease-out .2s both, pf-lune 8s ease-in-out 1.8s infinite; }
+:root[data-profile] body[data-etat="intro"] #splash .sp-screen::before {
+  animation: pf-eclot 1.4s cubic-bezier(.22, .8, .3, 1) 2s both, pf-brise-arbre 9s ease-in-out 4.6s infinite; }
+:root[data-profile] body[data-etat="intro"] #splash .sp-grid::before { animation: pf-explose 1s cubic-bezier(.2, .75, .3, 1) 2.5s both; }
+/* will-change seulement pendant l'éclosion : texture des fleurs rendue une fois, pas recalculée à chaque image */
+:root[data-profile] body[data-etat="intro"] #splash .sp-grid::before, :root[data-profile] body[data-etat="intro"] #splash .sp-screen::before { will-change: transform, opacity; }
+@keyframes pf-explose { 0% { opacity: 0; transform: scale(.55); } 40% { opacity: 1; } 55% { transform: scale(1.06); }
+  78% { transform: scale(.985); } 100% { opacity: 1; transform: none; } }
+:root[data-profile] body[data-etat="intro"] #splash .sp-sweep { animation: pf-apparait 1.4s ease-out 2.8s both, pf-chute 16s linear infinite; }
+:root[data-profile] body[data-etat="intro"] #splash .sp-screen::after { animation: pf-tourbillon 3.6s ease-out 3.1s both, pf-chute-vite 11s linear infinite; }
+@keyframes pf-eclot { 0% { opacity: 0; transform: scale(.9); } 55% { opacity: 1; } 75% { transform: scale(1.012); } 100% { opacity: 1; transform: none; } }
+@keyframes pf-tourbillon { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: .55; } }
+
+/* Le logo NEXUS (celui du panel) apparaît au centre, porté par les pétales */
+:root[data-profile] #splash .sp-center { z-index: 2; }
+:root[data-profile] #splash .sp-center::before {      /* halo doux derrière le logo : il reste lisible devant l'arbre */
+  content: ""; position: absolute; left: 50%; top: 50%; width: 820px; height: 640px; margin: -320px 0 0 -410px; z-index: -1;
+  background: radial-gradient(ellipse closest-side, rgba(23, 13, 27, .9) 0, rgba(23, 13, 27, .78) 45%, rgba(23, 13, 27, .4) 75%, transparent 100%);
+  pointer-events: none;
+}
+:root[data-profile][data-theme="sentinelle"] #splash .sp-center::before {
+  background: radial-gradient(ellipse closest-side, rgba(13, 18, 36, .9) 0, rgba(13, 18, 36, .78) 45%, rgba(13, 18, 36, .4) 75%, transparent 100%);
+}
+:root[data-profile] #splash .sp-tag, :root[data-profile] #splash .sp-granted, :root[data-profile] #splash .sp-prompt {
+  text-shadow: 0 1px 3px rgba(10, 5, 12, .95), 0 0 14px rgba(10, 5, 12, .9);
+}
+:root[data-profile] #splash .sp-enter { position: relative; }
+:root[data-profile] #splash .sp-enter::after {        /* berceau de pétales sous le mot NEXUS : il « porte » le logo */
+  content: ""; position: absolute; left: 50%; top: 100%; width: 420px; height: 130px; margin: -34px 0 0 -210px; z-index: -1;
+  background: url("assets/berceau.svg") center / contain no-repeat; pointer-events: none;
+}
+:root[data-profile] body[data-etat="intro"] #splash .sp-enter { animation: pf-porte 1.5s cubic-bezier(.2, .8, .2, 1) 4.1s both; }
+:root[data-profile] body[data-etat="intro"] #splash .sp-tag,
+:root[data-profile] body[data-etat="intro"] #splash .sp-bar,
+:root[data-profile] body[data-etat="intro"] #splash .sp-log { animation: pf-apparait 1s ease-out 4.9s both; }
+@keyframes pf-porte { from { opacity: 0; transform: translateY(70px) scale(.85); } 60% { opacity: 1; } to { opacity: 1; transform: none; } }
+
+:root[data-profile] #splash .sp-logo { filter: drop-shadow(0 0 12px rgba(244, 143, 177, .7)) drop-shadow(0 0 30px rgba(255, 232, 194, .3)); }
+:root[data-profile] #splash .sp-logo stop:first-child { stop-color: #fff1f6; }
+:root[data-profile] #splash .sp-logo stop:last-child { stop-color: #f48fb1; }
+:root[data-profile] #splash .sp-traces { stroke: #a8d88c; }
+:root[data-profile] #splash .sp-nodes { fill: #fde4ec; }
+:root[data-profile] #splash .sp-title {
+  font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif; font-weight: 400; letter-spacing: .22em; margin-right: -.22em;
+  color: #fff5f8; text-shadow: 0 0 22px rgba(244, 143, 177, .85), 0 0 60px rgba(244, 143, 177, .35);
+}
+:root[data-profile] #splash .sp-title::before, :root[data-profile] #splash .sp-title::after { display: none; }
+:root[data-profile] #splash .sp-title .ch.scr { color: #f8bbd0; }
+:root[data-profile] #splash .sp-tag { color: #e9cfdb; }
+:root[data-profile] #splash .sp-tag b { color: #f48fb1; }
+:root[data-profile] #splash .sp-bar { height: 3px; border-radius: 3px; background: rgba(255, 255, 255, .12); }
+:root[data-profile] #splash .sp-bar i { border-radius: 3px; background: linear-gradient(90deg, #a8d88c, #f48fb1); box-shadow: 0 0 10px rgba(244, 143, 177, .6); }
+:root[data-profile] #splash .sp-granted { color: #fde4ec; font-family: "Palatino Linotype", Georgia, serif; }
+:root[data-profile] #splash .sp-prompt { color: #ffe8c2; }
+:root[data-profile] #splash .sp-log { color: #c7aebd; text-shadow: none; opacity: .75; }
+:root[data-profile] #splash .sp-log .dim { color: #7d6676; }
+:root[data-profile] #splash[data-state="ready"] .sp-enter:hover .sp-logo { filter: drop-shadow(0 0 18px rgba(244, 143, 177, 1)) drop-shadow(0 0 44px rgba(255, 232, 194, .5)); }
+/* Bouton « Passer l'intro » (tout clic ou toute touche passe aussi l'intro) */
+:root[data-profile] #splash .sp-skip {
+  font-size: 0; cursor: pointer; padding: 9px 18px; border-radius: 999px; animation: none;
+  background: rgba(244, 143, 177, .14); border: 1px solid rgba(244, 143, 177, .45);
+}
+:root[data-profile] #splash .sp-skip::after { content: "Passer l'intro ▸"; font-size: 12px; letter-spacing: .2em; color: #fde4ec; }
+:root[data-profile] #splash .sp-standby { background: #0d0812; }
+
+/* ---------- Transition au clic sur NEXUS (2,2 s) : envol à travers une nuée de pétales ----------
+   Trois nuées sur deux calques (#splash::before : lointaine ; #splash::after : moyenne + proche), qui grossissent
+   vers soi en se décalant dans le temps, pendant que la scène s'éloigne ; les pétales qui tombent accélèrent. */
+:root[data-profile] #splash::before, :root[data-profile] #splash::after {
+  content: ""; position: absolute; inset: 0; z-index: 5; pointer-events: none; opacity: 0;
+  background: url("assets/vol-1.svg") center / cover no-repeat;
+}
+:root[data-profile] #splash::after { background: url("assets/vol-3.svg") center / cover no-repeat, url("assets/vol-2.svg") center / cover no-repeat; }
+/* (« transition » ET « arrivee » : l'animation continue pendant toute l'ouverture en rond, sans coupure ; le cercle
+   disperse les pétales — scale du panel, renforcé ici — et dévoile le sommaire) */
+:root[data-profile] #splash { --sp-disperse: 1.7; }
+:root[data-profile] body:is([data-etat="transition"], [data-etat="arrivee"]) #splash::before,
+:root[data-profile] body:is([data-etat="transition"], [data-etat="arrivee"]) #splash::after,
+:root[data-profile] body:is([data-etat="transition"], [data-etat="arrivee"]) #splash .sp-screen { will-change: transform, opacity; }
+:root[data-profile] body:is([data-etat="transition"], [data-etat="arrivee"]) #splash::before { animation: pf-vague 4s cubic-bezier(.35, .05, .6, .7) forwards; }
+:root[data-profile] body:is([data-etat="transition"], [data-etat="arrivee"]) #splash::after { animation: pf-vague-proche 3.8s cubic-bezier(.35, .05, .6, .7) .3s forwards; }
+@keyframes pf-vague { 0% { transform: scale(.45) rotate(-4deg); opacity: 0; } 10% { opacity: 1; } 85% { opacity: .95; } 100% { transform: scale(3) rotate(3deg); opacity: 0; } }
+@keyframes pf-vague-proche { 0% { transform: scale(.7) rotate(3deg); opacity: 0; } 12% { opacity: 1; } 86% { opacity: 1; } 100% { transform: scale(3.6) rotate(-3deg); opacity: 0; } }
+:root[data-profile] body:is([data-etat="transition"], [data-etat="arrivee"]) #splash .sp-screen {
+  transform-origin: 50% 45%; animation: pf-envol 4.1s cubic-bezier(.45, 0, .7, .35) forwards;
+}
+/* (la scène plonge vers l'arbre sans s'effacer : elle s'ouvre EN ROND sur le sommaire, profil.json "ouverture": "cercle") */
+@keyframes pf-envol { 0% { transform: none; } 100% { transform: scale(1.9); } }
+:root[data-profile] #splash { --sp-anneau: rgba(255, 192, 216, .95); }
+:root[data-profile] body:is([data-etat="transition"], [data-etat="arrivee"]) #splash .sp-sweep {
+  background: url("assets/petales-proches.svg") 0 0 / 900px 900px repeat, url("assets/petales.svg") 0 0 / 420px 420px repeat;
+  animation: pf-chute 3.2s linear infinite;
+}
+
+/* ---------- Arrivée sur le sommaire (body[data-etat="arrivee"]) : le vol se prolonge, quelques feuilles et
+   pétales passent encore au premier plan pendant que le sommaire apparaît, puis s'en vont ---------- */
+:root[data-profile]::after { content: none; }
+:root[data-profile]:has(> body[data-etat="arrivee"])::after {
+  content: ""; position: fixed; inset: -20vh -20vw; z-index: 95; pointer-events: none;
+  background: url("assets/feuilles.svg") 0 0 / 700px 700px repeat, url("assets/petales-proches.svg") 120px 80px / 1000px 1000px repeat;
+  animation: pf-feuilles-passent 1.9s cubic-bezier(.45, 0, .55, 1) forwards; will-change: transform, opacity;
+}
+@keyframes pf-feuilles-passent { 0% { opacity: 0; transform: translate(0, 0) scale(1.5); } 22% { opacity: .95; }
+  70% { opacity: .7; } 100% { opacity: 0; transform: translate(-28vw, 34vh) scale(1.15); } }
+
+/* ---------- Téléphone : moins de couches animées, arbre plus petit ---------- */
+@media (max-width: 700px) {
+  :root[data-profile] body::before { background-size: 600px 600px; opacity: .24; }
+  :root[data-profile] body::after { display: none; }
+  :root[data-profile] #splash .sp-grid, :root[data-profile] #splash .sp-screen::before, :root[data-profile] #splash .sp-grid::before {
+    background-size: auto 60vh; background-position: 50% calc(100% - 4.19vh); }
+  :root[data-profile] #splash .sp-grid::after { background-size: auto 12.77vh; }
+  :root[data-profile] #splash .sp-grid::before { transform-origin: 49% 70%; }
+  :root[data-profile]:has(> body[data-etat="arrivee"])::after { background: url("assets/feuilles.svg") 0 0 / 560px 560px repeat; }
+  :root[data-profile] #splash .sp-sweep { background-size: 560px 560px; }
+  :root[data-profile] #splash .sp-screen::after { display: none; }
+  :root[data-profile] #splash::after { background: url("assets/vol-2.svg") center / cover no-repeat; }
+  :root[data-profile] #splash .sp-glow { width: 100px; height: 100px; top: 6%; right: 7%; }
+  :root[data-profile] #splash .sp-center::before { width: 420px; height: 360px; margin: -180px 0 0 -210px; }
+  :root[data-profile] #splash .sp-enter::after { width: 300px; height: 92px; margin: -22px 0 0 -150px; }
+  :root[data-profile] .card::after { width: 72px; height: 42px; }
+}
+
+/* ---------- Sans animation : tout s'affiche directement, la transition devient un fondu ---------- */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-profile] body::before, :root[data-profile] body::after, :root[data-profile] #splash .sp-sweep,
+  :root[data-profile] #splash .sp-screen::after, :root[data-profile] #splash::before, :root[data-profile] #splash::after,
+  :root[data-profile]:has(> body[data-etat="arrivee"])::after { display: none; }
+  :root[data-profile] body[data-etat="intro"] #splash .sp-grid { background-image: url("assets/arbre.webp"); }
+  :root[data-profile] *:not(#splash), :root[data-profile] *::before, :root[data-profile] *::after { animation: none !important; transition: none !important; }
+  :root[data-profile] body[data-etat] #splash .sp-enter, :root[data-profile] body[data-etat] #splash .sp-tag,
+  :root[data-profile] body[data-etat] #splash .sp-bar { opacity: 1; transform: none; }
+}

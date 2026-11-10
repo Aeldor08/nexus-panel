@@ -1,0 +1,44 @@
+# Release : sur un tag v*, fabrique l'archive propre et son SHA256 et les joint à la release
+# (outils/release.py les envoie déjà depuis le PC : ici, seulement s'ils manquent).
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  archive:
+    name: Archive et SHA256
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Le tag correspond au fichier VERSION
+        run: test "v$(tr -d '[:space:]' < VERSION)" = "${GITHUB_REF_NAME}"
+      - name: Construction
+        run: python outils/release.py --construire-seulement --depot "${{ github.repository }}"
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          VER="${TAG#v}"
+          sleep 90   # laisse outils/release.py (sur le PC) créer la release et y joindre ses fichiers
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            awk -v v="$VER" '$0 ~ "^## \[" v "\]" {f=1; next} /^## \[/ {f=0} f' CHANGELOG.md > notes.md
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "NEXUS $VER" --notes-file notes.md --verify-tag
+          fi
+          ASSETS="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')"
+          if ! grep -qx "NEXUS-$VER.zip" <<< "$ASSETS"; then
+            gh release upload "$TAG" "dist/NEXUS-$VER.zip" "dist/NEXUS-$VER.zip.sha256" --repo "$GITHUB_REPOSITORY"
+          else
+            echo "Archive déjà jointe par outils/release.py : rien à faire."
+          fi

@@ -1,0 +1,9 @@
+{
+  "format": 1,
+  "nom": "Mon profil",
+  "auteur": "Moi",
+  "version": "1.0",
+  "modes": ["terminal", "sentinelle"],
+  "description": "Décris ici le style en une phrase.",
+  "apercu": { "couleurs": ["#101418", "#00c2ff", "#ff5c8a"] }
+}

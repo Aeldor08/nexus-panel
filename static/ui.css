@@ -1,0 +1,124 @@
+/* =====================================================================
+   Réglages de taille, agenda en fenêtres, rappels (js/reglages.js, js/layout.js, js/agenda.js, js/rappels.js)
+   Utilise les variables des modes (--cyan, --track…) : s'adapte à Terminal, Sentinelle et aux profils.
+   ===================================================================== */
+
+/* ---- Tailles par composant (variables posées sur <html> en !important ; valeurs par défaut ici) ---- */
+:root { --nx-z-lanceur: 1.25; --nx-z-deck: 1.15; --nx-z-melangeur: 1.15; --nx-z-agenda: 1.05; }
+/* (le zoom porte sur le CONTENU des blocs, jamais sur le bloc : sa position et sa taille restent exactes) */
+#tab-lanceur > .card > :not(.nx-rs):not(.nx-grip) { zoom: var(--nx-z-lanceur) !important; }
+#tab-deck .dk-grid { zoom: var(--nx-z-deck) !important; }
+.c-mixer > :not(.nx-rs):not(.nx-grip) { zoom: var(--nx-z-melangeur) !important; }
+.ag-panel > :not(.nx-rs) { zoom: var(--nx-z-agenda) !important; }
+
+/* ---- Bouton et menu Réglages ---- */
+.rg-wrap { position: relative; display: inline-block; }
+.btn.rg-btn { border-color: var(--muted); color: var(--text); }
+.rg-menu { position: absolute; z-index: 900; top: calc(100% + 8px); right: 0; width: min(380px, calc(100vw - 32px));
+  max-height: min(75vh, 640px); overflow: auto; padding: 12px; color: var(--text); font-family: var(--mono);
+  background: var(--deep-1, #0b0b0b); border: 1px solid var(--muted); box-shadow: 0 14px 40px rgba(0, 0, 0, .6);
+  text-transform: none; letter-spacing: normal; text-align: left; font-weight: 400; }
+.rg-menu[hidden] { display: none; }
+.rg-group { margin: 12px 0 6px; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+.rg-row { display: grid; grid-template-columns: minmax(0, 1fr) 120px 52px; gap: 10px; align-items: center; font-size: 14px; margin: 6px 0; }
+.rg-row input[type=range] { width: 100%; accent-color: var(--cyan); }
+.rg-row b { text-align: right; font-variant-numeric: tabular-nums; }
+.rg-row.rg-chk { grid-template-columns: auto 1fr; }
+.rg-row.rg-sel { grid-template-columns: minmax(0, 1fr) auto; }
+.rg-row.rg-sel select { font-size: 13px; max-width: 200px; }
+.rg-row.rg-chk input { width: 18px; height: 18px; accent-color: var(--cyan); }
+.rg-menu .btn { margin: 4px 6px 4px 0; }
+.rg-note { display: block; margin-top: 10px; font-size: 12px; line-height: 1.5; }
+@media (max-width: 760px) {
+  .rg-wrap { position: static; }
+  .rg-menu { position: fixed; left: 16px; right: 16px; top: 70px; width: auto; }
+  .rg-row { grid-template-columns: minmax(0, 1fr) 100px 48px; }
+}
+
+/* ---- Agenda : tableau de fenêtres ---- */
+.ag-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.ag-hint { font-size: 13px; }
+.ag-board { position: relative; min-height: 400px; }
+.ag-panel { display: flex; flex-direction: column; min-width: 0; overflow: hidden; box-sizing: border-box; }
+.ag-panel > h2.nx-drag { cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none; flex: none; }
+.ag-panel.nx-moving { opacity: .92; box-shadow: 0 18px 50px rgba(0, 0, 0, .6); }
+.ag-panel.nx-moving > h2.nx-drag { cursor: grabbing; }
+.ag-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; }
+.ag-panel .cal-head { flex-wrap: wrap; gap: 6px; }
+.ag-panel .cal-head .m { min-width: 0; }
+.cal-card .cal { flex: 1 1 auto; min-height: 0; grid-auto-rows: minmax(0, 1fr); }
+.cal-card .cal .dow { align-self: end; }
+.cal-card .day { min-height: 0; overflow: hidden; }
+.nx-rs { position: absolute; right: 2px; bottom: 2px; width: 22px; height: 22px; cursor: nwse-resize; touch-action: none; z-index: 3;
+  background: linear-gradient(135deg, transparent 50%, var(--cyan) 50% 58%, transparent 58% 70%, var(--cyan) 70% 78%, transparent 78%); opacity: .7; }
+.nx-rs:hover { opacity: 1; }
+.nx-locked .nx-rs { display: none; }
+.nx-locked .ag-panel > h2.nx-drag { cursor: default; touch-action: auto; }
+.btn.on { border-color: var(--yellow); color: var(--yellow); }
+@media (pointer: coarse) { .nx-rs { width: 34px; height: 34px; } }
+
+/* ---- Toutes les catégories : blocs libres (js/layout.js + js/blocs.js) ---- */
+.nx-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.nx-tools .btn { padding: 5px 12px; font-size: 13px; }
+/* État de la mise en page : verrouillée (ambre) ou déverrouillée (vert) ; un profil peut redéfinir ces couleurs */
+.nx-tools .nx-verrou[data-etat="verrouille"] { color: var(--warn); border-color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
+.nx-tools .nx-verrou[data-etat="deverrouille"] { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 70%, transparent); }
+.nx-hint { font-size: 13px; }
+.nx-panel { position: relative; box-sizing: border-box; min-width: 0; }
+.nx-panel > .nx-drag { cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none; }
+.nx-panel > .nx-drag:focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
+.nx-panel.nx-moving { opacity: .92; box-shadow: 0 18px 50px rgba(0, 0, 0, .6); }
+.nx-panel.nx-moving > .nx-drag { cursor: grabbing; }
+.nx-grip { height: 16px; margin: -6px 0 6px; line-height: 16px; text-align: center; font-size: 14px; letter-spacing: 6px;
+  color: var(--muted); opacity: .6; }
+.nx-grip:hover { opacity: 1; color: var(--cyan); }
+.nx-locked .nx-panel > .nx-drag { cursor: default; touch-action: auto; }
+.nx-locked .nx-grip { visibility: hidden; height: 0; margin: 0; }
+.nx-free .nx-contents { display: contents !important; }
+/* Blocs libres : défilement vertical seulement si le contenu dépasse vraiment (js/layout.js agrandit les blocs à qui
+   il ne manque que quelques pixels) ; jamais de barre horizontale (le contenu passe à la ligne ; les décorations
+   d'un profil qui débordent de 1 à 3 px — branche qui se balance, coin orné — sont simplement rognées) */
+main.nx-free > .nx-panel, main.nx-free .nx-contents > .nx-panel { overflow-x: hidden; overflow-y: auto; }
+/* Pages à valeurs qui bougent (js/layout.js « ajuste ») : le bloc grandit à son contenu, jamais de barre */
+main.nx-free.nx-ajuste > .nx-panel, main.nx-free.nx-ajuste .nx-contents > .nx-panel { scrollbar-width: none; }
+main.nx-free.nx-ajuste .nx-panel::-webkit-scrollbar { display: none; }
+.nx-spacer { pointer-events: none; }
+@media (pointer: coarse) { .nx-grip { height: 28px; line-height: 28px; font-size: 20px; } }
+
+/* ---- Agenda : liste du jour + formulaire ---- */
+.ag-ev .x { display: flex; flex-direction: column; }
+.ag-ev.editing { outline: 1px solid var(--yellow); }
+.ag-desc { color: var(--muted); font-size: 13px; white-space: pre-wrap; }
+.ag-up { width: 100%; font: inherit; color: inherit; background: none; border: 0; text-align: left; cursor: pointer; }
+.ag-form { margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--track); }
+.ag-form h3 { margin: 0 0 8px; font-size: 16px; letter-spacing: 1px; }
+.ag-form .ag-note { font-size: 13px; margin: 0 0 8px; }
+.ag-f { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; font-size: 13px; color: var(--muted); min-width: 0; }
+.ag-f > .in, .ag-f > textarea, .ag-f > select { font-size: 15px; color: var(--text); width: 100%; box-sizing: border-box; }
+.ag-f em { font-style: normal; color: var(--hot); font-size: 13px; min-height: 0; }
+.ag-f em:empty { display: none; }
+.ag-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.ag-chk { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 4px 0 8px; }
+.ag-chk input { width: 18px; height: 18px; accent-color: var(--cyan); }
+.ag-rem { border: 1px solid var(--track); padding: 6px 10px 8px; margin: 4px 0 10px; }
+.ag-rem legend { font-size: 13px; color: var(--muted); padding: 0 4px; }
+.ag-rem .in { width: 100%; box-sizing: border-box; font-size: 15px; }
+.ag-rem em { display: block; font-style: normal; color: var(--hot); font-size: 13px; }
+.ag-actions { flex-wrap: wrap; gap: 8px; }
+[hidden].ag-time, .ag-f[hidden], .ag-row[hidden] { display: none !important; }
+.ag-scope-btns { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.ag-scope-btns .btn { width: 100%; text-align: left; }
+
+/* ---- Rappels : bannières ---- */
+.nx-rem-stack { position: fixed; z-index: 4000; top: 16px; right: 16px; width: min(380px, calc(100vw - 32px));
+  display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+.nx-rem { pointer-events: auto; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding: 12px 14px;
+  font-family: var(--mono); color: var(--text); background: var(--deep-1, #111); border: 1px solid var(--yellow);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, .6), 0 0 20px rgba(var(--yel-rgb), .25); animation: nx-rem-in .35s ease-out; }
+.nx-rem.bday { border-color: var(--magenta); box-shadow: 0 10px 34px rgba(0, 0, 0, .6), 0 0 20px rgba(var(--mag-rgb), .3); }
+.nx-rem b { grid-column: 1; font-size: 15px; color: var(--yellow); }
+.nx-rem.bday b { color: var(--magenta); }
+.nx-rem span { grid-column: 1; font-size: 15px; }
+.nx-rem small { grid-column: 1; font-size: 12px; color: var(--muted); }
+.nx-rem .btn { grid-column: 2; grid-row: 1 / span 3; }
+@keyframes nx-rem-in { from { transform: translateX(30px); opacity: 0; } }

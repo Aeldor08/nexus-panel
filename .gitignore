@@ -1,0 +1,66 @@
+# =====================================================================
+#  NEXUS : rien de personnel ni de secret ne doit entrer dans Git.
+#  (voir NE_PAS_PARTAGER.md ; vérification : python outils/scan_perso.py + gitleaks)
+# =====================================================================
+
+# --- Secrets et configuration réelle (seuls les modèles *.example.json sont partagés)
+config.json
+deck.json
+jeux.json
+fan_names.json
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+*.p12
+*secret*
+*token*
+!**/*token*.py
+!**/*token*.md
+
+# --- Données personnelles : souvenirs (photos), statistiques, journal, notes, agenda, sessions
+data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# --- Journaux, sessions, sauvegardes, références, mises à jour en cours
+logs/
+*.log
+versions/
+partage/
+reference/
+references/
+sauvegardes/
+sauvegardes-maj/
+maj/
+backups/
+*.bak
+*.orig
+
+# --- Artefacts de release (fabriqués par outils/release.py)
+dist/
+*.sha256
+
+# --- Scripts personnels du stream deck (seul l'exemple est partagé)
+actions/*
+!actions/exemple.bat
+
+# --- Outil tiers téléchargé séparément (LibreHardwareMonitor, licence MPL-2.0)
+LibreHardwareMonitor/
+
+# --- Environnement Python et fichiers générés
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.ruff_cache/
+.pytest_cache/
+*.tmp
+*.lnk
+Thumbs.db
+desktop.ini
+.DS_Store

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="NEXUS">
+  <defs>
+    <linearGradient id="nx-g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#00f0ff"/>
+      <stop offset="1" stop-color="#ff2bd6"/>
+    </linearGradient>
+    <filter id="nx-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="2.2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <g fill="none" stroke="url(#nx-g)" stroke-linecap="square" filter="url(#nx-glow)">
+    <!-- hexagone extérieur -->
+    <path d="M60 6 L107 33 L107 87 L60 114 L13 87 L13 33 Z" stroke-width="4"/>
+    <!-- hexagone intérieur en pointillés -->
+    <path d="M60 20 L95 40 L95 80 L60 100 L25 80 L25 40 Z" stroke-width="1.5" stroke-dasharray="4 5" opacity=".7"/>
+    <!-- le N -->
+    <path d="M42 80 V40 L78 80 V40" stroke-width="8"/>
+  </g>
+  <!-- pistes de circuit et nœuds -->
+  <g stroke="#00f0ff" stroke-width="2" fill="none" opacity=".9">
+    <path d="M107 33 L116 28"/><path d="M13 87 L4 92"/><path d="M60 6 V1"/><path d="M60 114 V119"/>
+  </g>
+  <g fill="#fcee0a">
+    <circle cx="116" cy="28" r="2.6"/><circle cx="4" cy="92" r="2.6"/>
+  </g>
+</svg>

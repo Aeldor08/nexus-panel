@@ -1,0 +1,94 @@
+/* Menu des profils visuels (js/profiles.js) — utilise les variables du mode en cours */
+.pf-wrap { position: relative; display: inline-block; }
+.btn.pf-btn { border-color: var(--yellow); color: var(--yellow); background: rgba(var(--yel-rgb), .06);
+  max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn.pf-btn:hover { background: var(--yellow); color: var(--bg); }
+.pf-menu { position: absolute; z-index: 900; top: calc(100% + 8px); right: 0; width: min(420px, calc(100vw - 32px));
+  max-height: min(70vh, 620px); overflow: auto; padding: 10px; color: var(--text); font-family: var(--mono);
+  background: var(--deep-1, #0b0b0b); border: 1px solid var(--yellow); box-shadow: 0 14px 40px rgba(0, 0, 0, .6);
+  text-transform: none; letter-spacing: normal; text-align: left; font-weight: 400; }
+.pf-menu[hidden] { display: none; }
+.pf-menu.drag { outline: 2px dashed var(--yellow); outline-offset: -6px; }
+.pf-head { font-size: 13px; letter-spacing: 1px; color: var(--muted); padding: 2px 4px 8px; }
+.pf-head b { color: var(--text); }
+.pf-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.pf-list li { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+  padding: 8px; cursor: pointer; border: 1px solid transparent; background: rgba(255, 255, 255, .02); outline: none; }
+.pf-list li:hover, .pf-list li:focus-visible { border-color: rgba(var(--yel-rgb), .5); background: rgba(var(--yel-rgb), .06); }
+.pf-list li.on { border-color: var(--yellow); background: rgba(var(--yel-rgb), .1); }
+.pf-list li.on .pf-info b::after { content: "  ✓ actif"; color: var(--yellow); font-weight: 400; font-size: 12px; }
+.pf-prev { width: 56px; height: 36px; display: block; overflow: hidden; border: 1px solid rgba(255, 255, 255, .15); }
+.pf-prev img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pf-sw { display: flex; width: 100%; height: 100%; }
+.pf-sw i { flex: 1; }
+.pf-sw-def i:nth-child(1) { background: var(--bg); } .pf-sw-def i:nth-child(2) { background: var(--cyan); }
+.pf-sw-def i:nth-child(3) { background: var(--magenta); }
+.pf-info { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pf-info b { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-info small { font-size: 12px; color: var(--muted); }
+.pf-info em { font-style: normal; font-size: 12px; color: var(--text-2, var(--muted)); line-height: 1.35; }
+.pf-info em.pf-warn { color: var(--warn); }
+.pf-acts { display: flex; gap: 4px; }
+.pf-act { font: inherit; font-size: 16px; width: 32px; height: 30px; cursor: pointer; color: var(--text);
+  background: transparent; border: 1px solid rgba(255, 255, 255, .18); }
+.pf-act:hover { border-color: var(--yellow); color: var(--yellow); }
+.pf-note { font-size: 12px; color: var(--muted); padding: 8px 4px 0; }
+.pf-bad { margin-top: 10px; font-size: 12px; color: var(--warn); border: 1px solid rgba(255, 176, 0, .4); padding: 6px 8px; }
+.pf-bad summary { cursor: pointer; }
+.pf-bad div { margin-top: 6px; color: var(--text); }
+.pf-bad ul { margin: 2px 0 0; padding-left: 18px; color: var(--muted); }
+.pf-bad small { display: block; margin-top: 6px; color: var(--muted); }
+.pf-foot { display: flex; gap: 8px; margin-top: 10px; }
+.pf-foot .btn { flex: 1; }
+.pf-drop { margin-top: 8px; padding: 10px; text-align: center; font-size: 12px; color: var(--muted);
+  border: 1px dashed rgba(255, 255, 255, .2); }
+
+/* Fenêtres (conflit, erreurs, suppression) et messages */
+.pf-dlg { width: min(480px, calc(100vw - 32px)); color: var(--text); font-family: var(--mono); padding: 18px 20px;
+  background: var(--deep-1, #0b0b0b); border: 1px solid var(--yellow); box-shadow: 0 0 40px rgba(0, 0, 0, .6); }
+.pf-dlg::backdrop { background: rgba(0, 0, 0, .7); }
+.pf-dlg h3 { margin: 0 0 10px; font-size: 18px; letter-spacing: 2px; color: var(--yellow); text-transform: uppercase; }
+.pf-dlg-body { font-size: 14px; line-height: 1.55; max-height: 50vh; overflow: auto; }
+.pf-dlg-body ul { padding-left: 18px; color: var(--warn); }
+.pf-dlg-body code { color: var(--cyan); }
+.pf-dlg-btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; margin-top: 14px; }
+.pf-toast { position: fixed; z-index: 6000; left: 50%; bottom: 24px; transform: translateX(-50%); max-width: calc(100vw - 32px);
+  padding: 10px 16px; font-family: var(--mono); font-size: 14px; color: var(--text); background: var(--deep-1, #111);
+  border: 1px solid var(--cyan); box-shadow: 0 8px 30px rgba(0, 0, 0, .6); transition: opacity .4s; }
+.pf-toast.err { border-color: var(--hot); }
+.pf-toast.out { opacity: 0; }
+
+@media (max-width: 760px) {
+  .pf-wrap { position: static; }
+  .btn.pf-btn { max-width: 150px; }
+  .pf-menu { position: fixed; left: 16px; right: 16px; top: 70px; width: auto; }
+}
+
+/* ---------- Changement de profil en douceur (js/profiles.js → switchTo) ----------
+   Écran NEXUS neutre ; l'accent reprend celui du profil d'arrivée dès que sa feuille est appliquée.
+   --accent-profil : couleur d'accent d'un profil (un profil peut la définir ; sinon --cyan). Enregistrée pour
+   pouvoir glisser d'une couleur à l'autre. */
+@property --accent-profil { syntax: "<color>"; inherits: true; initial-value: #8fd3ff; }
+:root { --accent-profil: var(--cyan); }
+.nx-bascule { position: fixed; inset: 0; z-index: 3000; display: grid; place-items: center; pointer-events: auto;
+  background: radial-gradient(ellipse at 50% 45%, #141823 0%, #07080d 70%); color: #e6eaf2;
+  font-family: "Segoe UI", system-ui, sans-serif; opacity: 0; visibility: hidden;
+  transition: opacity .42s cubic-bezier(.45, 0, .55, 1), visibility 0s linear .42s, --accent-profil .5s ease-in-out; }
+.nx-bascule.on { opacity: 1; visibility: visible; transition: opacity .42s cubic-bezier(.45, 0, .55, 1), visibility 0s, --accent-profil .5s ease-in-out; }
+.nx-b-box { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 0 16px; }
+.nx-b-logo { width: 84px; height: 84px; filter: drop-shadow(0 0 14px color-mix(in srgb, var(--accent-profil) 70%, transparent));
+  animation: nx-b-respire 1.6s ease-in-out infinite; }
+.nx-b-titre { font-size: 30px; letter-spacing: .45em; margin-right: -.45em; font-weight: 300; color: #f2f5fa;
+  text-shadow: 0 0 18px color-mix(in srgb, var(--accent-profil) 55%, transparent); }
+.nx-b-txt { font-size: 15px; color: #c9cfdb; } .nx-b-txt b { color: var(--accent-profil); font-weight: 600; }
+.nx-b-ver { font-size: 12px; letter-spacing: .12em; color: #8a92a3; text-transform: uppercase; }
+.nx-b-barre { width: min(260px, 70vw); height: 3px; margin-top: 10px; border-radius: 3px; overflow: hidden; background: rgba(255, 255, 255, .1); }
+.nx-b-barre i { display: block; height: 100%; background: var(--accent-profil); box-shadow: 0 0 10px var(--accent-profil);
+  transform: scaleX(0); transform-origin: 0 50%; transition: transform .35s cubic-bezier(.3, .7, .3, 1); }
+@keyframes nx-b-respire { 50% { transform: scale(1.05); opacity: .85; } }
+/* sans animation : simple fondu court, logo et barre immobiles */
+.nx-bascule.calme, .nx-bascule.calme.on { transition-duration: .15s; }
+.nx-bascule.calme .nx-b-logo { animation: none; }
+.nx-bascule.calme .nx-b-barre { display: none; }
+@media (prefers-reduced-motion: reduce) { .nx-bascule { transition-duration: .15s !important; } .nx-b-logo { animation: none !important; } }
+@media (max-width: 700px) { .nx-b-logo { width: 64px; height: 64px; } .nx-b-titre { font-size: 24px; } }
