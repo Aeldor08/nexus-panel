@@ -8,6 +8,9 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Modifié
+- Intégration continue : dépendances de test dans `requirements-dev.txt` (client de test des versions récentes de Starlette)
+
 ## [1.0.0] - 2026-11-10 - Première version publiée
 
 Première version diffusée par un dépôt Git et des releases GitHub. Elle reprend tout le panel développé

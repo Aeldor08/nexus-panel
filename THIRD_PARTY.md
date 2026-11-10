@@ -29,7 +29,7 @@ Les illustrations, sprites et SVG des profils sont des créations originales pou
 | Pillow | miniatures des souvenirs, icônes | MIT-CMU (HPND) |
 | keyring | rangement du jeton GitHub dans le gestionnaire d'identifiants de Windows | MIT |
 
-Outils de développement seulement (non nécessaires pour utiliser NEXUS) : ruff (MIT), gitleaks (MIT).
+Outils de développement seulement (`requirements-dev.txt`, non nécessaires pour utiliser NEXUS) : ruff (MIT), httpx / httpx2 (BSD-3-Clause), gitleaks (MIT).
 
 ## Logiciel téléchargé séparément
 
