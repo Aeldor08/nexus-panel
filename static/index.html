@@ -146,6 +146,10 @@ try { if (sessionStorage.getItem("nexus-tx")) document.documentElement.classList
   .alert { display: flex; align-items: center; gap: 12px; padding: 9px 14px; font-size: 15px;
     letter-spacing: .5px; border: 1px solid; }
   .alert b { letter-spacing: 2px; font-size: 13px; padding: 2px 6px; }
+  .alert-txt { flex: 1 1 auto; min-width: 0; }
+  .alert-x { flex: none; margin-left: auto; font: inherit; font-size: 12px; letter-spacing: 1px; padding: 3px 10px;
+    color: inherit; background: transparent; border: 1px solid currentColor; border-radius: 4px; cursor: pointer; opacity: .85; }
+  .alert-x:hover, .alert-x:focus-visible { opacity: 1; background: rgba(255,255,255,.08); }
   .alert.crit { color: #ffd0d8; border-color: var(--hot); background: rgba(255,42,77,.10); }
   /* pulsation : halo FIXE sur un calque dont seule l'opacité varie (les profils peuvent remplacer ce ::after) */
   .alert.crit::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
@@ -673,7 +677,7 @@ function render(s) {
         `<span class="chip">${esc(f.label || (f.kind === "gpu" ? "GPU " : "") + f.name)} ${edit(f)}</span>`).join(" ")
     : "";
 
-  renderAlerts(s.alerts || []);
+  renderAlerts(s.alerts || [], s.demarrage);
 }
 
 // ---- Renommer un ventilateur (enregistré côté serveur dans fan_names.json)
@@ -745,12 +749,40 @@ function alertState(list) {
     alertEvtTimer = setTimeout(() => { delete document.body.dataset.alerteEvenement; }, 3000);
   }
 }
-function renderAlerts(list) {
-  $("alerts").innerHTML = list.map(a =>
-    `<div class="alert ${a.level}"><b>${a.level === "crit" ? "CRITIQUE" : "ALERTE"}</b>${esc(a.text)}</div>`).join("");
+// Alertes ignorées (bouton « Ignorer ») : cachées jusqu'à la prochaine ouverture de NEXUS (nouvel onglet) ou son
+// prochain démarrage (redémarrage, mise à jour) si le souci persiste. Un souci résolu depuis 10 min qui revient
+// est une nouvelle alerte : elle s'affiche de nouveau.
+const IGN_KEY = "nexus-alertes-ignorees", IGN_OUBLI = 10 * 60 * 1000;
+let ignorees = { demarrage: null, vues: {} };          // id -> dernière fois que l'alerte était active
+try { ignorees = JSON.parse(sessionStorage.getItem(IGN_KEY)) || ignorees; } catch (e) {}
+let ignSave = 0, alertsHtml = null, alertsLast = [], alertsBoot = null;
+function sauverIgnorees() { try { sessionStorage.setItem(IGN_KEY, JSON.stringify(ignorees)); } catch (e) {} ignSave = Date.now(); }
+$("alerts").addEventListener("click", e => {
+  const b = e.target.closest("[data-ignorer]");
+  if (!b) return;
+  ignorees.vues[b.dataset.ignorer] = Date.now();
+  sauverIgnorees();
+  renderAlerts(alertsLast, alertsBoot);
+});
+function renderAlerts(all, demarrage) {
+  alertsLast = all; alertsBoot = demarrage;
+  const now = Date.now(), active = new Set(all.map(a => a.id));
+  let change = false;
+  if (demarrage && ignorees.demarrage !== demarrage) { ignorees = { demarrage, vues: {} }; change = true; }
+  for (const id of Object.keys(ignorees.vues)) {
+    if (active.has(id)) ignorees.vues[id] = now;
+    else if (now - ignorees.vues[id] > IGN_OUBLI) { delete ignorees.vues[id]; change = true; }
+  }
+  if (change || (Object.keys(ignorees.vues).length && now - ignSave > 30000)) sauverIgnorees();
+  const list = all.filter(a => !Object.prototype.hasOwnProperty.call(ignorees.vues, a.id));
+  // réécrit seulement si quelque chose change (sinon le bouton serait remplacé sous le doigt chaque seconde)
+  const html = list.map(a => `<div class="alert ${a.level}"><b>${a.level === "crit" ? "CRITIQUE" : "ALERTE"}</b>` +
+    `<span class="alert-txt">${esc(a.text)}</span><button type="button" class="alert-x" data-ignorer="${esc(a.id)}"` +
+    ` title="Ignorer jusqu'à la prochaine ouverture de NEXUS (elle reviendra si le souci persiste)"` +
+    ` aria-label="Ignorer l'alerte : ${esc(a.text)}">✕ Ignorer</button></div>`).join("");
+  if (html !== alertsHtml) { $("alerts").innerHTML = html; alertsHtml = html; }
   document.title = (list.some(a => a.level === "crit") ? "⚠ " : "") + "NEXUS";
   alertState(list);
-  const now = Date.now(), active = new Set(list.map(a => a.id));
   for (const id of [...notified.keys()]) if (!active.has(id)) notified.delete(id);
   if (!notifOn) return;
   for (const a of list) {

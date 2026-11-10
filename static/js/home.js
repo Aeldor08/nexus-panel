@@ -29,7 +29,6 @@
       <div><div class="home-hello" id="h-hello"></div><div class="home-date" id="h-date"></div></div>
       <div class="home-time" id="h-time"></div>
     </div>
-    <div class="home-alerts" id="h-alerts"></div>
     <section class="home-grid">
       ${TILES.map((t, i) => `
         <article class="card home-tile" style="--accent: var(${t.color})">
@@ -82,9 +81,7 @@
     live("pc", kv("CPU", pct(s.cpu.percent), "n-pct") + kv("CPU temp.", deg(s.cpu.temperature), "n-deg " + tempClass(s.cpu.temperature, 65, 80)) +
       kv("GPU", g ? pct(g.load_percent) : "–", "n-pct") + kv("GPU temp.", g ? deg(g.temperature) : "–", "n-deg " + (g ? tempClass(g.temperature, 70, 83) : "")) +
       kv("RAM", pct(s.ram.percent), "n-pct") + (s.gamemode && s.gamemode.in_game ? kv("Mode jeu", "▶ " + esc(gameLabel(s.gamemode.game)), "t-ok") : ""));
-    const al = s.alerts || [];
-    const alHtml = al.length ? al.map(a => `<a class="alert ${a.level}" href="#pc"><b>${a.level === "crit" ? "CRITIQUE" : "ALERTE"}</b>${esc(a.text)}</a>`).join("") : "";
-    if (dernier.alertes !== alHtml) { $("h-alerts").innerHTML = alHtml; dernier.alertes = alHtml; }
+    // (les alertes s'affichent une seule fois : dans la barre commune sous les onglets, avec « Ignorer »)
   }
   function fromMedia() {
     const m = window.mediaState;

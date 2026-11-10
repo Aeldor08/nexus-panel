@@ -301,11 +301,15 @@ def main() -> int:
         d = m["disponible"]
         ok(d and d["version"] == "1.0.1" and d["archive"]["taille"] > 1e6 and "1.0.1" in d["notes"],
            "détection de la 1.0.1 (notes et taille)")
-        c, r = panel.post("/api/maj/installer", {"mot_de_passe": "faux"})
-        ok(c == 403, "installation refusée sans le bon mot de passe")
-        c, r = panel.post("/api/maj/installer", {})
-        ok(c == 403, "installation refusée sans mot de passe")
         c, r = panel.post("/api/maj/installer", {"mot_de_passe": MDP})
+        ok(c == 400 and "validation" in r.get("error", ""), f"installation refusée sans validation explicite ({c})")
+        c, r = panel.post("/api/maj/installer", {"mot_de_passe": MDP, "validation": "1.0.0"})
+        ok(c == 400, "installation refusée si la validation porte sur une autre version")
+        c, r = panel.post("/api/maj/installer", {"mot_de_passe": "faux", "validation": "1.0.1"})
+        ok(c == 403, "installation refusée sans le bon mot de passe")
+        c, r = panel.post("/api/maj/installer", {"validation": "1.0.1"})
+        ok(c == 403, "installation refusée sans mot de passe")
+        c, r = panel.post("/api/maj/installer", {"mot_de_passe": MDP, "validation": panel.get("/api/maj")["disponible"]["version"]})
         for _ in range(60):
             t = panel.get("/api/maj")["travail"]
             if t["etape"] == "erreur":
@@ -320,7 +324,7 @@ def main() -> int:
         fg.publier("1.0.1", z101)
         panel.post("/api/maj/verifier")
         fg.vus.clear()
-        c, r = panel.post("/api/maj/installer", {"mot_de_passe": MDP})
+        c, r = panel.post("/api/maj/installer", {"mot_de_passe": MDP, "validation": panel.get("/api/maj")["disponible"]["version"]})
         ok(c == 200, "installation lancée (clic + mot de passe)")
         etapes = set()
         while panel.proc.poll() is None:
@@ -350,9 +354,9 @@ def main() -> int:
         panel.post("/api/maj/resultat-vu")
 
         # ---- 4. retour à la version précédente --------------------------------------------------------------------
-        c, r = panel.post("/api/maj/revenir", {"mot_de_passe": "faux"})
+        c, r = panel.post("/api/maj/revenir", {"mot_de_passe": "faux", "validation": "1.0.0"})
         ok(c == 403, "retour refusé sans le bon mot de passe")
-        c, r = panel.post("/api/maj/revenir", {"mot_de_passe": MDP})
+        c, r = panel.post("/api/maj/revenir", {"mot_de_passe": MDP, "validation": "1.0.0"})
         ok(c == 200 and r["vers"] == "1.0.0", "retour à la version précédente lancé")
         panel.cycle_lanceur()
         m = panel.get("/api/maj")
@@ -366,7 +370,7 @@ def main() -> int:
         fg.publier("1.0.3", z103)
         panel.post("/api/maj/verifier")
         cfg_avant = json.loads((inst / "config.json").read_text(encoding="utf-8"))
-        c, r = panel.post("/api/maj/installer", {"mot_de_passe": MDP})
+        c, r = panel.post("/api/maj/installer", {"mot_de_passe": MDP, "validation": panel.get("/api/maj")["disponible"]["version"]})
         sortie = panel.cycle_lanceur(90)
         m = panel.get("/api/maj")
         res = m["dernier_resultat"] or {}

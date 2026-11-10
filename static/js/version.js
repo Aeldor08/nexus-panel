@@ -79,7 +79,7 @@
             <button class="btn on" data-maj="installer">⬇ Installer la version ${esc(d.version)}</button>
             <button class="btn" data-maj="plus-tard">Plus tard</button>
           </div>
-          <small class="muted">Rien ne s'installe sans ton clic et ton mot de passe. Avant d'installer : vérification de
+          <small class="muted">Rien ne s'installe sans ton mot de passe et ta validation, à chaque mise à jour. Avant d'installer : vérification de
             l'archive (SHA256), sauvegarde du code, de tes données et de ta configuration ; en cas de problème au
             redémarrage, la version actuelle est restaurée automatiquement.</small>
         </section>` : ""}`;
@@ -142,13 +142,36 @@
     try {
       if (a === "verifier") { b.disabled = true; b.textContent = "⟳ Vérification…"; maj = await api("/api/maj/verifier", {}); majBloc(); pastille(); }
       else if (a === "plus-tard") { maj = await api("/api/maj/plus-tard", { heures: 24 }); majBloc(); pastille(); toast("D'accord : rappel dans 24 h."); }
-      else if (a === "installer" || a === "revenir") {
-        let mdp = ($("maj-mdp") || {}).value;
-        if (!mdp) mdp = prompt(a === "installer" ? "Mot de passe du panel pour installer :" : "Mot de passe du panel pour revenir à la version précédente :");
+      else if (a === "installer") {
+        // 1re étape : mot de passe, puis récapitulatif à VALIDER (rien n'est installé avant « Valider »)
+        const mdp = ($("maj-mdp") || {}).value;
+        if (!mdp) { toast("Entre le mot de passe du panel, puis clique sur Installer.", true); ($("maj-mdp") || b).focus(); return; }
+        const d = maj.disponible, zone = dlg.querySelector(".maj-actions");
+        zone.innerHTML = `<div class="maj-valider" role="alertdialog" aria-label="Valider la mise à jour">
+            <b>Valider la mise à jour vers la version ${esc(d.version)} ?</b>
+            <ul><li>De la version ${esc(maj.version)} vers ${esc(d.version)}${d.archive && d.archive.taille ? ` · ${fmtBytes(d.archive.taille)} à télécharger` : ""}</li>
+              <li>Archive vérifiée (SHA256) puis sauvegarde de ton code, de tes données et de ta configuration</li>
+              <li>NEXUS redémarre (environ 30 s) ; en cas de problème, l'ancienne version revient toute seule</li></ul>
+            <div class="form-row"><button class="btn on" data-maj="valider">✔ Valider la mise à jour</button>
+              <button class="btn" data-maj="annuler">Annuler</button></div></div>`;
+        zone.dataset.mdp = mdp;
+        zone.querySelector('[data-maj="valider"]').focus();
+      }
+      else if (a === "annuler") { majBloc(); toast("Mise à jour annulée : rien n'a été installé."); }
+      else if (a === "valider") {
+        const zone = dlg.querySelector(".maj-actions"), vers = maj.disponible.version;
+        b.disabled = true;
+        await api("/api/maj/installer", { mot_de_passe: zone.dataset.mdp, validation: vers });
+        delete zone.dataset.mdp;
+        dlg.close();
+        ecranTransition(vers, "installer");
+      }
+      else if (a === "revenir") {
+        const vers = maj.sauvegardes[0].version;
+        const mdp = prompt("Mot de passe du panel pour revenir à la version précédente :");
         if (!mdp) return;
-        if (a === "revenir" && !confirm(`Revenir à la version ${maj.sauvegardes[0].version} ? Le panel va redémarrer (tes données sont gardées).`)) return;
-        const vers = a === "installer" ? maj.disponible.version : maj.sauvegardes[0].version;
-        await api("/api/maj/" + a, { mot_de_passe: mdp });
+        if (!confirm(`Valider le retour à la version ${vers} ? Le panel va redémarrer (tes données sont gardées).`)) return;
+        await api("/api/maj/revenir", { mot_de_passe: mdp, validation: vers });
         dlg.close();
         ecranTransition(vers, a);
       }

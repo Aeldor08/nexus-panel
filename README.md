@@ -446,7 +446,8 @@ contacte que l'API des releases de GitHub (`api.github.com`) pour le dépôt con
 
 - Une nouvelle version allume une **pastille** sur le bouton de version et affiche un **bandeau** : notes de
   version, taille, **Installer la version X** ou **Plus tard** (rappel 24 h plus tard).
-- Rien ne s'installe sans **ton clic et le mot de passe du panel** (celui du deck). Le bot Discord ne peut
+- Rien ne s'installe sans **le mot de passe du panel** (celui du deck) **et ta validation** : à chaque mise à jour,
+  un récapitulatif « Valider la mise à jour vers X ? » s'affiche ; « Annuler » ne touche à rien. Le bot Discord ne peut
   jamais lancer une installation ; il peut seulement te prévenir (option « Me prévenir sur Discord »).
 - L'installation : téléchargement depuis le dépôt configuré seulement → contrôle **SHA256** (archive refusée
   si elle ne correspond pas) → **sauvegarde horodatée** du code, de `data\` et de `config.json` dans
@@ -457,6 +458,9 @@ contacte que l'API des releases de GitHub (`api.github.com`) pour le dépôt con
 - **Revenir à la version précédente** (fenêtre Version) remet le code d'avant la dernière mise à jour.
 - Dépôt **privé** : il faut un jeton GitHub en lecture seule limité à ce dépôt, voir `docs\JETON_GITHUB.md`.
 - Sans connexion, limite de requêtes atteinte ou jeton invalide : un message clair, rien n'est touché.
+
+Les **alertes** (disque plein, température…) ont un bouton **Ignorer** : l'alerte disparaît jusqu'à la prochaine
+ouverture de NEXUS ou son prochain démarrage (mise à jour comprise), et revient si le souci persiste.
 
 Un profil peut indiquer `"panel_min_version"` dans `profil.json` : s'il demande une version plus récente,
 il est refusé avec un message au lieu de s'afficher de travers.

@@ -268,6 +268,7 @@ avec `stop:first-child` / `stop:last-child`, `.sp-traces`, `.sp-nodes`), `.sp-ti
 :root[data-profile] body[data-alerte-evenement="resolue"]::after { display: block; animation: mon-clin 2.8s forwards; }
 ```
 
+Une alerte que l'utilisateur a ignorée (bouton `.alert-x`) ne compte plus dans ces états jusqu'au prochain démarrage.
 Chaque alerte reste aussi un `.alert` (ou `.alert.crit`) dans `#alerts`. Exemple complet :
 `profils/des-du-destin` (un 20 doré quand tout est résolu, un 1 rouge à une nouvelle alerte critique).
 

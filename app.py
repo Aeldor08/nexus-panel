@@ -46,6 +46,8 @@ import version as version_mod
 HOST = "127.0.0.1"
 # (NEXUS_PORT : tests uniquement — une copie de test dans un autre dossier, sans gêner le panel en service)
 PORT = int(os.environ.get("NEXUS_PORT") or 8000)
+# Identifiant de ce démarrage du serveur : une alerte ignorée revient au prochain démarrage (ou mise à jour)
+DEMARRAGE = f"{os.getpid()}-{int(dt.datetime.now().timestamp())}"
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 
@@ -147,7 +149,7 @@ psutil.cpu_percent(percpu=True)   # amorce : le 1er appel renvoie toujours 0
 
 @app.get("/api/stats")
 def api_stats() -> JSONResponse:
-    payload = {**sensors.full(), "gamemode": game_mode.state()}
+    payload = {**sensors.full(), "gamemode": game_mode.state(), "demarrage": DEMARRAGE}
     return JSONResponse(payload, headers={"Cache-Control": "no-store"})
 
 
@@ -954,6 +956,10 @@ def api_maj_resultat_vu() -> JSONResponse:
 @app.post("/api/maj/installer")
 async def api_maj_installer(request: Request) -> JSONResponse:
     body = await json_body(request)
+    dispo = updater.public().get("disponible")
+    # validation explicite de CETTE version (étape « Valider la mise à jour » de la fenêtre Version) : obligatoire
+    if not dispo or str(body.get("validation") or "") != dispo["version"]:
+        raise BadRequest("validation requise : confirme l'installation de cette version dans la fenêtre Version", 400)
     _maj_mot_de_passe(request, body)
     try:
         updater.installer(_redemarrer_pour_maj)
@@ -965,6 +971,9 @@ async def api_maj_installer(request: Request) -> JSONResponse:
 @app.post("/api/maj/revenir")
 async def api_maj_revenir(request: Request) -> JSONResponse:
     body = await json_body(request)
+    sauv = updater.sauvegardes()
+    if not sauv or str(body.get("validation") or "") != sauv[0]["version"]:
+        raise BadRequest("validation requise : confirme le retour à la version précédente", 400)
     _maj_mot_de_passe(request, body)
     try:
         v = updater.revenir(_redemarrer_pour_maj)
