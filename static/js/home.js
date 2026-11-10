@@ -51,7 +51,15 @@
   $("h-intro").addEventListener("click", ev => { ev.preventDefault(); if (window.replayIntro) window.replayIntro(); });
   $("h-version").addEventListener("click", ev => { ev.preventDefault(); if (window.nxVersion) window.nxVersion.ouvrir(); });
 
-  const live = (tab, html) => { const el = $("h-live-" + tab); if (el) el.innerHTML = html; };
+  // Réécrit une tuile seulement si son contenu a changé (moins de travail de mise en page chaque seconde)
+  const dernier = {};
+  const live = (tab, html) => {
+    if (dernier[tab] === html) return false;
+    const el = $("h-live-" + tab);
+    if (!el) return false;
+    el.innerHTML = html; dernier[tab] = html;
+    return true;
+  };
   const kv = (label, value, cls = "") => `<span class="hk"><small>${label}</small><b class="${cls}">${value}</b></span>`;
   const pct = v => v == null ? "–" : Math.round(v) + " %";
   const deg = v => v == null ? "–" : Math.round(v) + "°";
@@ -75,7 +83,8 @@
       kv("GPU", g ? pct(g.load_percent) : "–", "n-pct") + kv("GPU temp.", g ? deg(g.temperature) : "–", "n-deg " + (g ? tempClass(g.temperature, 70, 83) : "")) +
       kv("RAM", pct(s.ram.percent), "n-pct") + (s.gamemode && s.gamemode.in_game ? kv("Mode jeu", "▶ " + esc(gameLabel(s.gamemode.game)), "t-ok") : ""));
     const al = s.alerts || [];
-    $("h-alerts").innerHTML = al.length ? al.map(a => `<a class="alert ${a.level}" href="#pc"><b>${a.level === "crit" ? "CRITIQUE" : "ALERTE"}</b>${esc(a.text)}</a>`).join("") : "";
+    const alHtml = al.length ? al.map(a => `<a class="alert ${a.level}" href="#pc"><b>${a.level === "crit" ? "CRITIQUE" : "ALERTE"}</b>${esc(a.text)}</a>`).join("") : "";
+    if (dernier.alertes !== alHtml) { $("h-alerts").innerHTML = alHtml; dernier.alertes = alHtml; }
   }
   function fromMedia() {
     const m = window.mediaState;
@@ -89,9 +98,9 @@
     try {
       const d = await api("/api/launcher");
       lastGame = d.games.find(g => !g.hidden) || null;
-      live("lanceur", (lastGame ? kv("Dernier jeu", esc(lastGame.name)) : "") + kv("Jeux", d.games.length) + kv("Applis", d.apps.length) +
+      const neuf = live("lanceur", (lastGame ? kv("Dernier jeu", esc(lastGame.name)) : "") + kv("Jeux", d.games.length) + kv("Applis", d.apps.length) +
         (lastGame ? `<button class="btn" id="h-play" title="Lancer ${esc(lastGame.name)}">▶ Jouer</button>` : ""));
-      const b = $("h-play");
+      const b = neuf && $("h-play");             // nouvel écouteur seulement sur un bouton tout neuf
       if (b) b.addEventListener("click", async () => {
         try { await api("/api/launcher/launch", { id: lastGame.id }); toast("▶ Lancement : " + lastGame.name); } catch (e) { toast(e.message, true); }
       });
@@ -136,7 +145,7 @@
   function fromDeck() {
     live("deck", `<span class="hk wide"><small>Stream deck</small><b>Gros boutons tactiles</b></span>`);
   }
-  function tickFast() { hero(); fromStats(); fromMedia(); fromAgenda(); fromDeck(); }
+  function tickFast() { if (document.hidden) return; hero(); fromStats(); fromMedia(); fromAgenda(); fromDeck(); }
   let perso = null;
   Tabs.register("accueil", {
     async show() {
@@ -146,8 +155,8 @@
       fromPerso();
       clearInterval(fast); clearInterval(slow); clearInterval(perso);
       fast = setInterval(tickFast, 1000);
-      slow = setInterval(fromNet, 3000);
-      perso = setInterval(fromPerso, 30000);
+      slow = setInterval(() => { if (!document.hidden) fromNet(); }, 3000);
+      perso = setInterval(() => { if (!document.hidden) fromPerso(); }, 30000);
     },
     hide() { clearInterval(fast); clearInterval(slow); clearInterval(perso); fast = slow = perso = null; },
   });

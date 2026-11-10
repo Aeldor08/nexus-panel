@@ -63,7 +63,7 @@
         <div><small>Dépôt surveillé</small><b>${r.depot ? esc(r.depot) : "—"}</b></div>
         <div><small>Dernière vérification</small><b>${quand(v.derniere)}</b></div>
         <div><small>Vérification automatique</small><b>${r.actif ? `toutes les ${r.intervalle_heures} h` : "désactivée"}</b></div>
-        <div><small>Jeton (dépôt privé)</small><b>${maj.jeton.enregistre ? (maj.jeton.ou === "windows" ? "enregistré (Windows)" : "enregistré (config.json)") : "aucun"}</b></div>
+        <div><small>Jeton (dépôt privé)</small><b>${maj.jeton.enregistre ? ({ windows: "enregistré (Windows)", config: "enregistré (config.json)", environnement: "variable d'environnement" }[maj.jeton.ou] || "enregistré") : "aucun"}</b></div>
       </div>
       <p class="maj-msg">${etat}</p>
       <div class="form-row"><button class="btn" data-maj="verifier">⟳ Vérifier maintenant</button>

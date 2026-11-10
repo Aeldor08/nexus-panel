@@ -31,6 +31,7 @@ GitHub **en lecture seule, limité à ce seul dépôt**. Sans jeton, la vérific
 - Il est rangé dans le **gestionnaire d'identifiants de Windows** (entrée « NEXUS-panel-mises-a-jour »).
   Si ce n'est pas possible, il va dans `config.json`, section `mises_a_jour`, qui n'est **jamais** dans Git.
 - Il n'est jamais réaffiché, ni écrit dans le code, les journaux ou les sauvegardes partagées.
+- Pour des tests automatiques, la variable d'environnement `NEXUS_MAJ_JETON` peut fournir un jeton : il est alors lu en mémoire et jamais enregistré.
 - Il n'est envoyé **qu'à `api.github.com`**. Les téléchargements redirigés vers les serveurs de fichiers de
   GitHub se font **sans** le jeton.
 - Même avec ce jeton, rien ne s'installe sans ton clic **et** le mot de passe du panel.

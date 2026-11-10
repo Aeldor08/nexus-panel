@@ -119,7 +119,10 @@ def _keyring():
 
 
 def jeton(depot: str) -> tuple[str, str]:
-    """(jeton, où il est rangé : 'windows' | 'config' | '')."""
+    """(jeton, où il est rangé : 'windows' | 'config' | 'environnement' | '')."""
+    t = os.environ.get("NEXUS_MAJ_JETON", "").strip()   # tests / CI : lu en mémoire, jamais enregistré
+    if t:
+        return t, "environnement"
     kr = _keyring()
     if kr and depot:
         try:
