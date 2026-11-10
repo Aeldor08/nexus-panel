@@ -354,7 +354,6 @@ class Updater:
     def verifier(self) -> dict:
         r = reglages()
         with self._lock:
-            self.etat["derniere"] = time.time()
             if not r["depot"]:
                 self.etat.update(resultat="non_configure", erreur="aucun dépôt configuré (Réglages → Mises à jour)", a_jour=None)
             else:
@@ -372,6 +371,7 @@ class Updater:
                             pass
                 except MajError as e:
                     self.etat.update(resultat="erreur", erreur=str(e))
+            self.etat["derniere"] = time.time()          # une fois la réponse reçue (jamais « vérifié » à moitié)
             _ecrire(ETAT_FILE, self.etat)
         return self.public()
 

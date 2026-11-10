@@ -8,6 +8,9 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Corrigé
+- Mises à jour : l'heure de la dernière vérification n'est notée qu'une fois la réponse de GitHub reçue
+
 ## [1.0.1] - 2026-11-10
 
 ### Modifié
