@@ -10,7 +10,7 @@ Ces fichiers et dossiers sont créés sur **ton** PC et contiennent tes secrets 
 | `deck.json` | Tes boutons du stream deck (chemins de tes applis, tes scripts) |
 | `data\` | Agenda (et ses sauvegardes `data\backups\`), rappels envoyés (`data\rappels.json`), notes, to-do, horloges, noms des ventilateurs, appareils du réseau local et téléphones appairés (avec leurs jetons), sessions du deck, icônes extraites de tes applis, historique des tests de débit |
 | `data\nexus.db` | Base locale : **journal** (humeurs, activités, textes), **statistiques personnelles** (temps par appli et par jeu, sessions), index des souvenirs |
-| `datactivite.jsonl` | Journal d'activité (actions du deck, mises à jour, appareils et leurs adresses IP, processus fermés) |
+| `data\activite.jsonl` | Journal d'activité (actions du deck, mises à jour, appareils et leurs adresses IP, processus fermés) |
 | `dataocus.json` | Session de focus en cours et réglages du minuteur |
 | `data\souvenirs\` | Tes **photos** (et leurs miniatures) |
 | `jeux.json` | Ta liste de jeux et d'applis suivis (seul `jeux.example.json` est partagé) |

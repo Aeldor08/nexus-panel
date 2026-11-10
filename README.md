@@ -446,7 +446,7 @@ ce PC, ou un téléphone appairé.
   chose ne va pas : c'est le premier endroit à regarder quand un bloc ne s'affiche plus.
 - **Journal d'activité** (2e onglet de la fenêtre Santé) : chaque action sensible avec l'heure et l'appareil :
   boutons et connexions du deck, mises à jour, appairage ou refus d'un appareil, fermeture d'un processus,
-  sessions de focus. Gardé sur ce PC (`datactivite.jsonl`), jamais de mot de passe ni de jeton dedans.
+  sessions de focus. Gardé sur ce PC (`data\activite.jsonl`), jamais de mot de passe ni de jeton dedans.
 - **PC → Processus → ▤ Classement** : tous les programmes, du plus gourmand au moins gourmand (processeur ou
   mémoire), avec **✖ Fermer** (confirmation demandée ; comme « Fin de tâche »). Les processus vitaux de Windows et
   NEXUS lui-même sont protégés, et la fermeture n'est possible que depuis le PC.
