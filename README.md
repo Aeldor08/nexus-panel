@@ -448,7 +448,8 @@ ce PC, ou un téléphone appairé.
   boutons et connexions du deck, mises à jour, appairage ou refus d'un appareil, fermeture d'un processus,
   sessions de focus. Gardé sur ce PC (`data\activite.jsonl`), jamais de mot de passe ni de jeton dedans.
 - **PC → Processus → ▤ Classement** : tous les programmes, du plus gourmand au moins gourmand (processeur ou
-  mémoire), avec **✖ Fermer** (confirmation demandée ; comme « Fin de tâche »). Les processus vitaux de Windows et
+  mémoire), avec un champ de **recherche** et **✖ Fermer** (confirmation demandée ; comme « Fin de tâche » ;
+  Entrée ferme le programme quand il ne reste qu'un résultat). Les processus vitaux de Windows et
   NEXUS lui-même sont protégés, et la fermeture n'est possible que depuis le PC.
 - **⏱ Focus** : minuteur Pomodoro (25 min de travail / 5 min de pause, pause longue toutes les 4 séances, tout est
   réglable). Le temps de travail compte dans **Travail** de tes statistiques, même si tu lis sans toucher au PC.

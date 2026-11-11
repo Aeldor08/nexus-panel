@@ -179,6 +179,9 @@ body[data-focus="pause"] .focus-barre i, body[data-focus="longue"] .focus-barre 
 
 /* ---- Classement des processus ---- */
 .btn.proc-btn { float: right; font-size: 12px; padding: 2px 10px; letter-spacing: 1px; }
+.proc-recherche { margin: 2px 0 8px; }
+.proc-recherche .in { flex: 1 1 auto; min-width: 0; font-size: 14px; padding: 7px 10px; }
+.proc-tbl mark { background: color-mix(in srgb, var(--yellow) 35%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
 .proc-tbl { width: 100%; font-size: 13px; margin: 8px 0; }
 .proc-tbl td { vertical-align: middle; }
 .proc-tbl .btn { font-size: 12px; padding: 2px 10px; }
