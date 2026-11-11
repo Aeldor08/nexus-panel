@@ -25,6 +25,8 @@ from pathlib import Path
 
 import psutil
 
+import winproc
+
 # 127.0.0.1 plutôt que "localhost" : sous Windows, "localhost" peut d'abord essayer
 # l'IPv6 (::1) et attendre le délai d'expiration avant de passer à l'IPv4.
 LHM_URL = "http://127.0.0.1:8085/data.json"
@@ -698,6 +700,8 @@ class ProcessMonitor:
         self._procs: dict[int, psutil.Process] = {}
         self._result = {"top_cpu": [], "top_ram": [], "count": 0}
         self._tous: list[dict] = []          # tous les groupes (classement complet)
+        self._cpu_prec: dict[int, float] = {}   # temps processeur au relevé précédent (pid -> s)
+        self._t_prec = 0.0
         self._ncpu = psutil.cpu_count(logical=True) or 1
         threading.Thread(target=self._loop, daemon=True).start()
 
@@ -719,27 +723,46 @@ class ProcessMonitor:
 
     def _sample(self) -> None:
         groups: dict[str, dict] = {}
-        alive: dict[int, psutil.Process] = {}
         count = 0
-        for p in psutil.process_iter(["name"]):
-            proc = self._procs.get(p.pid, p)
-            try:
-                name = proc.info["name"] if hasattr(proc, "info") and proc.info else proc.name()
-                name = name or f"pid {p.pid}"
-                if name.lower() in PROC_IGNORE or p.pid == 0:
+        liste = winproc.processus()          # un seul appel système (~2 ms au lieu de ~400 ms avec psutil)
+        if liste is not None:
+            now = time.monotonic()
+            prec, dt_ = self._cpu_prec, now - self._t_prec if self._t_prec else 0
+            cpu_now = {}
+            for pid, _ppid, name, cpu_s, rss in liste:
+                if name.lower() in PROC_IGNORE:
                     continue
-                cpu = proc.cpu_percent(None) / self._ncpu   # 0-100 % de tout le CPU
-                rss = proc.memory_info().rss
-            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess, OSError):
-                continue
-            alive[p.pid] = proc
-            count += 1
-            g = groups.setdefault(name, {"name": name, "cpu": 0.0, "ram": 0, "count": 0, "pids": []})
-            g["pids"].append(p.pid)
-            g["cpu"] += cpu
-            g["ram"] += rss
-            g["count"] += 1
-        self._procs = alive
+                cpu_now[pid] = cpu_s
+                old = prec.get(pid)
+                cpu = max(0.0, (cpu_s - old) / dt_ / self._ncpu * 100) if old is not None and dt_ > 0 else 0.0
+                count += 1
+                g = groups.setdefault(name, {"name": name, "cpu": 0.0, "ram": 0, "count": 0, "pids": []})
+                g["pids"].append(pid)
+                g["cpu"] += min(cpu, 100.0)
+                g["ram"] += rss
+                g["count"] += 1
+            self._cpu_prec, self._t_prec = cpu_now, now
+        else:                                # repli : psutil, processus par processus
+            alive: dict[int, psutil.Process] = {}
+            for p in psutil.process_iter(["name"]):
+                proc = self._procs.get(p.pid, p)
+                try:
+                    name = proc.info["name"] if hasattr(proc, "info") and proc.info else proc.name()
+                    name = name or f"pid {p.pid}"
+                    if name.lower() in PROC_IGNORE or p.pid == 0:
+                        continue
+                    cpu = proc.cpu_percent(None) / self._ncpu   # 0-100 % de tout le CPU
+                    rss = proc.memory_info().rss
+                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess, OSError):
+                    continue
+                alive[p.pid] = proc
+                count += 1
+                g = groups.setdefault(name, {"name": name, "cpu": 0.0, "ram": 0, "count": 0, "pids": []})
+                g["pids"].append(p.pid)
+                g["cpu"] += cpu
+                g["ram"] += rss
+                g["count"] += 1
+            self._procs = alive
         items = list(groups.values())
         for g in items:
             g["cpu"] = round(g["cpu"], 1)

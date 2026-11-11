@@ -134,7 +134,7 @@ def step_updates(previous: dict | None) -> str:
     if not actuel and (BASE / "DEPOT").is_file():
         actuel = (BASE / "DEPOT").read_text(encoding="utf-8").strip()
     print("NEXUS peut vérifier tout seul si une nouvelle version est publiée sur GitHub (rien ne s'installe sans toi).")
-    print("Dépôt privé : il faudra aussi un jeton en lecture seule (voir docs\JETON_GITHUB.md, dans les Réglages).")
+    print("Dépôt privé : il faudra aussi un jeton en lecture seule (voir docs\\JETON_GITHUB.md, dans les Réglages).")
     while True:
         v = ask(f"Dépôt à surveiller, propriétaire/nom{f' [{actuel}]' if actuel else ''} (« non » pour aucun) : ", actuel)
         v = v.strip().removeprefix("https://github.com/").strip("/")

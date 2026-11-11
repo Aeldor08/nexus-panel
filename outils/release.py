@@ -133,6 +133,14 @@ def construire_archive(ver: str, depot: str, fichiers: list[str], dest: Path = D
     return archive, somme
 
 
+def nettoyer_dist(ver: str) -> None:
+    """Le dossier dist ne garde que l'archive (et son .sha256) de la version qu'on vient de fabriquer : les précédentes
+    sont sur GitHub (releases)."""
+    for f in DIST.glob("*"):
+        if f.is_file() and not f.name.startswith((f"NEXUS-{ver}.", f"notes-{ver}.")):
+            f.unlink(missing_ok=True)
+
+
 def verifier_archive(archive: Path, ver: str) -> None:
     with zipfile.ZipFile(archive) as z:
         noms = z.namelist()
@@ -241,6 +249,7 @@ def main() -> int:
         etape("Archive de la release")
         archive, somme = construire_archive(ver, depot, fichiers_suivis(git))
         verifier_archive(archive, ver)
+        nettoyer_dist(ver)
     except Arret:
         _cmd(git, "tag", "-d", tag, check=False)           # pas de tag local orphelin
         raise

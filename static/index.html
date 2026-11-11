@@ -536,7 +536,26 @@ function setTemp(elId, srcId, t, warn, hot, srcText) {
   $(srcId).textContent = srcText || "";
 }
 
+// Relevé de chaque seconde. L'onglet PC n'est dessiné (jauges, courbes, listes) que quand il est affiché :
+// ailleurs, on garde seulement l'historique des courbes (pour qu'elles soient complètes en arrivant sur PC),
+// les voyants, le mode jeu et les alertes. Beaucoup moins de travail pour le navigateur sur les autres onglets.
 function render(s) {
+  if (Tabs.current === "pc" && !document.hidden) return renderPc(s);
+  push(hist.cpu, s.cpu.percent);
+  push(hist.ram, s.ram.percent);
+  const g = s.gpu.available ? s.gpu.devices[0] : null;
+  if (g) push(hist.gpu, g.load_percent || 0);
+  push(hist.rx, s.network.rx_rate); push(hist.tx, s.network.tx_rate);
+  $("dot-gpu").className = "dot " + (g ? "on" : "off");
+  $("dot-lhm").className = "dot " + (s.lhm.available ? "on" : "off");
+  const gm = s.gamemode || {};
+  document.body.classList.toggle("gamemode", !!gm.in_game);
+  $("gm-badge").hidden = !gm.in_game;
+  if (gm.in_game) $("gm-badge").textContent = "▶ MODE JEU · " + gameLabel(gm.game);
+  renderAlerts(s.alerts || [], s.demarrage);
+}
+
+function renderPc(s) {
   // ---- CPU
   push(hist.cpu, s.cpu.percent);
   $("v-cpu").textContent = Math.round(s.cpu.percent) + "%";
@@ -824,6 +843,7 @@ async function tick() {
 tick();
 setInterval(tick, 1000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) tick(); });   // retour : à jour tout de suite
+addEventListener("hashchange", () => { if (/^#pc(\/|$)/.test(location.hash)) setTimeout(tick, 0); });   // onglet PC : à jour tout de suite
 </script>
 <script src="/static/js/tabs.js"></script>
 <script src="/static/js/media.js"></script>

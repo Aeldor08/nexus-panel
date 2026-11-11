@@ -156,10 +156,21 @@ async def _no_stale_pages(request: Request, call_next):
 psutil.cpu_percent(percpu=True)   # amorce : le 1er appel renvoie toujours 0
 
 
+_stats_cache = {"t": 0.0, "corps": b""}
+_stats_lock = threading.Lock()
+
+
 @app.get("/api/stats")
-def api_stats() -> JSONResponse:
-    payload = {**sensors.full(), "gamemode": game_mode.state(), "demarrage": DEMARRAGE}
-    return JSONResponse(payload, headers={"Cache-Control": "no-store"})
+def api_stats() -> Response:
+    # Un seul relevé par demi-seconde, partagé par tous les appareils ouverts (PC, téléphone…) : moins de calcul,
+    # et des débits réseau plus réguliers (calculés sur l'intervalle entre deux relevés).
+    with _stats_lock:
+        now = time.monotonic()
+        if now - _stats_cache["t"] > .5:
+            payload = {**sensors.full(), "gamemode": game_mode.state(), "demarrage": DEMARRAGE}
+            _stats_cache.update(t=now, corps=JSONResponse(payload).body)
+        corps = _stats_cache["corps"]
+    return Response(corps, media_type="application/json", headers={"Cache-Control": "no-store"})
 
 
 class BadRequest(Exception):
@@ -1366,6 +1377,9 @@ if __name__ == "__main__":
         saved = version_mod.snapshot()   # sauvegarde du code de cette version (une seule fois)
         if saved:
             print(f"Version {version_mod.current()} sauvegardée dans versions\\{saved.name}")
+        retires = version_mod.nettoyer()   # au plus 8 sauvegardes de code (les plus récentes)
+        if retires:
+            print(f"Anciennes sauvegardes de code retirées : {len(retires)} (versions\\ garde les 8 plus récentes)")
     except OSError as exc:
         print(f"[avertissement] sauvegarde de version impossible : {exc}")
     # Accès téléphone activé : écoute aussi sur le réseau local (la garde exige un appareil appairé)

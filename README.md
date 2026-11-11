@@ -585,7 +585,8 @@ Seuls les appareils appairés passent ; les adresses Internet sont toujours refu
   redémarrage) / **▶ Réactiver** ; **✖ Ce n'est pas un jeu** met le programme détecté dans les exceptions.
   Les surcouches (Epic EOSOverlayRenderer, Steam, NVIDIA…) ne sont jamais prises pour des jeux.
 - Versions : bouton **vX.Y.Z** en haut (notes de version), sauvegarde automatique dans `versions\`,
-  retour arrière avec `restaurer_version.bat`. Mises à jour en ligne : voir « Mises à jour ».
+  retour arrière avec `restaurer_version.bat` (les 8 versions les plus récentes sont gardées ; les sauvegardes
+  faites avant une mise à jour en ligne, dans `sauvegardes-maj\`, sont gardées par 3). Mises à jour en ligne : voir « Mises à jour ».
 - Tiers : polices et bibliothèques, voir `THIRD_PARTY.md`.
 
 ## Licence

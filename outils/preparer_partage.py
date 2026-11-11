@@ -155,6 +155,14 @@ def main() -> int:
         for f in sorted(dest.rglob("*")):
             z.write(f, Path(dest.name) / f.relative_to(dest))
     size = zip_path.stat().st_size / 1024
+    # copies de partage des versions précédentes : retirées (seule la dernière sert à partager)
+    for ancien in OUT_ROOT.glob("NEXUS-*"):
+        if ancien.name in (dest.name, zip_path.name):
+            continue
+        if ancien.is_dir():
+            shutil.rmtree(ancien, ignore_errors=True)
+        else:
+            ancien.unlink(missing_ok=True)
     print(f"\n[OK] {len(copied)} fichiers copiés, aucune donnée personnelle détectée.")
     print(f"     Dossier : {dest}")
     print(f"     Zip     : {zip_path}  ({size:.0f} Ko)")

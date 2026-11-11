@@ -80,6 +80,27 @@ def snapshot(force: bool = False) -> Path | None:
     return target
 
 
+VERSIONS_A_GARDER = 8           # sauvegardes de code gardées dans versions\ (les plus récentes)
+
+
+def nettoyer(garder: int = VERSIONS_A_GARDER) -> list[str]:
+    """Supprime les sauvegardes de code les plus anciennes (au-delà de « garder ») ; renvoie les noms retirés.
+    Les copies « avant-restauration » sont gardées par 3 au plus. Ne touche à rien d'autre."""
+    retires = []
+    for motif, n in (("panel-v*.zip", garder), ("avant-restauration-*.zip", 3)):
+        fichiers = sorted(VERSIONS_DIR.glob(motif), key=lambda f: f.stat().st_mtime, reverse=True)
+        actuelle = VERSIONS_DIR / f"panel-v{current()}.zip"
+        for f in fichiers[max(1, n):]:
+            if f == actuelle:
+                continue
+            try:
+                f.unlink()
+                retires.append(f.name)
+            except OSError:
+                pass
+    return retires
+
+
 def snapshots() -> list[dict]:
     out = []
     for z in VERSIONS_DIR.glob("*.zip"):

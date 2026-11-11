@@ -11,18 +11,32 @@
 from __future__ import annotations
 
 import asyncio
+import importlib.util
 import os
 import threading
 import time
 
 import config
 
-try:
-    import discord
-    from discord import app_commands
-    AVAILABLE, IMPORT_ERROR = True, None
-except Exception as exc:  # discord.py absent
-    AVAILABLE, IMPORT_ERROR = False, str(exc)
+# discord.py (~30 Mo de mémoire avec aiohttp) n'est chargé QUE si le bot démarre vraiment (jeton configuré) :
+# sans bot, NEXUS ne paie pas ce coût. Voir _charger_discord().
+discord = app_commands = None
+AVAILABLE = importlib.util.find_spec("discord") is not None
+IMPORT_ERROR = None if AVAILABLE else "module discord introuvable"
+
+
+def _charger_discord() -> bool:
+    global discord, app_commands, AVAILABLE, IMPORT_ERROR
+    if discord is not None:
+        return True
+    try:
+        import discord as _d
+        from discord import app_commands as _ac
+        discord, app_commands = _d, _ac
+        return True
+    except Exception as exc:  # discord.py absent ou cassé
+        AVAILABLE, IMPORT_ERROR = False, str(exc)
+        return False
 
 COLOR_OK, COLOR_WARN, COLOR_HOT, COLOR_INFO = 0x3DFFA2, 0xFFB000, 0xFF2A55, 0x00F0FF
 HYSTERESIS = {"temp": 3.0, "percent": 2.0}   # marge avant d'annoncer le retour à la normale
@@ -176,6 +190,9 @@ class DiscordBot:
             return
         if not config.as_int(cfg.get("user_id")) or not config.as_int(cfg.get("alert_channel_id")):
             self._warn("bad_config", "discord.user_id ou discord.alert_channel_id manquant ou invalide dans config.json")
+            return
+        if not _charger_discord():
+            self._warn("missing_lib", f"discord.py n'est pas installé ({IMPORT_ERROR}) : lance lancer.bat pour l'installer")
             return
         threading.Thread(target=self._run, args=(token,), daemon=True, name="discord-bot").start()
 

@@ -447,6 +447,7 @@ class Updater:
             raise MajError("l'archive ne contient pas la version annoncée : installation refusée")
         self.travail.update(etape="sauvegarde")
         sauv = sauvegarder(f"avant-v{ver}")
+        nettoyer_sauvegardes()                         # au plus 3 sauvegardes de mise à jour (chacune ~ code + data)
         return {"etat": "a_appliquer", "de": version_mod.current(), "vers": ver, "fichiers": str(racine),
                 "sauvegarde": str(sauv), "date": time.time(), "essais": 0}
 
@@ -504,6 +505,19 @@ def fichiers_code(racine: Path = BASE) -> list[Path]:
             continue
         out.append(rel)
     return out
+
+
+SAUVEGARDES_A_GARDER = 3
+
+
+def nettoyer_sauvegardes(garder: int = SAUVEGARDES_A_GARDER) -> list[str]:
+    """Garde les « garder » sauvegardes de mise à jour les plus récentes (dossiers horodatés du dossier sauvegardes-maj)."""
+    dossiers = sorted((d for d in SAUV_DIR.glob("*") if (d / "manifeste.json").is_file()), key=lambda d: d.name, reverse=True)
+    retires = []
+    for d in dossiers[max(1, garder):]:
+        shutil.rmtree(d, ignore_errors=True)
+        retires.append(d.name)
+    return retires
 
 
 def sauvegarder(etiquette: str) -> Path:

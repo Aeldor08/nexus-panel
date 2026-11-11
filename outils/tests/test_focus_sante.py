@@ -118,6 +118,7 @@ pm = stats.ProcessMonitor.__new__(stats.ProcessMonitor)    # sans le fil d'écha
 pm._lock = __import__("threading").Lock()
 pm._procs, pm._tous, pm.paused, pm._ncpu = {}, [], False, 1
 pm._result = {"top_cpu": [], "top_ram": [], "count": 0}
+pm._cpu_prec, pm._t_prec = {}, 0.0
 pm._sample()
 c = pm.classement("ram")
 ok(c["total"] > 10 and c["processus"][0]["ram"] >= c["processus"][-1]["ram"], f"classement par mémoire ({c['total']} programmes)")
@@ -144,6 +145,48 @@ try:
     ok(False, "plus rien à fermer")
 except ValueError:
     ok(True, "plus aucun processus de ce nom : message clair")
+
+# ---- lecture rapide des processus (un seul appel système) ----------------------------------
+import winproc  # noqa: E402
+import psutil  # noqa: E402
+t0 = time.perf_counter()
+liste = winproc.processus()
+duree = (time.perf_counter() - t0) * 1000
+ok(liste is not None and len(liste) > 20, f"winproc : {len(liste or [])} processus lus en {duree:.1f} ms")
+moi = {x[0]: x for x in liste or []}.get(os.getpid())
+ok(moi is not None and moi[2].lower().startswith("python") and moi[4] > 5 * 2**20,
+   f"winproc : ce processus retrouvé avec son nom et sa mémoire ({moi and (moi[2], moi[4] // 2**20)})")
+noms_psutil = {p.pid: p.info["name"] for p in psutil.process_iter(["name"])}
+communs = [x for x in liste or [] if x[0] in noms_psutil]
+pareils = sum(1 for x in communs if x[2] == noms_psutil[x[0]])
+ok(pareils >= len(communs) - 3, f"winproc : mêmes noms que psutil ({pareils}/{len(communs)})")
+
+# ---- rétention de l'espace disque ------------------------------------------------------------
+import maj  # noqa: E402
+import version as version_mod  # noqa: E402
+tmp = Path(tempfile.mkdtemp(prefix="nexus-test-retention-"))
+version_mod.VERSIONS_DIR = tmp / "versions"
+version_mod.VERSIONS_DIR.mkdir()
+for i in range(12):
+    f = version_mod.VERSIONS_DIR / f"panel-v0.0.{i}.zip"
+    f.write_bytes(b"x")
+    os.utime(f, (1_000_000 + i, 1_000_000 + i))
+(version_mod.VERSIONS_DIR / "autre-fichier.txt").write_text("à garder", encoding="utf-8")
+retires = version_mod.nettoyer(8)
+restants = sorted(f.name for f in version_mod.VERSIONS_DIR.glob("panel-v*.zip"))
+ok(len(retires) == 4 and len(restants) == 8 and "panel-v0.0.11.zip" in restants and "panel-v0.0.0.zip" not in restants,
+   f"versions : les 8 plus récentes gardées ({len(restants)} restantes, {len(retires)} retirées)")
+ok((version_mod.VERSIONS_DIR / "autre-fichier.txt").exists(), "versions : les autres fichiers ne sont jamais touchés")
+maj.SAUV_DIR = tmp / "sauvegardes-maj"
+for i in range(5):
+    d = maj.SAUV_DIR / f"2026111{i}-120000-v1.0.{i}-avant-v1.0.{i + 1}"
+    (d / "data").mkdir(parents=True)
+    (d / "manifeste.json").write_text("{}", encoding="utf-8")
+(maj.SAUV_DIR / "dossier-perso").mkdir()
+retires = maj.nettoyer_sauvegardes(3)
+restants = sorted(d.name for d in maj.SAUV_DIR.iterdir())
+ok(len(retires) == 2 and "dossier-perso" in restants and any("v1.0.4" in r for r in restants) and not any("v1.0.0-" in r for r in restants),
+   f"sauvegardes de mise à jour : les 3 plus récentes gardées, le reste du dossier intact ({restants})")
 
 print(f"\n{passed} OK, {failed} échec(s)")
 sys.exit(1 if failed else 0)
