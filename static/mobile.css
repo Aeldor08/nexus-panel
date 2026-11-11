@@ -70,7 +70,9 @@ html, body { max-width: 100%; overflow-x: clip; }
   .ctl { width: 54px; height: 54px; }
   .ctl.main { width: 70px; height: 70px; }
   .m-vol { margin-top: 14px; max-width: none; }
-  .m-vol .mx-row, .mx-row { grid-template-columns: 30px minmax(0, 1fr) 46px 44px; gap: 8px 10px; }
+  .m-vol .mx-row, .mx-row { grid-template-columns: 44px minmax(0, 1fr) 62px 44px; gap: 8px 10px; }
+  .mx-val { white-space: nowrap; }
+  .mx-pas { width: 44px; height: 40px; }
   .sessions { grid-template-columns: minmax(0, 1fr); }
 
   /* Champs : 16 px minimum, sinon certains téléphones zooment la page au toucher d'un champ */

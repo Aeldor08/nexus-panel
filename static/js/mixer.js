@@ -112,6 +112,31 @@
     api("/api/audio", { target, muted }).then(() => poll.now()).catch(e => toast("Son : " + e.message, true));
   }
 
+  // ---- Boutons − / + (téléphone) : 5 % par appui, arrondi au multiple de 5 ; appui maintenu = répétition ----
+  function brancherPas(b, key, range) {
+    const pas = Number(b.dataset.pas);
+    const appliquer = () => {
+      const cur = Number(range.value);
+      const nv = Math.max(0, Math.min(100, pas > 0 ? Math.floor(cur / 5) * 5 + 5 : Math.ceil(cur / 5) * 5 - 5));
+      if (nv !== cur) userVolume(key, nv);
+    };
+    let attente = 0, repete = 0, parPointeur = false;
+    const stop = () => { clearTimeout(attente); clearInterval(repete); attente = repete = 0; };
+    b.addEventListener("pointerdown", ev => {
+      if (ev.button !== 0) return;
+      parPointeur = true;
+      appliquer();
+      stop();
+      attente = setTimeout(() => { repete = setInterval(appliquer, 140); }, 420);
+    });
+    ["pointerup", "pointerleave", "pointercancel"].forEach(n => b.addEventListener(n, stop));
+    b.addEventListener("click", () => {                // clavier (Entrée / Espace) ; un toucher est déjà compté
+      if (parPointeur) { parPointeur = false; return; }
+      appliquer();
+    });
+    b.addEventListener("contextmenu", ev => ev.preventDefault());   // appui long sur téléphone : pas de menu
+  }
+
   // ---- Une ligne de réglage (créée une fois, puis mise à jour) ----
   function row(container, key, opts) {
     let el = container.querySelector(`[data-key="${CSS.escape(key)}"]`);
@@ -123,12 +148,15 @@
         <span class="mx-ico"></span>
         <span class="mx-name"></span>
         <span class="mx-meter" aria-hidden="true"><i></i></span>
+        <button class="mx-pas mx-moins" type="button" data-pas="-5" aria-label="Baisser le volume de 5 %">−</button>
         <input type="range" min="0" max="100" step="1" class="mx-range">
+        <button class="mx-pas mx-plus" type="button" data-pas="5" aria-label="Monter le volume de 5 %">+</button>
         <span class="mx-val"></span>
         <button class="mx-mute" aria-pressed="false"></button>`;
       const range = el.querySelector(".mx-range");
       range.addEventListener("pointerdown", () => { C(key).held = true; });
       range.addEventListener("input", () => userVolume(key, Number(range.value)));
+      el.querySelectorAll(".mx-pas").forEach(b => brancherPas(b, key, range));
       el.querySelector(".mx-mute").addEventListener("click", () => {
         sendMute(key, el.querySelector(".mx-mute").getAttribute("aria-pressed") !== "true");
       });
