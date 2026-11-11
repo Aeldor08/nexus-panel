@@ -123,13 +123,17 @@
     try { maj = await api("/api/maj"); } catch (e) { maj = null; }
     pastille();
   }
-  async function ouvrir() {
+  async function ouvrir(but) {
     try { info = await api("/api/version"); } catch (e) { toast("Version : " + e.message, true); return; }
     render();
     if (!dlg.open) dlg.showModal();
     setSeen(info.version);
     btn.classList.remove("new");
     await charger(); majBloc();
+    if (but === "installer") {                       // depuis « Mettre à jour » : droit à la version disponible
+      const zone = dlg.querySelector(".maj-dispo");
+      if (zone) { zone.scrollIntoView({ block: "center" }); const m = $("maj-mdp"); if (m) m.focus(); }
+    }
     try { profils = (await api("/api/profils")).profils; const b = $("maj-profils"); if (b) b.innerHTML = blocProfils(); } catch (e) {}
   }
   window.nxVersion = { ouvrir };
@@ -179,8 +183,55 @@
   });
 
   // ---- pastille sur le bouton + bannière discrète ----
+  // ---- notification « nouvelle version » : page de garde et sommaire (bouton « Mettre à jour ») ----
+  // Elle apparaît dès que le serveur a trouvé une version plus récente (vérification au démarrage, toutes les N heures,
+  // ou « Vérifier maintenant »), sauf si « Plus tard » a été choisi pour cette version (rappel 24 h plus tard).
+  // Rien ne s'installe sans le mot de passe et la validation dans la fenêtre Version.
+  const texteNotif = d => `<span class="nx-maj-ico" aria-hidden="true">🆕</span>
+      <span class="nx-maj-msg"><b>NEXUS ${esc(d.version)} est disponible</b>
+        <small>Tu as la version ${esc(maj.version)}${d.archive && d.archive.taille ? ` · ${fmtBytes(d.archive.taille)}` : ""}</small></span>
+      <span class="nx-maj-btns"><button class="btn on" data-notif="installer">⬇ Mettre à jour</button>
+        <button class="btn" data-notif="plus-tard">Plus tard</button></span>`;
+  let notifGarde = null;
+  function notifications(d) {
+    const montrer = !!(d && !maj.rappel_repousse);
+    const splash = document.getElementById("splash");
+    if (splash && !notifGarde) {
+      notifGarde = document.createElement("div");
+      notifGarde.className = "nx-maj-garde"; notifGarde.setAttribute("role", "status");
+      splash.appendChild(notifGarde);
+    }
+    if (notifGarde) {
+      notifGarde.hidden = !montrer;
+      if (montrer) notifGarde.innerHTML = texteNotif(d);
+    }
+    const accueil = document.getElementById("h-maj");
+    if (accueil) {
+      accueil.hidden = !montrer;
+      if (montrer) accueil.innerHTML = texteNotif(d);
+    }
+    return montrer;
+  }
+  async function actionNotif(ev) {
+    const b = ev.target.closest("[data-notif]");
+    if (!b) return;
+    ev.stopPropagation();                             // (sur la page de garde : ne pas « entrer » dans NEXUS)
+    if (b.dataset.notif === "installer") ouvrir("installer");
+    if (b.dataset.notif === "plus-tard") {
+      try { maj = await api("/api/maj/plus-tard", { heures: 24 }); toast("D'accord : rappel dans 24 h."); } catch (e) {}
+      pastille();
+    }
+  }
+  document.addEventListener("click", ev => { if (ev.target.closest(".nx-maj-garde, #h-maj")) actionNotif(ev); }, true);
+  const surGardeOuSommaire = () => {
+    const sp = document.getElementById("splash");
+    return (sp && ["boot", "ready", "off"].includes(sp.dataset.state)) || /^(#accueil|#?$)/.test(location.hash.split("/")[0]);
+  };
+  addEventListener("hashchange", () => setTimeout(pastille, 0));
+
   function pastille() {
     const d = maj && maj.disponible;
+    const notifVisible = notifications(d);
     btn.classList.toggle("maj-dispo", !!d);
     btn.title = d ? `Version ${d.version} disponible : voir` : "Version et mises à jour";
     const res = maj && maj.dernier_resultat;
@@ -188,7 +239,7 @@
       ban.hidden = false;
       ban.className = "nx-maj-ban " + (res.ok ? "ok" : "ko");
       ban.innerHTML = `<span>${res.ok ? "✔" : "⚠"} ${esc(res.message)}</span><button class="btn" data-ban="vu">OK</button>`;
-    } else if (d && !maj.rappel_repousse) {
+    } else if (d && !maj.rappel_repousse && !(notifVisible && surGardeOuSommaire())) {
       ban.hidden = false; ban.className = "nx-maj-ban";
       ban.innerHTML = `<span>🆕 NEXUS ${esc(d.version)} est disponible${d.archive && d.archive.taille ? ` (${fmtBytes(d.archive.taille)})` : ""}.</span>
         <button class="btn on" data-ban="voir">Voir</button><button class="btn" data-ban="plus-tard">Plus tard</button>`;
@@ -243,7 +294,9 @@
     tour();
   }
 
-  btn.addEventListener("click", ouvrir);
+  btn.addEventListener("click", () => ouvrir());
+  const spEnter = document.getElementById("sp-enter");
+  if (spEnter) spEnter.addEventListener("click", () => setTimeout(pastille, 2500));
   api("/api/version").then(r => {
     info = r;
     btn.textContent = "v" + r.version;
@@ -252,5 +305,8 @@
     if (!seen) setSeen(r.version);
   }).catch(() => {});
   charger();
-  setInterval(() => { if (!document.hidden) charger(); }, 10 * 60 * 1000);   // l'état vient du serveur (qui vérifie seul)
+  // l'état vient du serveur, qui vérifie seul (20 s après son démarrage, puis toutes les N heures) : on le relit
+  // 25 s et 1 min après l'ouverture de la page, puis toutes les 2 min (une petite requête locale, sans Internet)
+  setTimeout(charger, 25000); setTimeout(charger, 60000);
+  setInterval(() => { if (!document.hidden) charger(); }, 2 * 60 * 1000);
 })();

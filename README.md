@@ -461,8 +461,9 @@ NEXUS vérifie tout seul s'il existe une nouvelle version : au démarrage, puis 
 (**⚙ Réglages → Version et mises à jour** : intervalle, désactivation, dépôt surveillé, jeton). Il ne
 contacte que l'API des releases de GitHub (`api.github.com`) pour le dépôt configuré.
 
-- Une nouvelle version allume une **pastille** sur le bouton de version et affiche un **bandeau** : notes de
-  version, taille, **Installer la version X** ou **Plus tard** (rappel 24 h plus tard).
+- Une nouvelle version allume une **pastille** sur le bouton de version et affiche une **notification** sur la
+  page de garde et en haut du sommaire (un bandeau sur les autres onglets) : **Mettre à jour** ouvre
+  directement l'installation, **Plus tard** repousse le rappel de 24 h.
 - Rien ne s'installe sans **le mot de passe du panel** (celui du deck) **et ta validation** : à chaque mise à jour,
   un récapitulatif « Valider la mise à jour vers X ? » s'affiche ; « Annuler » ne touche à rien. Le bot Discord ne peut
   jamais lancer une installation ; il peut seulement te prévenir (option « Me prévenir sur Discord »).

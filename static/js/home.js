@@ -29,6 +29,7 @@
       <div><div class="home-hello" id="h-hello"></div><div class="home-date" id="h-date"></div></div>
       <div class="home-time" id="h-time"></div>
     </div>
+    <div class="nx-maj-accueil" id="h-maj" role="status" hidden></div>
     <section class="home-grid">
       ${TILES.map((t, i) => `
         <article class="card home-tile" style="--accent: var(${t.color})">
