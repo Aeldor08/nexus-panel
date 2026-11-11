@@ -1,4 +1,4 @@
-/* Profil « Pure » — clair, pour les deux modes : blanc bleuté, bleu ciel, touches pastel.
+/* Profil « Pure » — clair, pour les deux modes : fond vert pastel, cartes blanches, bleu ciel et touches pastel.
    Inspiré des thèmes par défaut (mêmes blocs, mêmes repères), mais en version lumineuse et douce :
    cartes blanches arrondies, ombres légères, aucune lueur, aucun effet de balayage.
    Toutes les règles commencent par :root[data-profile]. Les couleurs de TEXTE restent assez foncées
@@ -7,13 +7,13 @@
 :root[data-profile] {
   color-scheme: light;
   /* couleurs au format r, g, b (transparences) : cohérentes avec les couleurs ci-dessous */
-  --neon-rgb: 43, 116, 189;   --mag-rgb: 122, 82, 194;   --yel-rgb: 154, 100, 16;  --ok-rgb: 35, 125, 91;
-  --deep-rgb: 238, 244, 251;  --glow2-rgb: 200, 224, 246; --neon3-rgb: 214, 233, 250; --splash-rgb: 246, 249, 253;
-  --bg: #f4f8fc;  --card: #ffffff;  --line: #d9e4f0;
+  --neon-rgb: 38, 103, 168;   --mag-rgb: 122, 82, 194;   --yel-rgb: 154, 100, 16;  --ok-rgb: 35, 125, 91;
+  --deep-rgb: 232, 244, 237;  --glow2-rgb: 200, 232, 214; --neon3-rgb: 214, 233, 250; --splash-rgb: 236, 247, 240;
+  --bg: #e5f3ea;  --card: #ffffff;  --line: #c7e0d2;                   /* fond vert pastel clair */
   --text: #1e2a3b;  --text-2: #46566c;  --muted: #5d6b80;
-  --track: #e4ecf5;  --edge: #d7e2ee;  --edge-2: #e6edf5;
-  --deep-1: #f3f7fc;  --deep-2: #edf3fa;  --deep-3: #e6eef8;
-  --cyan: #2b74bd;  --neon-2: #4a8bd0;  --neon-3: #a9cdf2;      /* bleu ciel (principal) */
+  --track: #e2eee7;  --edge: #c9e0d3;  --edge-2: #dcebe2;
+  --deep-1: #f2f9f4;  --deep-2: #e9f4ed;  --deep-3: #dfeee5;
+  --cyan: #2667a8;  --neon-2: #4a8bd0;  --neon-3: #a9cdf2;      /* bleu ciel (principal) */
   --magenta: #7a52c2;                                            /* lavande (secondaire) */
   --yellow: #9a6410;                                             /* ambre doux (horloge, réseau) */
   --green: #237d5b;                                              /* menthe (GPU) */
@@ -28,17 +28,18 @@
   --note-jaune: #fff3c4;  --note-rose: #fde1ea;  --note-vert: #dcf3e6;  --note-bleu: #dbeafb;
   --note-violet: #ebe2fb;  --note-peche: #ffe4d3;  --note-texte: #283444;
   /* fines nuances pastel réutilisées ci-dessous */
-  --pu-ciel: #e3effb;  --pu-lavande: #efe8fb;  --pu-menthe: #e1f4eb;  --pu-peche: #fdeadf;
-  --pu-ombre: 0 1px 2px rgba(40, 80, 130, .06), 0 6px 20px rgba(40, 80, 130, .07);
+  --pu-ciel: #e3effb;  --pu-lavande: #efe8fb;  --pu-menthe: #dcf2e6;  --pu-peche: #fde7da;  --pu-citron: #fbf3cf;
+  --pu-ombre: 0 1px 2px rgba(30, 90, 60, .08), 0 8px 24px rgba(30, 90, 60, .10);
 }
 :root[data-profile] body { font-variant-numeric: tabular-nums; }
 
-/* ---- Fond : blanc bleuté avec deux halos pastel très doux (fixes), sans grille ni lignes de balayage ---- */
+/* ---- Fond : vert pastel clair avec quatre halos pastel très doux (fixes), sans grille ni lignes de balayage ---- */
 :root[data-profile] body {
   color: var(--text);
-  background: radial-gradient(ellipse 60% 50% at 8% 0%, #e2eefb 0%, transparent 70%),
-              radial-gradient(ellipse 55% 45% at 100% 100%, #efe7fb 0%, transparent 70%),
-              radial-gradient(ellipse 40% 35% at 95% 10%, #e3f5ec 0%, transparent 70%), var(--bg);
+  background: radial-gradient(ellipse 55% 45% at 6% 0%, #dcecf8 0%, transparent 70%),
+              radial-gradient(ellipse 50% 40% at 100% 100%, #ece3f8 0%, transparent 70%),
+              radial-gradient(ellipse 40% 35% at 98% 6%, #fbe8dc 0%, transparent 70%),
+              radial-gradient(ellipse 45% 40% at 0% 100%, #f6f1d2 0%, transparent 70%), var(--bg);
   background-attachment: fixed;
 }
 :root[data-profile] body::before, :root[data-profile] body::after { display: none; }
@@ -59,13 +60,16 @@
 :root[data-profile] .section-title { color: var(--cyan); letter-spacing: 2px; }
 :root[data-profile] .section-title::after { background: linear-gradient(90deg, var(--edge), transparent); }
 
-/* ---- Cartes blanches arrondies, ombre douce ---- */
+/* ---- Cartes blanches arrondies, bien détachées du fond vert, avec un bandeau pastel en haut ----
+   Le bandeau prend la couleur de la catégorie (--accent : bleu, lavande, ambre, menthe…), adoucie en pastel. */
 :root[data-profile] .card {
-  background: var(--card); border: 1px solid var(--edge); border-radius: 16px; clip-path: none;
-  box-shadow: var(--pu-ombre); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  --pu-teinte: color-mix(in srgb, var(--accent, var(--cyan)) 38%, #fff);
+  background: var(--card); border: 1px solid var(--edge); border-top: 5px solid var(--pu-teinte); border-radius: 16px;
+  clip-path: none; box-shadow: var(--pu-ombre); -webkit-backdrop-filter: none; backdrop-filter: none; }
 :root[data-profile] .card::before, :root[data-profile] .card::after { display: none; }
 :root[data-profile] .temp, :root[data-profile] .rate, :root[data-profile] .facts {
-  background: var(--deep-1); border-color: var(--edge); border-radius: 10px; clip-path: none; }
+  background: color-mix(in srgb, var(--accent, var(--cyan)) 6%, #f7fbf8); border: 1px solid var(--edge-2);
+  border-radius: 10px; clip-path: none; }
 
 /* ---- Boutons, onglets : arrondis, fond blanc, survol bleu pastel ---- */
 :root[data-profile] .btn, :root[data-profile] .tabs a, :root[data-profile] .home-parts a, :root[data-profile] .dk-btn,
@@ -73,7 +77,7 @@
 :root[data-profile] .alert {
   clip-path: none; border-radius: 10px; }
 :root[data-profile] .btn {
-  background: #fff; color: var(--cyan); border: 1px solid #c9dcf0; box-shadow: 0 1px 2px rgba(40, 80, 130, .06);
+  background: #fff; color: var(--cyan); border: 1px solid #b9d3e8; box-shadow: 0 1px 2px rgba(40, 80, 130, .06);
   text-transform: none; letter-spacing: .3px; font-weight: 600; }
 :root[data-profile] .btn:hover:not(:disabled) { background: var(--pu-ciel); color: #1f5f9e; border-color: var(--neon-2); box-shadow: none; }
 :root[data-profile] .btn.on { background: var(--pu-ciel); color: #1f5f9e; border-color: var(--neon-2); }
@@ -82,7 +86,8 @@
 :root[data-profile] .btn.danger:hover:not(:disabled) { background: #fdecef; color: #b23349; border-color: var(--hot); }
 :root[data-profile] .btn:disabled { opacity: .55; }
 :root[data-profile] .tabs a {
-  background: rgba(255, 255, 255, .75); color: var(--text-2); border: 1px solid var(--edge); transform: none;
+  background: #fff; color: var(--text-2); border: 1px solid var(--edge); transform: none;
+  box-shadow: 0 1px 2px rgba(30, 90, 60, .06);
   text-transform: none; letter-spacing: .5px; font-family: var(--mono); font-weight: 600; }
 :root[data-profile] .tabs a::before, :root[data-profile] .tabs a::after { content: none; }
 :root[data-profile] .tabs a:hover { color: var(--cyan); background: #fff; border-color: var(--neon-3); box-shadow: none; }
@@ -91,6 +96,11 @@
 :root[data-profile] .in:focus { border-color: var(--neon-2); outline: 2px solid var(--pu-ciel); }
 :root[data-profile] ::placeholder { color: #93a1b3; }
 
+/* ---- Barre du haut : panneau blanc translucide, séparé du reste ---- */
+:root[data-profile] header { background: rgba(255, 255, 255, .62); border: 1px solid var(--edge); border-radius: 18px;
+  padding: 12px 16px 14px; margin-bottom: 14px; box-shadow: 0 2px 10px rgba(30, 90, 60, .06); }
+:root[data-profile] header::after { display: none; }
+
 /* ---- Barres, jauges : piste pastel, remplissage plein sans lueur ---- */
 :root[data-profile] .bar { border-radius: 6px; overflow: hidden; background: var(--track); box-shadow: none; }
 :root[data-profile] .bar i { box-shadow: none !important; }
@@ -98,9 +108,11 @@
 
 /* ---- Sommaire ---- */
 :root[data-profile] .home-tile { background: #fff; }
-:root[data-profile] .home-ico { background: var(--pu-ciel); color: var(--cyan); box-shadow: none; border: none; }
-:root[data-profile] .home-parts a { background: var(--deep-1); color: var(--text-2); border: 1px solid var(--edge); }
-:root[data-profile] .home-parts a:hover { background: var(--pu-ciel); color: var(--cyan); }
+:root[data-profile] .home-ico { background: color-mix(in srgb, var(--accent, var(--cyan)) 16%, #fff);
+  color: var(--accent, var(--cyan)); box-shadow: none; border: none; }
+:root[data-profile] .home-live { background: color-mix(in srgb, var(--accent, var(--cyan)) 6%, #f7fbf8); border-color: var(--edge-2); }
+:root[data-profile] .home-parts a { background: #fff; color: var(--text-2); border: 1px solid var(--edge); }
+:root[data-profile] .home-parts a:hover { background: color-mix(in srgb, var(--accent, var(--cyan)) 12%, #fff); color: var(--text); }
 :root[data-profile] .home-time { color: var(--cyan); }
 
 /* ---- Alertes : fonds pastel, texte foncé ---- */
@@ -115,13 +127,13 @@
 :root[data-profile] .nx-maj-ban, :root[data-profile] .toast {
   background: #fff; color: var(--text); border: 1px solid var(--edge); border-radius: 14px;
   box-shadow: 0 18px 50px rgba(40, 80, 130, .18); }
-:root[data-profile] .ver-dlg::backdrop { background: rgba(214, 228, 244, .55); }
+:root[data-profile] .ver-dlg::backdrop { background: rgba(200, 228, 212, .55); }
 :root[data-profile] .ver-head { border-bottom-color: var(--edge); }
 :root[data-profile] .tbl th { color: var(--muted); }
 :root[data-profile] .tbl td, :root[data-profile] .tbl th { border-color: var(--edge-2); }
 
 /* ---- Page de garde : blanche, NEXUS en bleu ciel, halo pastel, grille très légère ---- */
-:root[data-profile] .sp-screen { background: radial-gradient(ellipse at center, #ffffff 0%, #eef4fb 55%, var(--bg) 80%); }
+:root[data-profile] .sp-screen { background: radial-gradient(ellipse at center, #ffffff 0%, #eef8f2 50%, var(--bg) 80%); }
 :root[data-profile] .sp-grid { opacity: .45; }
 :root[data-profile] .sp-glow { background: radial-gradient(circle, rgba(151, 112, 214, .16), rgba(61, 139, 214, .08) 40%, transparent 70%); }
 :root[data-profile] .sp-title { color: var(--cyan); }
@@ -136,7 +148,7 @@
 :root[data-profile] .sp-log .dim { color: var(--muted); }
 :root[data-profile] .hdr-logo, :root[data-profile] .sp-logo, :root[data-profile] .sp-enter img { filter: none; }
 /* veille : écran pâle et calme (plutôt que noir) */
-:root[data-profile] .sp-standby { background: #e9eff7; color: var(--muted); }
+:root[data-profile] .sp-standby { background: #e3f0e8; color: var(--muted); }
 :root[data-profile] .sp-sb-clock { color: #9eb0c6; }
 :root[data-profile] .sp-standby small { color: #a8b6c8; }
 :root[data-profile] .sp-standby img { filter: none; }
@@ -165,6 +177,6 @@
 
 /* ---- Téléphone : barre d'onglets collée en haut, blanche et translucide ---- */
 @media (max-width: 760px) {
-  :root[data-profile] .tabs { background: rgba(244, 248, 252, .94); border-bottom: 1px solid var(--edge);
+  :root[data-profile] .tabs { background: rgba(229, 243, 234, .95); border-bottom: 1px solid var(--edge);
     -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
 }
