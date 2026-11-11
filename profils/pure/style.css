@@ -9,7 +9,7 @@
   /* couleurs au format r, g, b (transparences) : cohérentes avec les couleurs ci-dessous */
   --neon-rgb: 38, 103, 168;   --mag-rgb: 122, 82, 194;   --yel-rgb: 154, 100, 16;  --ok-rgb: 35, 125, 91;
   --deep-rgb: 232, 244, 237;  --glow2-rgb: 200, 232, 214; --neon3-rgb: 214, 233, 250; --splash-rgb: 236, 247, 240;
-  --bg: #e5f3ea;  --card: #ffffff;  --line: #c7e0d2;                   /* fond vert pastel clair */
+  --bg: #ddf1e5;  --card: #ffffff;  --line: #c7e0d2;                   /* fond vert pastel clair */
   --text: #1e2a3b;  --text-2: #46566c;  --muted: #5d6b80;
   --track: #e2eee7;  --edge: #c9e0d3;  --edge-2: #dcebe2;
   --deep-1: #f2f9f4;  --deep-2: #e9f4ed;  --deep-3: #dfeee5;
@@ -28,7 +28,7 @@
   --note-jaune: #fff3c4;  --note-rose: #fde1ea;  --note-vert: #dcf3e6;  --note-bleu: #dbeafb;
   --note-violet: #ebe2fb;  --note-peche: #ffe4d3;  --note-texte: #283444;
   /* fines nuances pastel réutilisées ci-dessous */
-  --pu-ciel: #e3effb;  --pu-lavande: #efe8fb;  --pu-menthe: #dcf2e6;  --pu-peche: #fde7da;  --pu-citron: #fbf3cf;
+  --pu-ciel: #e3effb;  --pu-lavande: #efe8fb;  --pu-menthe: #dcf2e6;  --pu-peche: #fde7da;  --pu-citron: #fbf3cf;  --pu-rose: #fce6ef;
   --pu-ombre: 0 1px 2px rgba(30, 90, 60, .08), 0 8px 24px rgba(30, 90, 60, .10);
 }
 :root[data-profile] body { font-variant-numeric: tabular-nums; }
@@ -36,10 +36,11 @@
 /* ---- Fond : vert pastel clair avec quatre halos pastel très doux (fixes), sans grille ni lignes de balayage ---- */
 :root[data-profile] body {
   color: var(--text);
-  background: radial-gradient(ellipse 55% 45% at 6% 0%, #dcecf8 0%, transparent 70%),
-              radial-gradient(ellipse 50% 40% at 100% 100%, #ece3f8 0%, transparent 70%),
-              radial-gradient(ellipse 40% 35% at 98% 6%, #fbe8dc 0%, transparent 70%),
-              radial-gradient(ellipse 45% 40% at 0% 100%, #f6f1d2 0%, transparent 70%), var(--bg);
+  background: radial-gradient(ellipse 60% 50% at 4% 0%, #d4e8fa 0%, transparent 72%),
+              radial-gradient(ellipse 55% 45% at 100% 100%, #e8dcfa 0%, transparent 72%),
+              radial-gradient(ellipse 45% 40% at 100% 4%, #fde0d0 0%, transparent 72%),
+              radial-gradient(ellipse 50% 45% at 0% 100%, #f7f0c8 0%, transparent 72%),
+              radial-gradient(ellipse 40% 35% at 50% 55%, #fbe4ee 0%, transparent 75%), var(--bg);
   background-attachment: fixed;
 }
 :root[data-profile] body::before, :root[data-profile] body::after { display: none; }
@@ -180,3 +181,63 @@
   :root[data-profile] .tabs { background: rgba(229, 243, 234, .95); border-bottom: 1px solid var(--edge);
     -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
 }
+
+/* =====================================================================
+   Pure 1.2 — encore plus pastel : les FONDS se colorent (cartes, onglets, boutons, barre du haut),
+   les TEXTES restent foncés (contraste vérifié).
+   ===================================================================== */
+
+/* Cartes teintées de la couleur de leur catégorie, bordure assortie, bandeau pastel en haut (dessiné à
+   l'intérieur de la carte : les coins restent arrondis) */
+:root[data-profile] .card {
+  --pu-fond: color-mix(in srgb, var(--accent, var(--cyan)) 7%, #fff);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent, var(--cyan)) 11%, #fff) 0, var(--pu-fond) 90px, var(--pu-fond));
+  border: 1px solid color-mix(in srgb, var(--accent, var(--cyan)) 22%, #fff);
+  box-shadow: inset 0 6px 0 color-mix(in srgb, var(--accent, var(--cyan)) 40%, #fff), var(--pu-ombre); }
+:root[data-profile] .home-tile { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 13%, #fff), color-mix(in srgb, var(--accent) 6%, #fff) 120px); }
+:root[data-profile] .temp, :root[data-profile] .rate, :root[data-profile] .facts, :root[data-profile] .home-live {
+  background: rgba(255, 255, 255, .7); border-color: color-mix(in srgb, var(--accent, var(--cyan)) 18%, #fff); }
+
+/* Barre du haut : dégradé ciel → lavande → pêche très léger */
+:root[data-profile] header {
+  background: linear-gradient(100deg, rgba(220, 236, 251, .85), rgba(236, 228, 251, .8) 50%, rgba(253, 230, 218, .8));
+  border-color: #cfe0ef; }
+
+/* Onglets : chacun sa couleur pastel ; l'onglet ouvert est plus soutenu, avec un liseré */
+:root[data-profile] .tabs a { --pu-onglet: var(--pu-ciel); background: color-mix(in srgb, var(--pu-onglet) 60%, #fff);
+  border-color: color-mix(in srgb, var(--pu-onglet) 70%, #9ab); }
+:root[data-profile] .tabs a[data-tab="pc"] { --pu-onglet: #dceafb; }
+:root[data-profile] .tabs a[data-tab="media"] { --pu-onglet: #ece3fb; }
+:root[data-profile] .tabs a[data-tab="deck"] { --pu-onglet: #f6e2f3; }
+:root[data-profile] .tabs a[data-tab="lanceur"] { --pu-onglet: #ddf0fa; }
+:root[data-profile] .tabs a[data-tab="reseau"] { --pu-onglet: #fbf0cc; }
+:root[data-profile] .tabs a[data-tab="statistiques"] { --pu-onglet: #dff3e8; }
+:root[data-profile] .tabs a[data-tab="agenda"] { --pu-onglet: #fde6d8; }
+:root[data-profile] .tabs a[data-tab="souvenirs"] { --pu-onglet: #fce3ec; }
+:root[data-profile] .tabs a[data-tab="journal"] { --pu-onglet: #eef3d6; }
+:root[data-profile] .tabs a:hover { background: var(--pu-onglet); color: var(--text); }
+:root[data-profile] .tabs a[aria-selected="true"] { background: var(--pu-onglet); color: #14304f;
+  border-color: color-mix(in srgb, var(--pu-onglet) 40%, #5a7fa8);
+  box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--pu-onglet) 30%, #3f6aa0), 0 3px 10px rgba(40, 80, 130, .16); }
+
+/* Boutons : fond ciel pâle au lieu du blanc ; « danger » en rose pâle */
+:root[data-profile] .btn { background: #eef5fc; border-color: #bcd4ea; }
+:root[data-profile] .btn:hover:not(:disabled), :root[data-profile] .btn.on { background: #dcebfa; }
+:root[data-profile] .btn.danger { background: #fdf0f3; }
+:root[data-profile] .home-parts a { background: color-mix(in srgb, var(--accent, var(--cyan)) 9%, #fff);
+  border-color: color-mix(in srgb, var(--accent, var(--cyan)) 22%, #fff); }
+:root[data-profile] .in { background: #fbfdff; border-color: #cddfee; }
+
+/* Barres : remplissages adoucis vers le pastel (la couleur reste reconnaissable) */
+:root[data-profile] .bar i { filter: saturate(.75) brightness(1.12); }
+
+/* Fenêtres et menus : très léger voile lavande en haut */
+:root[data-profile] .ver-dlg, :root[data-profile] .rg-menu, :root[data-profile] .pf-menu, :root[data-profile] .focus-menu {
+  background: linear-gradient(180deg, #f4effd 0, #fff 120px); }
+
+/* textes de la barre du haut un peu plus foncés (lisibles sur son dégradé pastel) */
+:root[data-profile] header { --muted: #4c596c; }
+:root[data-profile] header #clock { color: #7f520a; }
+:root[data-profile] header h1 em { color: #3a76b8; }
+:root[data-profile] .np .eq { color: #5f3fa3; }
+:root[data-profile] header .sub b { color: #7f520a; }

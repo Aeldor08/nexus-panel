@@ -2,20 +2,20 @@
   "format": 1,
   "nom": "Pure",
   "auteur": "NEXUS",
-  "version": "1.1",
+  "version": "1.2",
   "panel_min_version": "1.0.0",
   "modes": [
     "terminal",
     "sentinelle"
   ],
-  "description": "Clair et apaisant : fond vert pastel, cartes blanches bien détachées avec un bandeau pastel par catégorie, bleu ciel et touches lavande, menthe, pêche. Aucun effet lumineux.",
+  "description": "Tout en pastel : fond menthe aux halos ciel, lavande, pêche et rose, cartes teintées de la couleur de leur catégorie, onglets de couleurs différentes, textes foncés bien lisibles. Aucun effet lumineux.",
   "apercu": {
     "couleurs": [
-      "#e5f3ea",
-      "#2b74bd",
-      "#a98bd9",
-      "#5fb894",
-      "#f2a77e"
+      "#ddf1e5",
+      "#dceafb",
+      "#ece3fb",
+      "#fde6d8",
+      "#fce3ec"
     ]
   }
 }

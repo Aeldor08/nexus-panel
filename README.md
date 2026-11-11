@@ -363,7 +363,7 @@ sans recharger la page. La liste ne montre que les profils compatibles avec le m
 leurs couleurs. **Défaut** (l'apparence d'origine) est toujours là et ne peut pas être supprimé ; NEXUS y
 revient tout seul si un profil est cassé ou a disparu.
 
-Fournis en exemple : **Pure** (clair : fond vert pastel, cartes blanches, bleu ciel et touches pastel, les deux modes), **Ardoise** (sombre sobre, les deux modes), **Néon Minuit** (néon années 80,
+Fournis en exemple : **Pure** (tout en pastel : fond menthe, cartes et onglets teintés par catégorie, les deux modes), **Ardoise** (sombre sobre, les deux modes), **Néon Minuit** (néon années 80,
 Sentinelle), **Phosphore** (vieux terminal vert, Terminal), **Sakura** (cerisier en fleurs, les deux modes)
 , **Pluie d'étoiles** (ciel cosmique, voie lactée, étoiles filantes, nuages aux bords ambrés et montagnes
 dans la brume ; polices libres Cinzel et Inter incluses avec leurs licences ; les deux modes) et **Dés du
