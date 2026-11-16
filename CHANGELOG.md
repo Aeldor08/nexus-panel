@@ -8,6 +8,19 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Ajouté
+- **Philibert**, un petit iguane vert virtuel (compagnon façon tamagotchi, dessins et règles originaux) : il se promène dans un couloir sous la barre du haut (sans jamais recouvrir un bouton ; seul son corps est cliquable), marche, s'arrête, regarde autour de lui, cligne des yeux, hoche la tête, agite son fanon, se dore au soleil, dort la nuit, et montre son humeur dans une bulle (cœur, « ! » quand il a besoin de soin, Zzz, nuage s'il est malade)
+- Son **île** (clic sur lui, ou ⚙ Réglages → Ouvrir son île) : plage, palmier où il dort, rocher chaud, flaque, mer turquoise et vagues, crabes, mouettes, ciel à l'heure réelle (aube, jour, coucher, nuit étoilée) et météo de l'île (nuages, pluie, arc-en-ciel) ; jauges (faim, bonheur, énergie, propreté, santé, chaleur), poids, âge, « ce qui ne va pas »
+- Soins : nourrir (100 % végétal : verdure, légumes, fleurs ; fruits en friandises à limiter ; insectes, viande et croquettes refusés avec une astuce), chauffer au soleil ou sous une lampe chauffante (sang froid), éteindre la lumière la nuit, bain tiède ou de mer, nettoyer, soigner, caresser, féliciter, gronder doucement (caprices et vrais besoins)
+- Philibert **ne meurt jamais** : malade trop longtemps, la tortue vétérinaire l'emmène en barque se reposer 12 à 24 h (jauges figées) ; il revient en forme avec une carte postale qui explique ce qui lui a manqué et donne un conseil ; pension chez la voisine pendant les longues absences ; mode vacances
+- Évolution œuf → bébé → juvénile → adulte → vieux sage, avec une variante selon les soins (le Royal, le Gourmand, le Nageur, le Convalescent, l'Insulaire) ; mues, évènements de l'île
+- Trois mini-jeux (Pluie de feuilles, Gauche ou droite ?, Le hochement), coquillages, boutique (nourriture, remède, lampe, accessoires, déco), garde-robe, carnet (historique, statistiques, 21 succès, cartes postales, 18 fiches « Le savais-tu ? »)
+- Réglages de Philibert : affichage en haut, vitesse du temps, sons, notification Windows ou Discord (facultatives, jamais en mode jeu), mode vacances, nouvel œuf (double confirmation)
+- Moteur côté serveur (`philibert.py`, routes `/api/philibert…`) : temps qui passe même NEXUS fermé, valeurs et récompenses calculées par le serveur (anti-triche), données dans `data\philibert.json` ; moments marquants dans le journal d'activité (catégorie « Philibert ») ; tests `outils/tests/test_philibert.py`
+
+### Corrigé
+- `NE_PAS_PARTAGER.md` : le nom du fichier `data\focus.json` était abîmé
+
 ## [1.0.9] - 2026-11-15
 
 ### Ajouté

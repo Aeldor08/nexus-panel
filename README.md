@@ -510,6 +510,25 @@ La liste de ce qui ne doit jamais être partagé est dans **`NE_PAS_PARTAGER.md`
 
 ---
 
+## Philibert, l'iguane de NEXUS
+
+Un petit iguane vert vit sous la barre du haut : il s'y promène, s'arrête, regarde autour de lui, cligne des yeux,
+hoche la tête, se dore au soleil et dort la nuit. Sa bulle dit comment il va (cœur, **!** s'il a besoin de toi,
+Zzz, petit nuage s'il est malade). **Clique sur lui** (ou ⚙ Réglages → 🦎 Ouvrir son île) pour rejoindre son île :
+nourris-le (100 % végétal, les fruits sont des friandises), réchauffe-le sur le rocher chaud (c'est un lézard à
+sang froid), baigne-le, nettoie, soigne-le, joue avec lui (trois mini-jeux qui rapportent des coquillages), achète
+de la nourriture, une lampe chauffante, des accessoires et de la déco, et lis son carnet (historique, succès,
+cartes postales, fiches « Le savais-tu ? »).
+
+- **Le temps passe même NEXUS fermé** (heure réelle ; plus lentement la nuit et pendant tes absences).
+- **Philibert ne meurt jamais** : malade trop longtemps, la tortue vétérinaire l'emmène se reposer (12 à 24 h) et
+  il revient en forme avec une carte postale qui explique ce qui lui a manqué. Si tu t'absentes plusieurs jours,
+  la voisine de l'île le prend en pension. **Mode vacances** dans ses réglages : tout est en pause.
+- Réglages de Philibert : le voir ou non en haut, vitesse normale ou lente, sons, notification Windows ou
+  Discord s'il tombe malade, recommencer avec un nouvel œuf. Règles détaillées : `docs\PHILIBERT.md`.
+- Ses données restent sur ce PC (`data\philibert.json`, jamais partagé). Il s'immobilise en mode jeu et avec
+  « réduire les animations » de Windows.
+
 ## Détails techniques
 
 ### Fichiers
@@ -535,6 +554,8 @@ La liste de ce qui ne doit jamais être partagé est dans **`NE_PAS_PARTAGER.md`
 | `reminders.py` | Rappels de l'agenda (calcul, envoi panel + Discord, mémoire des rappels envoyés : `data\rappels.json`) |
 | `static\js\layout.js`, `static\js\blocs.js` | Blocs déplaçables et redimensionnables : le moteur unique (`layout.js`) et son application à toutes les catégories (`blocs.js`) |
 | `static\js\rappels.js`, `static\js\reglages.js`, `static\ui.css` | Bannières de rappel, menu ⚙ Réglages (tailles), styles des blocs et de l'agenda |
+| `philibert.py` | Philibert, l'iguane : temps qui passe, jauges, santé, vétérinaire, évolution, boutique, mini-jeux (règles : `docs\PHILIBERT.md`) |
+| `static\js\philibert*.js`, `static\philibert.css` | Philibert en haut de la page, son dessin, son île et ses mini-jeux |
 | `profiles.py` | Profils visuels : lecture du dossier `profils\`, vérification et nettoyage du CSS, import et export .zip |
 | `valider_profil.py` | Vérifie un dossier ou un .zip de profil et explique les erreurs |
 | `profils\` | Les profils visuels ; `FORMAT.md` (le format), `_modele\` (modèle à copier) |

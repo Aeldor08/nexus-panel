@@ -87,7 +87,7 @@ lentement quand il refroidit) :
   Baisse : faim < 20 (−2,5/h), propreté < 25 (−1,5/h), chaleur < 35 (−2/h), ventre rond > 78 (−0,8/h),
   UV < 25 (−0,6/h), énergie < 15 (−1/h). Chaque baisse est comptée dans des **causes** (froid, fruits, faim,
   propreté, soleil, fatigue) qui servent aux explications et à la carte postale.
-- **Malade** quand la santé passe sous 35 (ou 5 friandises en 24 h : indigestion). La maladie porte le nom de la
+- **Malade** quand la santé passe sous 35 (ou 5 friandises en 24 h : indigestion ; la santé descend alors à 34). La maladie porte le nom de la
   cause principale : rhume (froid), indigestion (fruits), faiblesse (faim), petite infection (propreté),
   os fragiles (soleil), épuisement (fatigue). Il tousse, devient vert pâle, bouge peu.
 - **Guérir** : le **remède** (boutique, 8 coquillages) donne +25 de santé et guérit s'il est au chaud
@@ -106,10 +106,11 @@ lentement quand il refroidit) :
 
 ## 6. Absences, pension, vacances
 
-- **Mode vacances** (réglages) : Philibert part en pension chez la voisine de l'île (une poule d'eau dessinée).
+- **Mode vacances** (réglages) : Philibert part en pension chez la voisine (sa cabane est sur l'île d'à côté, à l'horizon).
   Tout est en pause : jauges, âge, maladie. On le fait revenir quand on veut.
-- **Pension automatique** : si personne ne s'est occupé de lui depuis 3 jours, ou s'il revient du vétérinaire sans
-  que personne soit passé entre-temps, la voisine le prend en pension. Il n'y a donc jamais plusieurs séjours chez
+- **Pension automatique** : si personne ne s'est occupé de lui depuis 3 jours (s'il est malade à ce moment-là, la
+  tortue vétérinaire passe d'abord), ou s'il revient du vétérinaire sans que personne soit passé entre-temps, la
+  voisine le prend en pension et s'occupe bien de lui : il t'attend en forme (jauges remontées à un niveau correct). Il n'y a donc jamais plusieurs séjours chez
   le vétérinaire d'affilée pendant une longue absence : **même après des semaines, Philibert va bien**.
 
 ## 7. Régime alimentaire (principe B)
@@ -191,7 +192,7 @@ récompense calculée par le serveur, **60 coquillages par jour au plus** gagné
 ## 12. Carnet
 
 Historique (naissance, éclosion, maladies, séjours chez le vétérinaire, mues, évolutions… 300 lignes au plus),
-statistiques (repas, friandises, bains, jeux, refus, séjours…), **succès** (20), **cartes postales** reçues,
+statistiques (repas, friandises, bains, jeux, refus, séjours…), **succès** (21), **cartes postales** reçues,
 fiches **« Le savais-tu ? »** débloquées (18), âge en jours.
 
 ## 13. Notifications et réglages
@@ -239,4 +240,39 @@ vétérinaire, vacances, nouvel œuf — pas les repas (pas de spam).
 
 ## 17. Où j'en suis / reste à faire
 
-*(mis à jour en fin de session)*
+État au 16/11/2026 (une seule longue session a couvert les deux sessions prévues).
+
+**Fait et vérifié**
+- Moteur serveur complet (`philibert.py`) et routes `/api/philibert…` ; 133 tests sans navigateur
+  (`outils/tests/test_philibert.py`, inscrit dans `run_all.py`) : temps simulé, nuit ralentie, planchers d'absence,
+  chaleur jour/nuit/pluie/lampe, refus des aliments non végétaux, maladie → remède / repos au chaud, vétérinaire
+  (gel, retour, carte postale, coût jamais bloquant), aucune mort après 1, 3 et 8 semaines d'absence, pension et
+  vacances, vitesse lente, évolution et les 5 variantes, boutique et garde-robe, mini-jeux et anti-triche,
+  discipline, réglages, nouvel œuf, routes HTTP.
+- Philibert du haut (`philibert.js`) : couloir sous la barre du haut, marche (transition de `transform`),
+  regards, clignements, hochements, fanon, bain de soleil à plat ventre, sommeil (Zzz), bulles d'humeur, panneau
+  « chez le vétérinaire / en pension », notification Windows facultative ; seul son corps est cliquable.
+- Dessin original (`philibert-dessin.js`) : 5 stades, 5 variantes, humeurs (calme, joyeux, dort, malade, froid,
+  grognon), mue, ventre rond, 5 accessoires, œuf qui se fend.
+- L'île (`philibert-ile.js`) : ciel par phase et météo, soleil/lune qui suivent l'heure, étoiles, nuages,
+  mouettes, vagues, crabes, pluie, arc-en-ciel, île voisine avec la cabane de la voisine, barque de la tortue
+  vétérinaire, palmier, rocher chaud, flaque, lanterne (lumière), lampe chauffante, déco, crottes cliquables ;
+  jauges, « ce qui ne va pas », évènements, tous les soins, panneaux nourrir / bain / jouer / boutique /
+  garde-robe / carnet / réglages, carte postale, bandeaux de succès et de fiches.
+- Mini-jeux (`philibert-jeux.js`) : Pluie de feuilles (canevas + `nxImage`), Gauche ou droite ?, Le hochement.
+- Vérifié dans le navigateur intégré (copie isolée, port 8015) : jour, nuit, coucher + pluie, aube + arc-en-ciel,
+  boutique, nourrir, 3 mini-jeux joués jusqu'au bout, téléphone (375 px), Échap (panneau puis île), mode jeu
+  (animations coupées), profils Pure, Sakura, Dés du destin, Phosphore, Néon minuit (couloir bien placé).
+
+**Pas pu être vérifié**
+- Mesure réelle du coût CPU de l'iguane du haut (le panneau du navigateur était masqué pendant la session : les
+  images y sont ralenties). Par construction : aucune boucle d'animation en JavaScript, déplacement par
+  `transform` (composité), pattes animées par `steps()` seulement pendant la marche, rien quand l'onglet est caché.
+- Les notifications Windows et Discord (code en place, non déclenchées pour de vrai).
+- Les profils Ardoise et Pluie d'étoiles en capture (même mécanisme d'en-tête que les autres).
+
+**Idées pour la suite**
+- Un raccourci « Philibert » sur le sommaire, avec son humeur du moment.
+- Plus de mini-jeux (course au rocher chaud), plus d'évènements, des saisons sur l'île.
+- Une fiche « Le savais-tu ? » illustrée, et un album des évolutions passées après « nouvel œuf ».
+- Sons plus riches (toujours synthétisés, pas de fichiers).

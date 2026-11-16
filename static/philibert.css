@@ -185,6 +185,7 @@
 .phb-feuille { position: absolute; inset: 64px 12px 12px; z-index: 6; width: auto; max-width: 900px; margin: 0 auto; overflow: auto;
   padding: 14px 18px 18px; border-radius: 14px; background: #fffdf6; color: #1f3036; border: 1px solid #e0cfa8; box-shadow: 0 14px 40px rgba(0, 0, 0, .35); }
 .phb-feuille[hidden] { display: none; }
+.phb-feuille.phb-f-carte, .phb-feuille.phb-f-bain, .phb-feuille.phb-f-jouer { bottom: auto; max-height: calc(100% - 76px); }
 .phb-feuille h3 { margin: 0 40px 10px 0; font-size: 19px; color: #0d4f58; }
 .phb-feuille h3 small { font-size: 14px; font-weight: 400; color: #4f5f63; }
 .phb-fermer-f { position: sticky; float: right; top: 0; z-index: 2; margin: -4px -6px 0 8px; }

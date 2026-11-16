@@ -414,6 +414,7 @@
     const html = { nourrir: feuilleNourrir, bain: feuilleBain, jouer: feuilleJouer, boutique: feuilleBoutique, garde: feuilleGarde, carnet: feuilleCarnet,
       reglages: feuilleReglages, carte: () => carteHtml(e.carte) + `<button class="phb-b phb-prim" data-phb="carte-lue">Merci, docteur Tortue !</button>` }[feuille]();
     f.hidden = false;
+    f.className = "phb-feuille phb-f-" + feuille;
     const msg = message && ["boutique", "garde", "reglages"].includes(feuille) ? `<p class="phb-dit" role="status">${esc(message)}</p>` : "";
     f.innerHTML = `<button class="phb-b phb-fermer-f" data-phb="fermer-feuille" aria-label="Fermer ce panneau">✕</button>${msg}${html}`;
   }
