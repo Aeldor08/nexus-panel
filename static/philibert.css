@@ -134,7 +134,7 @@
 .phb-dlg .phb-fermer { width: 38px; height: 38px; padding: 0; display: grid; place-items: center; border-radius: 50%;
   background: rgba(255, 255, 255, .14); color: #fff; border: 1px solid rgba(255, 255, 255, .35); box-shadow: none; }
 .phb-dlg .phb-fermer:hover:not(:disabled) { background: rgba(255, 255, 255, .26); }
-.phb-dlg .phb-amb[aria-pressed="false"] { opacity: .7; }
+.phb-dlg .phb-amb[aria-pressed="false"]:not(.phb-theme) { opacity: .7; }
 
 /* ---------- la scène ---------- */
 .phb-scene-zone { flex: 0 0 auto; position: relative; overflow: hidden; height: min(50cqw, max(37.5cqw, var(--phb-vue)));
@@ -483,11 +483,12 @@ button.phb-carte:hover:not(:disabled) { transform: translateY(-2px); box-shadow:
   .phb-garde, .phb-postale { grid-template-columns: 1fr; }
   .phb-perso { width: 20%; }
   .phb-tete-ile h2 { font-size: 18px; }
-  .phb-tete-ile { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; }
+  .phb-tete-ile { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto auto; gap: 8px 8px; }
   .phb-ciel-info { grid-row: 2; grid-column: 1 / -1; }
-  .phb-dlg .phb-amb { grid-row: 1; grid-column: 3; }
-  .phb-coq { grid-row: 1; grid-column: 4; }
-  .phb-dlg .phb-fermer:not(.phb-amb) { grid-row: 1; grid-column: 5; }
+  .phb-dlg .phb-theme { grid-row: 1; grid-column: 3; }
+  .phb-dlg .phb-amb:not(.phb-theme) { grid-row: 1; grid-column: 4; }
+  .phb-coq { grid-row: 1; grid-column: 5; }
+  .phb-dlg .phb-fermer:not(.phb-amb) { grid-row: 1; grid-column: 6; }
 }
 
 /* ---------- Réduire les animations : Philibert immobile, île figée, tout reste utilisable ---------- */

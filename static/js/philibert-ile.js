@@ -912,6 +912,8 @@
         <div class="phb-puces">${e.stade === "oeuf" ? `<span>Œuf</span>` : `<span>${esc(e.stade_nom)}</span><span>${age(e.age_jours)}</span><span>${poids(e.poids_g)}${e.ventre_rond ? " · ventre rond" : ""}</span>`}</div></div>
       <div class="phb-ciel-info"><span class="phb-puce" title="Météo de l'île">${ico(met)}${metTxt}</span>
         <span class="phb-puce" title="${esc(e.ciel.saison_texte || "")}">${ico(ICO_SAISON[e.ciel.saison] || "fleur")}${esc(e.ciel.saison_nom || "")}</span></div>
+      <button class="phb-b phb-fermer phb-amb phb-theme" data-phb="theme" aria-pressed="${interfaceSombre()}"
+        aria-label="${interfaceSombre() ? "Passer l'interface en clair" : "Passer l'interface en sombre"}" title="Interface claire ou sombre (réglage complet dans Réglages)">${ico(interfaceSombre() ? "soleil" : "lune")}</button>
       <button class="phb-b phb-fermer phb-amb" data-phb="ambiance" aria-pressed="${!!(e.reglages.sons && e.reglages.ambiance !== false)}"
         aria-label="${e.reglages.sons && e.reglages.ambiance !== false ? "Couper les bruits de l'île" : "Écouter les bruits de l'île"}" title="Bruits de l'île (vagues, pluie, vent, oiseaux…)">${ico(e.reglages.sons && e.reglages.ambiance !== false ? "son" : "muet")}</button>
       <span class="phb-coq" role="img" aria-label="${e.coquillages} coquillages">${icone("coquillage")}<b>${e.coquillages}</b></span>
@@ -1174,6 +1176,8 @@
     dispatchEvent(new CustomEvent("philibert:etat", { detail: nv }));
   }
   function appliquer(nv) { diffuser(nv); if (dlg.open) rendre(); }
+  // une liste, une case ou un champ du panneau ouvert a le focus : on ne redessine pas le panneau sous ses doigts
+  const saisieEnCours = () => { const a = document.activeElement; return !!(a && a.closest && a.closest(".phb-feuille") && /^(SELECT|INPUT|TEXTAREA)$/.test(a.tagName)); };
   function dire(m) {
     message = m || "";
     clearTimeout(messageT);
@@ -1237,7 +1241,7 @@
     if (e) rendre();
     await charger();
     clearInterval(pollT);
-    pollT = setInterval(() => { if (!document.hidden && dlg.open && feuille !== "jeu") charger(); }, 30000);
+    pollT = setInterval(() => { if (!document.hidden && dlg.open && feuille !== "jeu" && !saisieEnCours()) charger(); }, 30000);
     flaner();
     if (f && typeof f === "string") ouvrirFeuille(f);
   }
@@ -1274,6 +1278,7 @@
     if (a === "nourrir") { feuille = null; rendreFeuille(); dernierAliment = b.dataset.aliment; await action("nourrir", { aliment: b.dataset.aliment }); return; }
     if (a === "bain") { feuille = null; rendreFeuille(); await action("bain", { lieu: b.dataset.lieu }); return; }
     if (a === "lampe") return action("lampe", { on: !e.lampe.allumee });
+    if (a === "theme") return action("reglages", { theme: interfaceSombre() ? "clair" : "sombre" });
     if (a === "ambiance") return action("reglages", e.reglages.sons ? { ambiance: e.reglages.ambiance === false } : { sons: true, ambiance: true });
     if (a === "lumiere") return action("lumiere", { on: !e.lumiere });
     if (a === "acheter") { await action("acheter", { article: b.dataset.article }); return; }

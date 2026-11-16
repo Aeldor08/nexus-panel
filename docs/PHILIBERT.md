@@ -265,9 +265,12 @@ son île.
   ciel couvert ou en saison fraîche, goélands le jour au soleil, grillons et petites grenouilles la nuit. Seulement
   quand l'île est ouverte, l'onglet visible, hors mode jeu et avec les petits sons activés ; coupés avec « réduire
   les animations ».
-- **Couleurs de l'interface** (réglage *theme*) : *automatique* (sombre si le fond du profil du panel est sombre ou
+- **Couleurs de l'interface** (bouton lune/soleil dans l'en-tête de l'île, qui bascule entre clair et sombre, ou
+  réglage *theme*) : *automatique* (sombre si le fond du profil du panel est sombre ou
   s'il fait nuit sur l'île), *clair* ou *sombre*. Contrastes vérifiés : texte ≥ 12 : 1, texte secondaire ≥ 7 : 1,
   pastilles et encadrés ≥ 7 : 1, rubans de rareté ≥ 5,8 : 1. La scène, elle, suit toujours l'heure de l'île.
+  Le rafraîchissement automatique (toutes les 30 s) attend qu'on ait fini de choisir dans une liste ou une case d'un
+  panneau ouvert (sinon la liste se refermait).
 - **Réglages** : afficher/masquer Philibert en haut, vitesse (normale / lente), sons, notifications Windows,
   Discord, mode vacances, recommencer avec un nouvel œuf (double confirmation).
 

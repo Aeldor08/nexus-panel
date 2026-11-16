@@ -25,7 +25,7 @@ longtemps, une tortue vétérinaire prend soin de lui. Tout est dessiné d'aprè
 - **Garde-robe** et **carnet** : historique, album (chaque étape de sa vie et les Philibert d'avant), statistiques, 24 succès, cartes postales, 20 fiches « Le savais-tu ? »
 - **Tuile Philibert sur le sommaire** : humeur, besoin principal, âge, coquillages, et accès directs (Nourrir, Jouer, Boutique, Carnet)
 - **Bruits de l'île** selon la météo, tous synthétisés et très discrets : vagues, pluie et tonnerre lointain, vent, goélands le jour, grillons et petites grenouilles la nuit ; bouton pour les couper dans l'en-tête de l'île
-- **Mode sombre** de l'interface de l'île : automatique (selon le thème du panel et la nuit sur l'île), clair ou sombre, contrastes vérifiés
+- **Mode sombre** de l'interface de l'île : bouton clair/sombre dans l'en-tête de l'île, et réglage automatique (selon le thème du panel et la nuit sur l'île), clair ou sombre ; contrastes vérifiés
 - **Réglages** : le voir en haut ou non, vitesse du temps, sons, bruits de l'île, couleurs, notification Windows ou Discord (facultatives, jamais en mode jeu), mode vacances, nouvel œuf (double confirmation)
 - **Dessin naturaliste** : un vrai iguane vert (grande écaille ronde sous l'oreille, fanon dentelé, crête d'épines, queue annelée, longs doigts griffus, texture d'écailles ; il fonce quand il a froid), cocotier annelé, cumulus, mer en perspective, reflets du soleil et de la lune, ombres qui suivent le soleil ; fenêtre de l'île grande, scène sur toute la largeur
 - **Sur le PC seulement** : depuis le téléphone (accès réseau), pas d'iguane, d'île ni de tuile, et le serveur refuse ses routes (« réservé au PC »)
