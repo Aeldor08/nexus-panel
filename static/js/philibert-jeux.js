@@ -4,16 +4,41 @@
    1. Pluie de feuilles (30 s) : déplacer Philibert (souris, doigt, flèches) pour attraper feuilles et fleurs ;
       les insectes, il les refuse (−1). Dessin sur un canevas avec nxImage (60 i/s max), en pause onglet caché.
    2. Gauche ou droite ? : deviner de quel côté il tourne la tête (5 manches).
-   3. Le hochement : répéter ses suites de petits et grands hochements de tête (mémoire et rythme).
+   3. Le hochement : répéter ses suites de petits et grands hochements de tête et de fanon déployé (mémoire et
+      rythme) ; chaque manche tire une nouvelle suite, plus longue, et il va de plus en plus vite.
    4. Course au rocher chaud (30 s au plus) : il court vers le rocher ; sauter (Espace, ↑, clic ou doigt) par-dessus
       les crabes et les noix de coco ; les rayons de soleil le réchauffent (il court plus vite), l'ombre des nuages le
       refroidit (sang froid !). Il part avec sa vraie chaleur du moment. Canevas + nxImage, en pause onglet caché. */
 (() => {
   const D = window.PhilibertDessin;
   let actif = null;          // { arreter() }
+  let enCours = null;        // { jeton, ctx } : la partie ouverte sur le serveur, tant qu'elle n'est pas terminée
 
   const api2 = (etape, corps) => api("/api/philibert/jeu/" + etape, corps);
-  function arreter() { if (actif) { try { actif.arreter(); } catch (x) {} actif = null; } }
+  // Quitter une partie en cours (✕, fermeture de l'île, autre jeu) = l'abandonner : le serveur la clôt, sans gain ;
+  // l'énergie prise au lancement ne revient pas.
+  function arreter() {
+    if (actif) { try { actif.arreter(); } catch (x) {} actif = null; }
+    if (enCours) { const j = enCours.jeton; enCours = null; api2("annuler", { jeton: j }).catch(() => {}); }
+  }
+  const ouverte = (partie, ctx, box) => {
+    enCours = { jeton: partie.jeton, ctx };
+    const b = box.querySelector("[data-abandon]");
+    if (b) b.hidden = false;
+  };
+  const terminee = () => { enCours = null; };   // juste avant d'envoyer « fin »
+  async function abandonner(box) {
+    if (!enCours) return;
+    if (!confirm("Abandonner la partie ?\nTu ne gagnes rien, et l'énergie dépensée pour la lancer (−8) ne revient pas.")) return;
+    const { jeton, ctx } = enCours;
+    enCours = null;
+    if (actif) { try { actif.arreter(); } catch (x) {} actif = null; }
+    let r;
+    try { r = await api2("annuler", { jeton }); } catch (x) { r = { message: x.message }; }
+    const zone = box.querySelector(".phb-jeu");
+    if (zone) zone.insertAdjacentHTML("afterbegin", `<p class="phb-dit" role="status">${esc(r.message || "Partie abandonnée.")}</p>`);
+    setTimeout(() => ctx.fin(r), 1200);
+  }
   const son = t => window.PhilibertSon && window.PhilibertSon(t);
 
   const ico = n => (window.PhilibertIcones ? window.PhilibertIcones.ico(n) : "");
@@ -21,8 +46,10 @@
   function entete(box, titre, aide) {
     box.hidden = false;
     box.className = "phb-feuille phb-f-jeu";
-    box.innerHTML = `<button class="phb-b phb-fermer-f" data-phb="fermer-feuille" aria-label="Quitter le jeu">${ico("fermer") || "✕"}</button>
-      <h3>${ico(ICONES[titre] || "de")}<span>${esc(titre)}</span></h3><p class="phb-gris">${aide}</p><div class="phb-jeu"></div>`;
+    box.innerHTML = `<button class="phb-b phb-fermer-f" data-phb="fermer-feuille" aria-label="Quitter le jeu (la partie est abandonnée)">${ico("fermer") || "✕"}</button>
+      <h3>${ico(ICONES[titre] || "de")}<span>${esc(titre)}</span><button class="phb-b phb-abandon" data-abandon hidden>Abandonner</button></h3>
+      <p class="phb-gris">${aide}</p><div class="phb-jeu"></div>`;
+    box.querySelector("[data-abandon]").addEventListener("click", () => abandonner(box));
     return box.querySelector(".phb-jeu");
   }
   function finir(r, ctx, zone) {
@@ -66,9 +93,10 @@
   // ---------------------------------------------------------------- 1. Pluie de feuilles
   async function feuilles(box, ctx) {
     const e = ctx.etat();
-    const zone = entete(box, "Pluie de feuilles", "Attrape les feuilles (+1) et les fleurs (+2) qui tombent du palmier. Les insectes, il n'en mange pas : évite-les ! Souris, doigt ou flèches ← →.");
+    const zone = entete(box, "Pluie de feuilles", "Attrape les feuilles (+1) et les fleurs (+2) qui tombent du palmier. Les insectes, il n'en mange pas : évite-les ! Souris, doigt ou flèches ← →. Pendant la partie, la souris reste dans le cadre (Échap, Alt+Tab ou la touche Windows pour en sortir).");
     let partie;
     try { partie = await api2("debut", { jeu: "feuilles" }); } catch (x) { zone.innerHTML = `<p class="phb-dit">${esc(x.message)}</p>`; return; }
+    ouverte(partie, ctx, box);
     zone.innerHTML = `<div class="phb-jeu-infos"><span>Score : <b data-score>0</b></span><span>Temps : <b data-temps>30</b> s</span><span data-msg aria-live="polite"></span></div>
       <canvas class="phb-canevas" tabindex="0" aria-label="Zone de jeu : déplace Philibert avec les flèches gauche et droite"></canvas>`;
     const cv = zone.querySelector("canvas"), g = cv.getContext("2d");
@@ -87,9 +115,22 @@
     taille();
     let px = W / 2, vise = px, score = 0, insectes = 0, reste = 30, compte = 3, objets = [], prochain = 0, dernier = 0, fini = false, msgT = 0, touches = {};
     const msg = t => { const m = zone.querySelector("[data-msg]"); m.textContent = t; clearTimeout(msgT); msgT = setTimeout(() => { m.textContent = ""; }, 1400); };
-    const bouger = ev => { const r = cv.getBoundingClientRect(); vise = Math.max(40, Math.min(W - 40, (ev.clientX - r.left))); };
+    // La souris reste « prisonnière » du cadre pendant la partie (Pointer Lock) : on lit ses déplacements, le curseur
+    // ne peut plus sortir (Échap, Alt+Tab ou la touche Windows le libèrent, c'est le navigateur qui le garantit).
+    const verrouille = () => document.pointerLockElement === cv;
+    const verrouiller = () => { if (!fini && !verrouille() && cv.requestPointerLock) { try { const p = cv.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (x) { /* refusé : souris libre */ } } };
+    const bouger = ev => {
+      if (verrouille()) vise = Math.max(40, Math.min(W - 40, vise + (ev.movementX || 0)));      // souris gardée : on suit ses mouvements
+      else { const r = cv.getBoundingClientRect(); vise = Math.max(40, Math.min(W - 40, (ev.clientX - r.left))); }   // doigt, ou souris libre
+    };
+    const libre = () => { if (!verrouille() && !fini) msg("Clique dans le cadre pour y garder la souris."); };
     cv.addEventListener("pointermove", bouger);
-    cv.addEventListener("pointerdown", ev => { bouger(ev); cv.focus(); });
+    cv.addEventListener("pointerdown", ev => { bouger(ev); cv.focus(); if (ev.pointerType === "mouse") verrouiller(); });
+    const refus = () => { if (!fini) msg("Ce navigateur ne permet pas de garder la souris dans le cadre : elle reste libre."); };
+    document.addEventListener("pointerlockchange", libre);
+    document.addEventListener("pointerlockerror", refus);
+    const deverrouiller = () => { document.removeEventListener("pointerlockchange", libre); document.removeEventListener("pointerlockerror", refus); if (verrouille()) document.exitPointerLock(); };
+    verrouiller();
     const kd = ev => { if (ev.key === "ArrowLeft" || ev.key === "ArrowRight") { touches[ev.key] = true; ev.preventDefault(); } };
     const ku = ev => { delete touches[ev.key]; };
     cv.addEventListener("keydown", kd); cv.addEventListener("keyup", ku);
@@ -138,6 +179,7 @@
       og.addColorStop(0, "rgba(59,42,18,.3)"); og.addColorStop(1, "rgba(59,42,18,0)");
       g.fillStyle = og; g.fillRect(px - 50, py + 4, 100, 16);
       if (pret(img)) g.drawImage(img, px - 48, py - 34, 96, 48);
+      if (verrouille()) { g.fillStyle = "rgba(255,255,255,.85)"; g.beginPath(); g.moveTo(vise, py + 22); g.lineTo(vise - 6, py + 30); g.lineTo(vise + 6, py + 30); g.fill(); }
       objets.forEach(dessinerObjet);
       if (pret(IM.cime)) { const hc = Math.min(120, W * .2); for (let x = 0; x < W; x += hc * 600 / 130) g.drawImage(IM.cime, x, 0, hc * 600 / 130, hc); }
       zone.querySelector("[data-score]").textContent = score;
@@ -151,12 +193,14 @@
     }
     async function fin() {
       fini = true;
+      deverrouiller();
       removeEventListener("resize", taille);
       let r = null;
+      terminee();
       try { r = await api2("fin", { jeton: partie.jeton, score, insectes }); } catch (x) { r = { message: x.message }; }
       finir(r, ctx, zone);
     }
-    actif = { arreter() { fini = true; removeEventListener("resize", taille); } };
+    actif = { arreter() { fini = true; deverrouiller(); removeEventListener("resize", taille); } };
     nxImage(image);
   }
 
@@ -166,6 +210,7 @@
     const zone = entete(box, "Gauche ou droite ?", "De quel côté Philibert va-t-il tourner la tête ? 5 manches. Flèches ← → au clavier.");
     let partie;
     try { partie = await api2("debut", { jeu: "devin" }); } catch (x) { zone.innerHTML = `<p class="phb-dit">${esc(x.message)}</p>`; return; }
+    ouverte(partie, ctx, box);
     zone.innerHTML = `<div class="phb-jeu-infos"><span>Manche <b data-m>1</b> / 5</span><span>Score : <b data-s>0</b></span></div>
       <div class="phb-devin"><div class="phb-devin-perso phb-anim">${dessin(e, { humeur: "calme" })}</div></div>
       <p class="phb-dit" data-r aria-live="polite">Fais ton choix !</p>
@@ -186,6 +231,7 @@
       if (r.fini) {
         fini = true;
         let f = null;
+        terminee();
         try { f = await api2("fin", { jeton: partie.jeton }); } catch (x) { f = { message: x.message }; }
         finir(f, ctx, zone);
       } else {
@@ -203,36 +249,44 @@
   // ---------------------------------------------------------------- 3. Le hochement
   async function rythme(box, ctx) {
     const e = ctx.etat();
-    const zone = entete(box, "Le hochement", "Les iguanes « parlent » en hochant la tête. Regarde Philibert, puis répète : petit hochement (← ou 1) ou grand hochement (→ ou 2).");
+    const zone = entete(box, "Le hochement", "Les iguanes « parlent » avec la tête et le fanon. Regarde Philibert, puis répète : petit hochement (← ou 1), grand hochement (→ ou 2), fanon déployé (↓ ou 3). À chaque manche, une nouvelle suite, un geste de plus… et il va de plus en plus vite !");
     let partie;
     try { partie = await api2("debut", { jeu: "rythme" }); } catch (x) { zone.innerHTML = `<p class="phb-dit">${esc(x.message)}</p>`; return; }
-    zone.innerHTML = `<div class="phb-jeu-infos"><span>Suite de <b data-n>3</b></span><span data-etat aria-live="polite">Regarde bien…</span></div>
+    ouverte(partie, ctx, box);
+    zone.innerHTML = `<div class="phb-jeu-infos"><span>Suite de <b data-n>3</b></span><span>Vitesse <b data-v>1</b></span><span data-etat aria-live="polite">Regarde bien…</span></div>
       <div class="phb-devin"><div class="phb-devin-perso phb-anim">${dessin(e, { humeur: "calme" })}</div></div>
       <div class="phb-suite" aria-hidden="true"></div>
-      <div class="phb-ligne phb-centre"><button class="phb-b phb-prim" data-h="petit" disabled>• Petit hochement</button><button class="phb-b phb-prim" data-h="grand" disabled>● Grand hochement</button></div>`;
+      <div class="phb-ligne phb-centre"><button class="phb-b phb-prim" data-h="petit" disabled>• Petit hochement</button><button class="phb-b phb-prim" data-h="grand" disabled>● Grand hochement</button>
+        <button class="phb-b phb-prim" data-h="fanon" disabled>◆ Fanon</button></div>`;
     const perso = zone.querySelector(".phb-devin-perso"), chips = zone.querySelector(".phb-suite");
-    let suite = partie.suite, rep = [], ecoute = false, fini = false, timers = [];
+    let suite = partie.suite, tempo = partie.tempo || .78, rep = [], ecoute = false, fini = false, timers = [];
+    const T0 = partie.tempo || .78, DUREE = { petit: 1, grand: 1.5, fanon: 1.4 };
     const dire = t => { zone.querySelector("[data-etat]").textContent = t; };
     const boutons = on => zone.querySelectorAll("[data-h]").forEach(b => { b.disabled = !on; });
+    const geste = h => {
+      perso.classList.remove("hoche-petit", "hoche-grand", "fanon"); void perso.offsetWidth;
+      perso.classList.add(h === "fanon" ? "fanon" : "hoche-" + h);
+    };
     function montrer() {
       ecoute = false; rep = []; boutons(false);
       zone.querySelector("[data-n]").textContent = suite.length;
+      zone.querySelector("[data-v]").textContent = (T0 / tempo).toFixed(1).replace(".", ",") + "×";
+      perso.style.setProperty("--phb-t", tempo + "s");                 // vitesse des animations de la tête et du fanon
       dire("Regarde bien…");
       chips.innerHTML = suite.map(() => `<i class="phb-chip"></i>`).join("");
       let t = 600;
-      suite.forEach((s, i) => {
+      suite.forEach((h, i) => {
         timers.push(setTimeout(() => {
           if (fini) return;
-          perso.classList.remove("hoche-petit", "hoche-grand"); void perso.offsetWidth;
-          perso.classList.add("hoche-" + s);
-          chips.children[i].className = "phb-chip vu " + s;
-          son(s === "petit" ? "pop" : "croc");
+          geste(h);
+          chips.children[i].className = "phb-chip vu " + h;
+          son(h === "petit" ? "pop" : h === "grand" ? "croc" : "saut");
         }, t));
-        t += s === "petit" ? 600 : 1000;
+        t += DUREE[h] * tempo * 1000;
       });
       timers.push(setTimeout(() => {
         if (fini) return;
-        perso.classList.remove("hoche-petit", "hoche-grand");
+        perso.classList.remove("hoche-petit", "hoche-grand", "fanon");
         chips.innerHTML = suite.map(() => `<i class="phb-chip"></i>`).join("");
         ecoute = true; boutons(true); dire("À toi !");
         zone.querySelector("[data-h]").focus();
@@ -243,15 +297,16 @@
       rep.push(h);
       const c = chips.children[rep.length - 1];
       if (c) c.className = "phb-chip vu " + h;
-      perso.classList.remove("hoche-petit", "hoche-grand"); void perso.offsetWidth; perso.classList.add("hoche-" + h);
+      geste(h);
       if (rep.length < suite.length) return;
       ecoute = false; boutons(false);
       let r;
       try { r = await api2("coup", { jeton: partie.jeton, reponse: rep }); } catch (x) { dire(x.message); return; }
-      if (r.bon && !r.fini) { son("ding"); dire("Bravo ! Une de plus…"); suite = r.suite; timers.push(setTimeout(montrer, 1100)); return; }
+      if (r.bon && !r.fini) { son("ding"); dire("Bravo ! Nouvelle suite, un peu plus vite…"); suite = r.suite; tempo = r.tempo || tempo; timers.push(setTimeout(montrer, 1100)); return; }
       fini = true;
       dire(r.bon ? "Parfait, jusqu'au bout !" : "Oups, ce n'était pas tout à fait ça.");
       let f = null;
+      terminee();
       try { f = await api2("fin", { jeton: partie.jeton }); } catch (x) { f = { message: x.message }; }
       finir(f, ctx, zone);
     }
@@ -259,6 +314,7 @@
     const kd = ev => {
       if (ev.key === "ArrowLeft" || ev.key === "1") { ev.preventDefault(); taper("petit"); }
       if (ev.key === "ArrowRight" || ev.key === "2") { ev.preventDefault(); taper("grand"); }
+      if (ev.key === "ArrowDown" || ev.key === "3") { ev.preventDefault(); taper("fanon"); }
     };
     document.addEventListener("keydown", kd);
     actif = { arreter() { fini = true; timers.forEach(clearTimeout); document.removeEventListener("keydown", kd); } };
@@ -271,6 +327,7 @@
     const zone = entete(box, "Course au rocher chaud", "Philibert court jusqu'au rocher chaud. Saute par-dessus les crabes et les noix de coco (Espace, ↑, clic ou doigt). Les rayons de soleil le réchauffent : plus il a chaud, plus il court vite. L'ombre des nuages le refroidit.");
     let partie;
     try { partie = await api2("debut", { jeu: "course" }); } catch (x) { zone.innerHTML = `<p class="phb-dit">${esc(x.message)}</p>`; return; }
+    ouverte(partie, ctx, box);
     zone.innerHTML = `<div class="phb-jeu-infos"><span>Rayons : <b data-score>0</b></span><span>Temps : <b data-temps>30</b> s</span><span data-msg aria-live="polite"></span></div>
       <canvas class="phb-canevas course" tabindex="0" aria-label="Course : appuie sur Espace ou flèche haut pour sauter"></canvas>`;
     const cv = zone.querySelector("canvas"), g = cv.getContext("2d");
@@ -400,6 +457,7 @@
       dessiner();
       msg(arrive ? "Arrivé ! Il s'étale sur le rocher chaud." : "Presque… le rocher était tout proche.");
       let r = null;
+      terminee();
       try { r = await api2("fin", { jeton: partie.jeton, score, arrivee: arrive }); } catch (x) { r = { message: x.message }; }
       finir(r, ctx, zone);
     }

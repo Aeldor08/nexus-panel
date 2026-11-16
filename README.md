@@ -526,6 +526,7 @@ cartes postales, fiches « Le savais-tu ? »).
 - Sa **boutique** propose aussi des pièces rares et légendaires (couronne d'or, diadème de nacre, cape royale, coffre
   au trésor…), chères mais jamais au détriment des soins. L'île a ses **bruits** selon la météo (vagues, pluie, vent,
   grenouilles la nuit, discrets et coupables) et un **mode sombre** (automatique selon le thème du panel).
+- Toutes les règles chiffrées (jauges par heure, chaleur selon la météo, soleil ou lampe…) : `docs\PHILIBERT-REGLES.md`.
 - **Le temps passe même NEXUS fermé** (heure réelle ; plus lentement la nuit et pendant tes absences).
 - Une **tuile Philibert** sur le sommaire montre son humeur et ce dont il a besoin, avec des accès directs.
 - L'île vit au rythme des **saisons** (selon le mois réel) et propose quatre mini-jeux, dont la **course au rocher

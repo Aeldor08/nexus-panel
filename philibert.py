@@ -31,6 +31,27 @@ PLANCHERS = {"faim": 20, "bonheur": 25, "proprete": 20, "chaleur": 20, "energie"
 SANTE_MIN = 5
 JAUGES = ("faim", "bonheur", "energie", "proprete", "sante", "chaleur")
 GAINS_JEUX_JOUR = 60
+ENERGIE_JEU = 8                    # énergie prise au lancement d'une partie (perdue si on l'abandonne)
+# « Le hochement » : petit hochement, grand hochement, fanon déployé (les trois vrais signaux de l'iguane vert).
+# Chaque manche tire une NOUVELLE suite, un geste de plus, et Philibert va de plus en plus vite (durée d'un temps).
+GESTES = {"petit": 1.0, "grand": 1.5, "fanon": 1.4}          # durée de chaque geste, en « temps »
+RYTHME_MAX = 10
+tempo_rythme = lambda manche: max(.34, .78 - .06 * manche)  # noqa: E731  (secondes par temps)
+
+
+def _suite_hochements(n: int) -> list[str]:
+    """Suite au hasard (tirage du serveur) : jamais trois fois le même geste d'affilée, et au moins deux gestes différents."""
+    while True:
+        out: list[str] = []
+        for _ in range(n):
+            choix = [g for g in GESTES if not (len(out) >= 2 and out[-1] == out[-2] == g)]
+            out.append(secrets.choice(choix))
+        if len(set(out)) >= 2:
+            return out
+
+
+def _duree_suite(suite: list[str], tempo: float) -> float:
+    return sum(GESTES.get(g, 1.0) for g in suite) * tempo
 # « Il veut jouer / il réclame de l'attention » (ennui, caprice) : seulement quand son bonheur est à 30 ou moins
 SEUIL_ATTENTION = 30
 METEO_FORCEE: str | None = None  # tests : "soleil", "nuages", "pluie"
@@ -1320,6 +1341,7 @@ class Philibert:
                 raise PhilibertErreur("Il est malade : il a besoin de repos et de chaleur, pas de jeux.")
             if j["energie"] < 15:
                 raise PhilibertErreur("Il est trop fatigué pour jouer : laisse-le se reposer.")
+            j["energie"] = _borne(j["energie"] - ENERGIE_JEU)            # pris au départ : perdu si on abandonne
             jeton = secrets.token_urlsafe(12)
             s["jeu"] = {"jeton": jeton, "jeu": jeu, "debut": now, "score": 0, "manche": 0, "fini": False, "graine": secrets.randbelow(2 ** 31)}
             out = {"jeton": jeton, "jeu": jeu, "graine": s["jeu"]["graine"]}
@@ -1330,9 +1352,8 @@ class Philibert:
             elif jeu == "devin":
                 out["manches"] = 5
             else:
-                s["jeu"]["suite"] = [secrets.choice(("petit", "grand")) for _ in range(3)]
-                s["jeu"]["montre"] = now
-                out["suite"] = list(s["jeu"]["suite"])
+                s["jeu"].update(suite=_suite_hochements(3), montre=now, tempo=tempo_rythme(0))
+                out["suite"], out["tempo"] = list(s["jeu"]["suite"]), s["jeu"]["tempo"]
             self._fait("hochement" if jeu == "rythme" else "oeil" if jeu == "devin" else "herbivore")
             s["contact"] = now
             self._sauver(force=True)
@@ -1365,16 +1386,16 @@ class Philibert:
             if g["jeu"] == "rythme":
                 if not isinstance(reponse, list) or len(reponse) > 12:
                     raise PhilibertErreur("Réponse invalide.")
-                if now - g["montre"] < .35 * len(g["suite"]):     # impossible de répondre avant d'avoir vu la suite
+                if now - g["montre"] < .8 * _duree_suite(g["suite"], g.get("tempo", .78)):   # pas avant d'avoir vu la suite
                     raise PhilibertErreur("Trop rapide : regarde d'abord Philibert hocher la tête.")
                 if [str(x) for x in reponse] == g["suite"]:
                     g["score"] = len(g["suite"])
-                    if len(g["suite"]) >= 8:
+                    g["manche"] += 1
+                    if len(g["suite"]) >= RYTHME_MAX:
                         g["fini"] = True
                         return {"bon": True, "score": g["score"], "fini": True}
-                    g["suite"] = g["suite"] + [secrets.choice(("petit", "grand"))]
-                    g["montre"] = now
-                    return {"bon": True, "score": g["score"], "suite": list(g["suite"]), "fini": False}
+                    g.update(suite=_suite_hochements(len(g["suite"]) + 1), montre=now, tempo=tempo_rythme(g["manche"]))
+                    return {"bon": True, "score": g["score"], "suite": list(g["suite"]), "tempo": g["tempo"], "fini": False}
                 g["fini"] = True
                 return {"bon": False, "score": g["score"], "attendu": list(g["suite"]), "fini": True}
             raise PhilibertErreur("Ce jeu ne se joue pas coup par coup.")
@@ -1438,7 +1459,6 @@ class Philibert:
             s["stats"]["coquillages_gagnes"] += gain
             s["stats"]["jeux"] += 1
             j["bonheur"] = _borne(j["bonheur"] + bonheur)
-            j["energie"] = _borne(j["energie"] - 8)
             s["corpulence"] = _borne(s["corpulence"] - 2, 10, 100)
             s["jeu"], s["contact"] = None, now
             self._fin_appel("ennui")
@@ -1448,6 +1468,20 @@ class Philibert:
             return {"ok": True, "score": sc, "gain": gain, "bonheur": bonheur,
                     "message": f"{JEUX[g['jeu']]} : {txt} ! +{gain} coquillage{'s' if gain > 1 else ''}, bonheur +{bonheur}."
                     + (" (Plafond de coquillages des jeux atteint pour aujourd'hui.)" if plafond else ""),
+                    "etat": self._vue(now)}
+
+    def jeu_annuler(self, jeton: str) -> dict:
+        """Abandonner la partie en cours : ni coquillages ni bonheur, et l'énergie prise au départ ne revient pas."""
+        now = maintenant()
+        with self._lock:
+            self._avancer(now)
+            g = self.s["jeu"]
+            if not g or not secrets.compare_digest(str(jeton or ""), g["jeton"]):
+                raise PhilibertErreur("Il n'y a pas de partie en cours.")
+            self.s["jeu"] = None
+            self.s["stats"]["abandons"] = self.s["stats"].get("abandons", 0) + 1
+            self._sauver(force=True)
+            return {"ok": True, "message": f"Partie abandonnée. L'énergie dépensée pour la lancer (−{ENERGIE_JEU}) ne revient pas.",
                     "etat": self._vue(now)}
 
     # -- outils de test --------------------------------------------------------------

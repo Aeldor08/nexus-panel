@@ -442,6 +442,12 @@ button.phb-carte:hover:not(:disabled) { transform: translateY(-2px); box-shadow:
 .phb-suite { display: flex; justify-content: center; gap: 8px; min-height: 22px; margin: 8px 0; }
 .phb-chip { display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: color-mix(in srgb, var(--bord) 60%, var(--carte)); border: 2px solid var(--bord); }
 .phb-chip.grand { width: 22px; height: 22px; }
+.phb-chip.fanon { width: 18px; height: 18px; border-radius: 4px; transform: rotate(45deg); }
+/* « Le hochement » : les gestes suivent la vitesse de la manche (--phb-t = durée d'un temps) */
+.phb-devin-perso.phb-anim.hoche-petit .phb-tete { animation: phb-hoche calc(var(--phb-t, .78s) * .42) ease-in-out 2; }
+.phb-devin-perso.phb-anim.hoche-grand .phb-tete { animation: phb-hoche-g calc(var(--phb-t, .78s) * 1.2) ease-in-out 1; }
+.phb-devin-perso.phb-anim.fanon .phb-fanon { animation: phb-fanon calc(var(--phb-t, .78s) * .35) ease-in-out 4 alternate; }
+.phb-feuille h3 .phb-abandon { margin-left: auto; margin-right: 40px; font-size: 13px; padding: 5px 12px; }
 .phb-chip.vu { background: var(--prim); border-color: var(--prim); animation: phb-pop .3s cubic-bezier(.34, 1.56, .64, 1); }
 
 /* ---------- Grande fenêtre : textes, icônes et tuiles un peu plus grands ---------- */

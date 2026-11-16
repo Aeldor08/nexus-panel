@@ -43,7 +43,7 @@
             ${t.parts.map(([id, label]) => `<a href="#${t.tab}/${id}">${label}</a>`).join("")}
           </nav>
         </article>`).join("")}
-      <article class="card home-tile home-philibert" style="--accent: var(--green)" data-panel="philibert">
+      ${["localhost", "127.0.0.1", "::1", "[::1]"].includes(location.hostname) ? `<article class="card home-tile home-philibert" style="--accent: var(--green)" data-panel="philibert">
         <a class="home-main" href="#accueil" data-philibert="" aria-label="Ouvrir l'île de Philibert">
           <span class="home-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <path d="M2.5 17.5c2.8.4 4.6-1.4 6.6-3.2 1-1 2.4-1.5 3.9-1.5h3.4c1.3 0 2.2-.9 3.2-1.6.9-.5 2 0 2.2.9.3 1-.3 1.9-1.3 2.2l-2.1.6"/>
@@ -56,7 +56,7 @@
           <a href="#accueil" data-philibert="nourrir">Nourrir</a><a href="#accueil" data-philibert="jouer">Jouer</a>
           <a href="#accueil" data-philibert="boutique">Boutique</a><a href="#accueil" data-philibert="carnet">Carnet</a>
         </nav>
-      </article>
+      </article>` : ""}
     </section>
     <p class="hint" style="text-align:center">Clique sur une catégorie ou directement sur une sous-partie.
       Pour revenir ici : bouton <b>◀ Retour</b>, onglet <b>⌂ Sommaire</b> ou touche <b>Échap</b>. Le logo <b>NEXUS</b> ramène à la page de garde.

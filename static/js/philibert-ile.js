@@ -12,7 +12,7 @@
    en pause onglet caché, et figées avec « réduire les animations ». */
 (() => {
   const D = window.PhilibertDessin, I = window.PhilibertIcones, N = window.PhilibertNature;
-  if (!D || !I || !N) return;
+  if (!D || !I || !N || !["localhost", "127.0.0.1", "::1", "[::1]"].includes(location.hostname)) return;      // (sur le PC seulement)
   const ico = I.ico;
   const dlg = document.createElement("dialog");
   dlg.className = "phb-dlg";

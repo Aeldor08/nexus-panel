@@ -8,7 +8,9 @@
    jeu ; immobile avec « réduire les animations ». Seul son corps dessiné est cliquable (philibert.css). */
 (() => {
   const header = document.querySelector("body > header");
-  if (!header || !window.PhilibertDessin) return;
+  // Philibert vit sur le PC seulement : depuis le téléphone (accès réseau), ni iguane, ni île (le serveur refuse aussi)
+  const surPC = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(location.hostname);
+  if (!header || !window.PhilibertDessin || !surPC) return;
   const D = window.PhilibertDessin;
   const reduit = matchMedia("(prefers-reduced-motion: reduce)");
   const lane = document.createElement("div");

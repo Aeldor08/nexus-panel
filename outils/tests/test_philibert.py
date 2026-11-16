@@ -432,14 +432,23 @@ ok(erreur(p.jeu_coup, g["jeton"], "triche") is None, "(partie finie : plus de co
 r = p.jeu_fin(g["jeton"])
 ok(r["gain"] == min(10, r["score"] * 2) or r["gain"] == round(min(10, r["score"] * 2) * 1.25), "récompense de Gauche ou droite")
 g = p.jeu_debut("rythme")
-ok(len(g["suite"]) == 3 and set(g["suite"]) <= {"petit", "grand"}, "Le hochement : suite de 3")
+ok(len(g["suite"]) == 3 and set(g["suite"]) <= set(P.GESTES) and g["tempo"] == P.tempo_rythme(0), "Le hochement : suite de 3, au rythme de départ")
 ok(erreur(p.jeu_coup, g["jeton"], None, g["suite"]) is not None, "répondre avant d'avoir vu la suite : refusé")
-suite = g["suite"]
+suite, tempos, suites = g["suite"], [g["tempo"]], [g["suite"]]
 for _ in range(4):
-    horloge[0] += 5
+    horloge[0] += 12
     r = p.jeu_coup(g["jeton"], None, suite)
     suite = r.get("suite", suite)
-ok(r["bon"] and r["score"] == 6, f"suites répétées jusqu'à 6 ({r['score']})")
+    tempos.append(r.get("tempo"))
+    suites.append(suite)
+ok(r["bon"] and r["score"] == 6, f"suites réussies jusqu'à 6 ({r['score']})")
+ok(all(a > b for a, b in zip(tempos, tempos[1:])), f"de plus en plus rapide ({tempos})")
+ok(all(len(b) == len(a) + 1 for a, b in zip(suites, suites[1:])), "un geste de plus à chaque manche")
+gros = [P._suite_hochements(8) for _ in range(300)]
+ok(all(not any(x[i] == x[i + 1] == x[i + 2] for i in range(6)) for x in gros), "jamais trois fois le même geste d'affilée")
+ok(all(len(set(x)) >= 2 for x in gros) and {g for x in gros for g in x} == set(P.GESTES), "suites variées : petit, grand et fanon")
+ok(len({tuple(x) for x in gros}) > 250, "suites vraiment au hasard (presque jamais deux fois la même)")
+ok(sum(x[:7] != y[:7] for x, y in zip(suites[1:], [s + ["?"] for s in suites[:-1]])) >= 1, "chaque manche tire une nouvelle suite (pas seulement un geste ajouté)")
 horloge[0] += 5
 r = p.jeu_coup(g["jeton"], None, ["faux"])
 ok(r["fini"] and not r["bon"], "erreur : partie finie")
@@ -458,6 +467,23 @@ p.s["j"]["energie"] = 90
 p.etat()
 ok(erreur(p.jeu_debut, "devin") is not None, "la nuit, il dort : pas de jeux")
 ok(erreur(p.jeu_coup, "n'importe quoi", "gauche") is not None, "jeton inventé refusé")
+# abandonner une partie : l'énergie prise au départ est perdue, rien n'est gagné
+p = nouveau()
+a_heure(11)
+p.etat()
+p.s["j"]["energie"], c0, b0 = 70, p.s["coquillages"], None
+g = p.jeu_debut("feuilles")
+ok(p.s["j"]["energie"] == 70 - P.ENERGIE_JEU, f"lancer une partie prend {P.ENERGIE_JEU} d'énergie")
+b0 = p.s["j"]["bonheur"]
+r = p.jeu_annuler(g["jeton"])
+ok(r["ok"] and p.s["jeu"] is None and p.s["coquillages"] == c0 and p.s["j"]["bonheur"] == b0, "abandon : ni coquillages ni bonheur")
+ok(p.s["j"]["energie"] == 70 - P.ENERGIE_JEU and "ne revient pas" in r["message"], "abandon : l'énergie dépensée ne revient pas")
+ok(erreur(p.jeu_fin, g["jeton"], 10, 0) is not None and erreur(p.jeu_annuler, g["jeton"]) is not None, "partie abandonnée : plus rien à terminer ni à annuler")
+g = p.jeu_debut("course")
+horloge[0] += 31
+e0 = p.s["j"]["energie"]
+p.jeu_fin(g["jeton"], 5, None, True)
+ok(p.s["j"]["energie"] > e0 - 3, "partie terminée : pas d'énergie en plus (déjà prise au départ)")
 
 # ---- attention et discipline -----------------------------------------------------------------
 # « il veut jouer / il réclame de l'attention » : seulement quand son bonheur est à 30 ou moins
@@ -587,6 +613,14 @@ p.action("recommencer", {"confirmer": "NOUVEL OEUF"})
 c = p.carnet()
 ok(len(c["album"]) == 2 and c["album"][0]["stade"] == "bebe" and c["etapes"] == [], "album gardé d'un œuf à l'autre (le plus récent d'abord)")
 
+# ---- le document pour l'administrateur suit le code -------------------------------------------
+doc = (BASE / "docs" / "PHILIBERT-REGLES.md").read_text(encoding="utf-8")
+ok(f"**−{P.ENERGIE_JEU} énergie au lancement**" in doc and f"**{P.GAINS_JEUX_JOUR} coquillages par jour**" in doc, "doc admin : coût et plafond des jeux")
+ok(all(f"**{v}**" in doc for v in (P.PLANCHERS["faim"], P.PLANCHERS["bonheur"])) and f"bonheur est à {P.SEUIL_ATTENTION} ou moins**" in doc, "doc admin : planchers et seuil d'attention")
+ok(all(f"{P.ALIMENTS[k]['nom']}" in doc for k in ("trefle", "feuilles_murier", "courge", "hibiscus", "banane")), "doc admin : tableau des aliments")
+ok("**+5**" in doc and "**−6**" in doc and P.SAISONS["ete"]["chaleur"] == 5 and P.SAISONS["hiver"]["chaleur"] == -6, "doc admin : chaleur des saisons")
+ok("**76 le jour, 72 la nuit**" in doc, "doc admin : lampe chauffante")
+
 # ---- routes de l'API --------------------------------------------------------------------------
 os.chdir(BASE)
 os.environ.update(NEXUS_NO_BOT="1", NEXUS_DECK_DRYRUN="1")
@@ -614,6 +648,14 @@ r = c.post("/api/philibert/action", data="x", headers={"content-type": "text/pla
 ok(r.status_code == 415, "corps JSON obligatoire")
 r = c.post("/api/philibert/jeu/debut", json={"jeu": "devin"})
 ok(r.status_code in (200, 400), f"POST jeu/debut ({r.status_code})")
+r = c.post("/api/philibert/jeu/annuler", json={"jeton": "faux"})
+ok(r.status_code == 400 and r.json()["error"], "POST jeu/annuler sans partie : 400 avec un message")
+app.remote_svc.enabled, ancien = True, app.remote_svc.enabled
+tel = TestClient(app.app, client=("192.168.1.42", 5000), base_url="http://127.0.0.1:8000")
+r = tel.get("/api/philibert")
+ok(r.status_code == 403 and "réservé au PC" in r.text, "Philibert depuis le téléphone (réseau local) : réservé au PC")
+ok(tel.post("/api/philibert/action", json={"action": "caresser"}).status_code == 403, "aucune action sur Philibert depuis le téléphone")
+app.remote_svc.enabled = ancien
 r = c.post("/api/philibert/jeu/xyz", json={})
 ok(r.status_code == 404, "étape de jeu inconnue : 404")
 import activite  # noqa: E402

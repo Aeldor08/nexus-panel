@@ -17,6 +17,7 @@ Deux principes guident toutes les règles :
 
 | Fichier | Rôle |
 |---|---|
+| `docs/PHILIBERT-REGLES.md` | Toutes les règles chiffrées, pour l'administrateur (jauges par heure, chaleur selon la météo, soleil ou lampe, soins, jeux) |
 | `philibert.py` | Moteur du jeu : temps qui passe, jauges, santé, vétérinaire, évolution, boutique, mini-jeux, succès. Aucune dépendance au reste de NEXUS (horloge et notifications injectables) |
 | `app.py` | Routes `/api/philibert…` (minces : tout est calculé par le moteur) |
 | `data/philibert.json` | État de Philibert (sur ce PC uniquement, hors Git, listé dans `NE_PAS_PARTAGER.md`) |
@@ -185,15 +186,21 @@ Variante, décidée en devenant adulte (dans cet ordre) :
 
 ## 10. Mini-jeux (coquillages + bonheur)
 
-Il faut qu'il soit éveillé, pas malade, avec au moins 15 d'énergie. Chaque partie : énergie −8, corpulence −2.
+Il faut qu'il soit éveillé, pas malade, avec au moins 15 d'énergie. Chaque partie : **énergie −8 prise au
+lancement**, corpulence −2. On peut **abandonner** une partie (bouton « Abandonner », ou ✕) : aucun gain, et l'énergie
+dépensée pour la lancer ne revient pas. Toutes les règles chiffrées : `docs/PHILIBERT-REGLES.md`.
 
 1. **Pluie de feuilles** (30 s) : déplacer Philibert (souris, doigt ou flèches) pour attraper les feuilles et
-   fleurs qui tombent du palmier en évitant les insectes (il les refuserait).
+   fleurs qui tombent du palmier en évitant les insectes (il les refuserait). Pendant la partie, la souris reste
+   dans le cadre (verrouillage du pointeur du navigateur ; Échap, Alt+Tab ou la touche Windows la libèrent). Si le
+   navigateur le refuse, la souris reste libre et un message le dit.
 2. **Gauche ou droite ?** (5 manches) : deviner de quel côté il va tourner la tête. Le côté est tiré par le
    serveur *après* le choix.
-3. **Le hochement** (jeu de mémoire et de rythme) : Philibert hoche la tête en une suite de petits et grands
-   hochements (sa façon de parler) ; il faut la répéter. Une étape de plus à chaque réussite (8 au plus).
-   Les suites sont tirées et vérifiées par le serveur.
+3. **Le hochement** (jeu de mémoire et de rythme) : Philibert « parle » avec trois gestes, ceux d'un vrai iguane
+   vert — petit hochement, grand hochement, fanon déployé ; il faut répéter sa suite (boutons, ← → ↓ ou 1 2 3).
+   À chaque réussite, le serveur tire **une nouvelle suite au hasard**, plus longue d'un geste (de 3 à 10, jamais
+   trois fois le même geste d'affilée), et Philibert va **de plus en plus vite** (un temps passe de 0,78 s à 0,34 s ;
+   la vitesse est affichée). Le serveur refuse une réponse donnée avant la fin de la démonstration.
 4. **Course au rocher chaud** (30 s au plus) : il court vers le rocher ; on saute (Espace, ↑, clic, doigt)
    par-dessus les crabes et les noix de coco ; les rayons de soleil le réchauffent (+1 point, il court plus vite),
    l'ombre des nuages le refroidit. Il part avec **sa vraie chaleur du moment**. Arrivé : il finit étalé sur le

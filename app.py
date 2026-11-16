@@ -140,8 +140,8 @@ async def _guard(request: Request, call_next):
         activite.noter("appareil", "accès refusé (réseau non autorisé)", "refusé", "", ip, unique_s=600)
         return PlainTextResponse("Accès refusé", status_code=403)
     path = request.url.path
-    # (mises à jour, appairage, fermeture de processus : seulement depuis le PC)
-    if path.startswith(("/api/remote", "/api/maj", "/api/processus/fermer")):
+    # (mises à jour, appairage, fermeture de processus, Philibert : seulement depuis le PC)
+    if path.startswith(("/api/remote", "/api/maj", "/api/processus/fermer", "/api/philibert")):
         return JSONResponse({"error": "réservé au PC"}, status_code=403)
     if path in PUBLIC_REMOTE_PATHS:
         return await call_next(request)
@@ -1206,6 +1206,8 @@ async def api_philibert_jeu(etape: str, request: Request) -> JSONResponse:
         return _philibert(philibert_svc.jeu_coup, body.get("jeton"), body.get("choix"), body.get("reponse"))
     if etape == "fin":
         return _philibert(philibert_svc.jeu_fin, body.get("jeton"), body.get("score"), body.get("insectes"), body.get("arrivee"))
+    if etape == "annuler":
+        return _philibert(philibert_svc.jeu_annuler, body.get("jeton"))
     raise BadRequest("étape inconnue", 404)
 
 

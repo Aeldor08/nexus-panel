@@ -56,10 +56,10 @@
             .map(([v, t]) => `<option value="${v}"${cur === v ? " selected" : ""}>${esc(t)}</option>`).join("")}
         </select></label>
         <small class="muted rg-note">Retenu pour ce profil seulement : chaque profil garde son propre passage.</small>`; })()}
-      <div class="rg-group">Philibert, l'iguane</div>
-      <label class="rg-row rg-chk"><input type="checkbox" data-act="philibert-visible" ${window.nxPhilibert && window.nxPhilibert.visible() ? "checked" : ""}>
+      ${window.nxPhilibert ? `<div class="rg-group">Philibert, l'iguane</div>
+      <label class="rg-row rg-chk"><input type="checkbox" data-act="philibert-visible" ${window.nxPhilibert.visible() ? "checked" : ""}>
         <span>Le voir se promener sous la barre du haut</span></label>
-      <button class="btn" data-act="philibert">🦎 Ouvrir son île</button>
+      <button class="btn" data-act="philibert">🦎 Ouvrir son île</button>` : ""}
       <div class="rg-group">Version et mises à jour</div>
       <div id="rg-maj"><small class="muted rg-note">Chargement…</small></div>
       <div class="rg-group">Rappels de l'agenda</div>
