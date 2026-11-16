@@ -516,10 +516,13 @@ Un petit iguane vert vit sous la barre du haut : il s'y promène, s'arrête, reg
 hoche la tête, se dore au soleil et dort la nuit. Sa bulle dit comment il va (cœur, **!** s'il a besoin de toi,
 Zzz, petit nuage s'il est malade). **Clique sur lui** (ou ⚙ Réglages → 🦎 Ouvrir son île) pour rejoindre son île :
 nourris-le (100 % végétal, les fruits sont des friandises), réchauffe-le sur le rocher chaud (c'est un lézard à
-sang froid), baigne-le, nettoie, soigne-le, joue avec lui (trois mini-jeux qui rapportent des coquillages), achète
+sang froid), baigne-le, nettoie, soigne-le, joue avec lui (quatre mini-jeux qui rapportent des coquillages), achète
 de la nourriture, une lampe chauffante, des accessoires et de la déco, et lis son carnet (historique, succès,
 cartes postales, fiches « Le savais-tu ? »).
 
+- Tout est dessiné d'après nature : un vrai iguane vert (écaille ronde sous l'oreille, fanon dentelé, crête, queue
+  annelée), un cocotier, un lagon turquoise, des crabes fantômes, des cumulus, la lune à sa vraie phase, les ombres
+  qui suivent le soleil.
 - **Le temps passe même NEXUS fermé** (heure réelle ; plus lentement la nuit et pendant tes absences).
 - Une **tuile Philibert** sur le sommaire montre son humeur et ce dont il a besoin, avec des accès directs.
 - L'île vit au rythme des **saisons** (selon le mois réel) et propose quatre mini-jeux, dont la **course au rocher

@@ -21,7 +21,8 @@ Deux principes guident toutes les règles :
 | `app.py` | Routes `/api/philibert…` (minces : tout est calculé par le moteur) |
 | `data/philibert.json` | État de Philibert (sur ce PC uniquement, hors Git, listé dans `NE_PAS_PARTAGER.md`) |
 | `static/js/philibert.js` | Philibert qui se promène en haut de la page + sa bulle |
-| `static/js/philibert-dessin.js` | Le dessin SVG de Philibert (stade, variante, humeur, accessoires, pose) |
+| `static/js/philibert-dessin.js` | Le dessin SVG de Philibert (stade, variante, humeur, accessoires, pose), d'après l'anatomie de l'iguane vert |
+| `static/js/philibert-nature.js` | Les éléments de nature réalistes partagés par l'île et les mini-jeux (cocotier, nuages, oiseaux, crabe fantôme, papillons, rocher, noix de coco, feuilles, hibiscus, scarabée) |
 | `static/js/philibert-ile.js` | L'île (fenêtre), les soins, la boutique, la garde-robe, le carnet, les réglages |
 | `static/js/philibert-jeux.js` | Les quatre mini-jeux |
 | `static/js/philibert-icones.js` | Les icônes dessinées de l'île (actions, jauges, météo, saisons) |
@@ -174,7 +175,7 @@ lentement quand il refroidit) :
 
 Variante, décidée en devenant adulte (dans cet ordre) :
 1. **le Convalescent** — 2 séjours ou plus chez le vétérinaire (petit pansement, écharpe) ;
-2. **le Royal** — santé moyenne ≥ 80, bonheur moyen ≥ 70, ≤ 20 % de friandises, aucun séjour (collerette dorée) ;
+2. **le Royal** — santé moyenne ≥ 80, bonheur moyen ≥ 70, ≤ 20 % de friandises, aucun séjour (couleurs orangées de parade des mâles : crête, fanon, pattes) ;
 3. **le Gourmand** — ≥ 30 % de friandises ou ventre rond (tout rond, joues pleines) ;
 4. **le Nageur** — au moins 8 bains de mer (crête bleutée, rayures marines) ;
 5. **l'Insulaire** — sinon (le vert classique de l'île).
@@ -276,6 +277,45 @@ courbes douces pour les déplacements et à rebond pour ce qui apparaît.
   (`philibert-icones.js`, une seule famille d'icônes au lieu d'émojis) ; **palette de nuit** (bleu nuit) quand il
   fait nuit sur l'île.
 
+### Version 3 : un dessin réaliste (16/11/2026)
+
+Chaque élément a été redessiné d'après des descriptions et des photos réelles (principes seulement, aucun dessin
+repris) : fiches d'espèces de l'iguane vert (zoo d'Honolulu, IUCN Iguana Specialist Group, Animal Diversity Web,
+université de Floride), du cocotier (Kew, CTAHR Hawaï), du crabe fantôme de l'Atlantique ; descriptions de lagons
+et de plages des Caraïbes ; conseils de peintres pour le ciel et les cumulus.
+
+- **Philibert** : silhouette naturaliste de profil — tête haute aux joues fortes, **grande écaille ronde et pâle
+  sous l'oreille** (subtympanique), tympan, arcade sourcilière, iris doré à pupille ronde, narine, rangées d'écailles
+  des lèvres, œil pariétal ; **fanon** bordé de petites épines ; **crête** d'épines fines penchées vers l'arrière,
+  plus hautes sur la nuque, prolongée sur la base de la queue ; **queue** très longue, effilée et **annelée** ;
+  pattes musclées (genou vers l'avant, coude vers l'arrière) et longs doigts griffus. Volume par dégradés (dos
+  sombre, flancs verts, ventre pâle) et fine texture d'écailles granuleuses (omise sur le petit Philibert du haut).
+  Couleurs vraies : le **froid l'assombrit** (un lézard fonce pour capter la chaleur), la maladie le pâlit, le
+  vieux sage devient gris-olive, le Royal prend l'**orange de parade** ; les joues roses « dessin animé » ont
+  disparu. L'œuf est un œuf de reptile, souple et cabossé, à moitié enfoui dans son nid de sable.
+- **Ciel** : dégradé du zénith vers un **horizon clair et voilé** ; soleil sans rayons dessinés, avec son halo ;
+  **lune à sa vraie phase** (calculée sur le mois lunaire) avec ses mers sombres ; Voie lactée discrète ;
+  **cumulus** au sommet éclairé et à la base plate et grise, plus petits et plus plats vers l'horizon.
+- **Mer** : bleu profond voilé à l'horizon, texture de vagues **en perspective** (plus serrées au loin), voile de
+  crêtes qui miroite, **colonne de reflets** sous le soleil ou la lune, **lagon** turquoise sur le sable blanc avec
+  des reflets de lumière au fond (caustiques), patates de corail, **dentelle d'écume** le long du rivage.
+- **Plage** : sable mouillé plus sombre au bord, sable grainé, laisse de mer, coquillages, galets, herbes des dunes à
+  épis, **liseron de mer** (feuilles en cœur, fleurs roses) ; **cocotier** au stipe annelé et renflé, aux palmes
+  pennées dont les folioles retombent, avec une palme sèche et ses noix ; **rocher** volcanique à facettes
+  (éclairé du côté du soleil) avec lichens et air qui tremble au-dessus quand il chauffe ; flaque bordée de galets ;
+  **ombres portées** à l'opposé du soleil, plus longues le matin et le soir ; crottes d'iguane avec leur partie
+  blanche (comme chez tous les reptiles).
+- **Faune** : crabes fantômes (couleur sable, yeux noirs sur pédoncules, pinces blanches inégales, actifs aussi la
+  nuit), goélands et frégate qui plane, papillons julia et soufré.
+- **Couleurs du moment** : palmes plus chaudes au coucher, ternes sous la pluie (brume au loin), Philibert dans la
+  pénombre la nuit (moins quand la lanterne est allumée).
+- **Objets et aliments** dessinés comme les vrais (mangue dégradée vert-jaune-rouge, papaye ouverte et ses graines,
+  feuille de mûrier dentée, trèfle à chevrons, chou vert nervuré, flacon de remède ambré…), carte postale avec une
+  tortue verte à écailles, pancarte en planche de bois.
+- **Mini-jeux** : mêmes dessins que l'île (palmes au-dessus de la pluie de feuilles, vraies feuilles nervurées,
+  hibiscus, scarabée ; cocotiers en parallaxe, crabes, noix qui roulent, rocher, nuages et leurs ombres dans la
+  course) ; le fond de plage est peint une seule fois sur un canevas hors écran.
+
 ## 17. Performance et accessibilité
 
 - Philibert du haut : un seul élément SVG, déplacé par `transform` (transition CSS), pattes et queue animées en
@@ -286,6 +326,10 @@ courbes douces pour les déplacements et à rebond pour ce qui apparaît.
 - L'île : animations CSS seulement (vagues, nuages, pluie, crabes, mouettes), coupées en mode jeu et avec
   `prefers-reduced-motion` ; le mini-jeu « Pluie de feuilles » dessine avec `nxImage()` (60 i/s au plus) et
   s'arrête quand l'onglet est caché. Fenêtre `<dialog>` : Échap ferme, boutons nommés, focus visible.
+- Version 3 : le décor reste un dessin fixe recalculé seulement quand le ciel change (phase, météo, saison, demi-heure),
+  les filtres (flou des ombres et des nuages, caustiques) sont donc calculés une fois ; ce qui bouge reste en
+  `transform`/`opacity`. Les dégradés de chaque dessin de Philibert ont un préfixe par endroit de la page (`uid`),
+  pour qu'un dessin caché ne prive jamais un autre de ses dégradés.
 
 ## 18. Où j'en suis / reste à faire
 
@@ -324,6 +368,11 @@ courbes douces pour les déplacements et à rebond pour ce qui apparaît.
 panneaux), course au rocher chaud jouée jusqu'au bout (arrivée sur le vrai rocher, gain calculé par le serveur),
 saisons (jour, nuit, pluie), album après un nouvel œuf, nouvelles animations et nouveau design (jour, nuit,
 téléphone). 151 tests serveur.
+
+**Version 3 (16/11/2026)** — dessin réaliste de Philibert, de l'île, des objets et des mini-jeux, vérifié dans la
+copie isolée : jour, coucher, nuit (lune à sa phase réelle), pluie, saisons, toutes les décorations, boutique et
+nourriture, pluie de feuilles et course jouées jusqu'au bout, pancarte du vétérinaire, téléphone (375 px).
+Pas mesuré : le coût réel des nouveaux filtres sur une petite carte graphique (calculés une fois par changement de ciel).
 
 **Idées pour la suite**
 - Plus d'évènements de saison (ponte de tortues marines au printemps, grande marée en saison des pluies).

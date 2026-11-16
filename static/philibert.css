@@ -49,20 +49,23 @@
    4 temps (pose, appui, lever, passage), genou plié pendant le passage ; corps qui ondule (2 petits rebonds par
    cycle) ; queue en S (base et bout décalés). Le Philibert du haut se contente de quelques images par pas. */
 .phb-p-av { transform-origin: 80px 43px; } .phb-p-ar { transform-origin: 51px 43.4px; }
-.phb-p-av-loin { transform-origin: 75px 41.6px; } .phb-p-ar-loin { transform-origin: 46.5px 42px; }
-.phb-p-av .phb-genou { transform-origin: 84.4px 48.6px; } .phb-p-ar .phb-genou { transform-origin: 46.6px 49.4px; }
-.phb-p-av-loin .phb-genou { transform-origin: 78.6px 46.8px; } .phb-p-ar-loin .phb-genou { transform-origin: 42.8px 47.6px; }
-.phb-queue { transform-origin: 44.5px 41px; } .phb-queue-bout { transform-origin: 24.4px 46.8px; }
-.phb-tete { transform-origin: 86px 37px; } .phb-fanon { transform-origin: 92px 40px; } .phb-corps { transform-origin: 62px 48px; }
-.phb-paupiere { transform-origin: 101.4px 27.4px; transform: scaleY(0); }
+.phb-p-av-loin { transform-origin: 75.2px 41.6px; } .phb-p-ar-loin { transform-origin: 46.8px 41.8px; }
+/* coude des pattes avant vers l'arrière, genou des pattes arrière vers l'avant (comme chez les vrais lézards) */
+.phb-p-av .phb-genou { transform-origin: 76.6px 48.4px; } .phb-p-ar .phb-genou { transform-origin: 56.4px 48.6px; }
+.phb-p-av-loin .phb-genou { transform-origin: 72.2px 46.8px; } .phb-p-ar-loin .phb-genou { transform-origin: 51.6px 47px; }
+.phb-queue { transform-origin: 45px 40.4px; } .phb-queue-bout { transform-origin: 24px 46px; }
+.phb-tete { transform-origin: 86px 37px; } .phb-fanon { transform-origin: 94px 40.4px; } .phb-corps { transform-origin: 62px 48px; }
+.phb-paupiere { transform-origin: 101.4px 27.3px; transform: scaleY(0); }
 .phb-corps-tout { transition: transform .4s ease; }
 @keyframes phb-hanche { 0%, 100% { transform: rotate(-19deg); } 60% { transform: rotate(17deg); } }
 @keyframes phb-genou { 0%, 60%, 100% { transform: rotate(0); } 80% { transform: rotate(-32deg); } }
+@keyframes phb-genou-ar { 0%, 60%, 100% { transform: rotate(0); } 80% { transform: rotate(30deg); } }
 @keyframes phb-bob { 0%, 50%, 100% { transform: translateY(0); } 25%, 75% { transform: translateY(-.8px); } }
 @keyframes phb-queue { 0%, 100% { transform: rotate(-2.6deg); } 50% { transform: rotate(2.6deg); } }
 @keyframes phb-queue-bout { 0%, 100% { transform: rotate(4deg); } 50% { transform: rotate(-5deg); } }
 .phb-anim.marche .phb-patte { animation: phb-hanche var(--phb-cycle, .8s) var(--phb-tf, ease-in-out) infinite; }
 .phb-anim.marche .phb-genou { animation: phb-genou var(--phb-cycle, .8s) var(--phb-tf, ease-in-out) infinite; }
+.phb-anim.marche .phb-p-ar .phb-genou, .phb-anim.marche .phb-p-ar-loin .phb-genou { animation-name: phb-genou-ar; }
 .phb-anim.marche .phb-p-ar, .phb-anim.marche .phb-p-av-loin,
 .phb-anim.marche .phb-p-ar .phb-genou, .phb-anim.marche .phb-p-av-loin .phb-genou { animation-delay: calc(var(--phb-cycle, .8s) / -2); }
 .phb-anim.marche .phb-corps { animation: phb-bob var(--phb-cycle, .8s) var(--phb-tf, ease-in-out) infinite; }
@@ -135,33 +138,40 @@
 .phb-l { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .phb-decor svg.phb-l { overflow: hidden; }
 .phb-nuit { background: #061230; pointer-events: none; transition: opacity 1s; }
-.phb-etoiles, .phb-nuages, .phb-mouettes, .phb-reflets, .phb-vagues, .phb-crabes, .phb-pluie, .phb-papillons, .phb-lucioles, .phb-guirlande, .phb-ecume, .phb-palmes { pointer-events: none; }
+.phb-etoiles, .phb-nuages, .phb-mouettes, .phb-chaleur, .phb-miroite, .phb-brume, .phb-reflets, .phb-vagues, .phb-crabes, .phb-pluie, .phb-papillons, .phb-lucioles, .phb-guirlande, .phb-ecume, .phb-palmes { pointer-events: none; }
 .phb-nuages, .phb-mouettes, .phb-vagues, .phb-crabes, .phb-pluie, .phb-papillons { overflow: hidden; }
+/* nuages, oiseaux et pluie s'effacent doucement sur les bords de la scène (pas de coupure nette sur écran large) */
+.phb-nuages, .phb-mouettes, .phb-pluie { -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent); }
 /* étoiles qui scintillent, soleil et ses rayons, lune */
 .phb-etoiles i { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: #fff; animation: phb-scintille 4s ease-in-out infinite; }
 .phb-etoiles i.g { width: 3px; height: 3px; box-shadow: 0 0 6px rgba(255, 255, 255, .8); }
+.phb-etoiles i.f { width: 1px; height: 1px; opacity: .6; }
+/* Voie lactée : une bande diffuse en travers du ciel (fixe) */
+.phb-etoiles i.phb-voie { left: -10%; top: 4%; width: 120%; height: 34%; border-radius: 50%; background: radial-gradient(closest-side, rgba(200, 210, 255, .16), rgba(200, 210, 255, .05) 60%, transparent);
+  transform: rotate(-14deg); animation: none; box-shadow: none; }
 @keyframes phb-scintille { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
 .phb-astre { position: absolute; width: 11%; aspect-ratio: 1; transform: translate(-50%, -50%); pointer-events: none; }
 .phb-astre svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.phb-soleil .phb-rayons { animation: phb-tourne 90s linear infinite; }
-.phb-soleil::after { content: ""; position: absolute; inset: -40%; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 236, 140, .35), transparent);
-  animation: phb-halo 6s ease-in-out infinite; }
-@keyframes phb-tourne { to { transform: rotate(360deg); } }
-@keyframes phb-halo { 50% { opacity: .55; transform: scale(1.08); } }
+.phb-soleil { width: 14%; }   /* disque et halo dessinés dans le SVG (pas de rayons « dessin animé ») */
 .phb-lune { width: 9%; }
 /* nuages, mouettes, vagues, reflets, écume, palmes, crabes, papillons, lucioles, guirlande, pluie */
 .phb-nuage { position: absolute; left: 0; animation: phb-nuage var(--d) linear infinite; animation-delay: var(--r); will-change: transform; }
 .phb-nuage svg { display: block; width: 100%; height: auto; }
 @keyframes phb-nuage { from { transform: translateX(-110%); } to { transform: translateX(640%); } }
 .phb-mouette { position: absolute; left: 0; width: 4%; animation: phb-mouette var(--d) linear infinite; animation-delay: var(--r); will-change: transform; }
-.phb-mouette svg { display: block; width: 100%; height: auto; animation: phb-battre .6s ease-in-out infinite alternate; }
+.phb-mouette svg { display: block; width: 100%; height: auto; }
+.phb-mouette .phb-ailes-o { transform-box: fill-box; transform-origin: 50% 85%; animation: phb-battre .55s ease-in-out infinite alternate; }
+.phb-mouette.plane { width: 5%; }   /* frégate : elle plane, sans battre des ailes */
 @keyframes phb-mouette { from { transform: translate(-150%, 0); } 50% { transform: translate(1300%, -60%); } to { transform: translate(2700%, 10%); } }
-@keyframes phb-battre { to { transform: scaleY(.5); } }
+@keyframes phb-battre { to { transform: scaleY(-.35); } }
 .phb-reflets i { position: absolute; width: .6%; height: .5%; border-radius: 2px; background: #fff; opacity: 0; animation: phb-reflet 3.4s ease-in-out infinite; }
 @keyframes phb-reflet { 0%, 100% { opacity: 0; transform: scaleX(.5); } 45% { opacity: .85; transform: scaleX(1.6); } }
 .phb-vague { position: absolute; left: 0; width: 200%; height: 3.4%; animation: phb-vague var(--d) linear infinite; will-change: transform; }
 .phb-vague svg { display: block; width: 100%; height: 100%; }
 @keyframes phb-vague { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.phb-miroite { pointer-events: none; animation: phb-miroite 4.2s ease-in-out infinite alternate; }
+@keyframes phb-miroite { from { opacity: .15; } to { opacity: 1; } }
 .phb-ecume { transform-origin: 50% 100%; animation: phb-ecume 5s ease-in-out infinite; }
 @keyframes phb-ecume { 50% { transform: scale(1.014, 1.035); opacity: .7; } }
 .phb-palmes { transform-origin: 22.2% 39.2%; }
@@ -172,7 +182,8 @@
 @keyframes phb-crabe { from { transform: translateX(0); } to { transform: translateX(380%); } }
 @keyframes phb-trottine { 50% { transform: translateY(-6%); } }
 .phb-papillon { position: absolute; width: 2.6%; animation: phb-papillon var(--d) ease-in-out infinite alternate; animation-delay: var(--r); }
-.phb-papillon svg { display: block; width: 100%; height: auto; animation: phb-ailes .22s ease-in-out infinite alternate; }
+.phb-papillon svg { display: block; width: 100%; height: auto; }
+.phb-papillon .phb-ailes { transform-box: fill-box; transform-origin: 50% 50%; animation: phb-ailes .2s ease-in-out infinite alternate; }
 @keyframes phb-papillon { 0% { transform: translate(0, 0); } 25% { transform: translate(140%, -90%); } 50% { transform: translate(300%, 20%); } 75% { transform: translate(430%, -70%); } 100% { transform: translate(560%, 10%); } }
 @keyframes phb-ailes { to { transform: scaleX(.35); } }
 .phb-lucioles i { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #fff6a0; box-shadow: 0 0 8px 3px rgba(255, 238, 120, .7);
@@ -180,12 +191,22 @@
 @keyframes phb-luciole { to { transform: translate(22px, -16px); } }
 .phb-guirlande i { position: absolute; width: 6px; height: 6px; margin: -3px; border-radius: 50%; background: var(--k); opacity: .7; animation: phb-scintille 2.2s ease-in-out infinite; }
 .phb-guirlande.nuit i { box-shadow: 0 0 9px 2px var(--k); opacity: 1; }
+/* air qui tremble au-dessus du rocher chaud (soleil), brume de pluie */
+.phb-chaleur { pointer-events: none; }
+.phb-chaleur i { position: absolute; top: 62%; width: 2.4%; height: 9%; border-radius: 50%; border-left: 2px solid rgba(255, 255, 255, .35); opacity: 0;
+  animation: phb-chaleur 2.8s ease-in-out infinite; }
+@keyframes phb-chaleur { 0% { opacity: 0; transform: translateY(20%) scaleX(1); } 40% { opacity: .7; } 100% { opacity: 0; transform: translateY(-40%) scaleX(-1); } }
+.phb-brume { pointer-events: none; background: linear-gradient(transparent 20%, rgba(190, 200, 210, .3) 48%, rgba(190, 200, 210, .12) 70%, transparent); }
 .phb-pluie svg { position: absolute; left: 0; top: -100%; width: 100%; height: 200%; animation: phb-pluie .8s linear infinite; will-change: transform; }
 @keyframes phb-pluie { from { transform: translateY(0); } to { transform: translateY(50%); } }
 
 .phb-pancarte { display: grid; place-items: center; pointer-events: none; }
-.phb-pancarte > div { pointer-events: auto; max-width: min(460px, 86%); padding: 14px 18px; border-radius: 12px; text-align: center;
-  background: #c98f52; color: #2b1a08; border: 3px solid #7d5229; box-shadow: 0 8px 0 #6b4a29, 0 10px 30px rgba(0, 0, 0, .35); display: grid; gap: 6px;
+.phb-pancarte > div { pointer-events: auto; max-width: min(460px, 86%); padding: 14px 18px; border-radius: 8px; text-align: center;
+  /* une planche de bois clair : veines fines, nœud, bord plus sombre */
+  background: radial-gradient(ellipse 18px 7px at 82% 70%, rgba(90, 55, 25, .35), transparent 70%),
+    linear-gradient(rgba(255, 255, 255, .14), rgba(0, 0, 0, .1)),
+    repeating-linear-gradient(178deg, #d3a46c 0 5px, #c9985f 5px 9px, #d8ab74 9px 11px, #c4935a 11px 17px);
+  color: #2b1a08; border: 3px solid #7d5229; box-shadow: inset 0 0 0 2px rgba(255, 228, 185, .3), 0 8px 0 #6b4a29, 0 10px 30px rgba(0, 0, 0, .35); display: grid; gap: 6px;
   animation: phb-pop .5s cubic-bezier(.34, 1.56, .64, 1); }
 .phb-pancarte b { font-size: 18px; }
 .phb-pancarte .phb-b { justify-self: center; }
@@ -195,6 +216,11 @@
   transform: translate(calc(var(--x, 50) * 1cqw), calc(var(--y, 87) * .5cqw)) translateY(-100%) rotate(var(--rot, 0deg)); transform-origin: 50% 100%;
   transition: transform 1.2s cubic-bezier(.45, .05, .55, .95); z-index: 3; will-change: transform; }
 .phb-perso[hidden] { display: none; }
+/* la nuit, Philibert est dans la pénombre comme le reste de l'île (un peu moins quand la lanterne est allumée) */
+.phb-dlg[data-nuit] .phb-perso .phb-flip { filter: brightness(.6) saturate(.7); }
+.phb-dlg[data-nuit][data-lumiere] .phb-perso .phb-flip { filter: brightness(.78) saturate(.82); }
+.phb-dlg[data-phase="coucher"] .phb-perso .phb-flip { filter: sepia(.28) saturate(.92) brightness(.9); }
+.phb-dlg[data-phase="aube"] .phb-perso .phb-flip { filter: sepia(.15) brightness(.95); }
 .phb-perso:focus-visible { outline: 3px solid #ff8c00; outline-offset: 2px; border-radius: 12px; }
 .phb-perso .phb-paupiere { animation: phb-cligne 6s infinite; }
 @keyframes phb-cligne { 0%, 95%, 100% { transform: scaleY(0); } 97% { transform: scaleY(1); } }
@@ -322,7 +348,7 @@ button.phb-carte:hover:not(:disabled) { transform: translateY(-2px); box-shadow:
 .phb-carte .phb-info { color: var(--t); font-weight: 700; }
 .phb-carte-jeu { align-items: flex-start; text-align: left; display: grid; grid-template-columns: 48px 1fr; grid-template-rows: auto auto; column-gap: 12px; }
 .phb-carte-jeu .phb-ic { grid-row: 1 / 3; }
-.phb-ic { width: 44px; height: 44px; display: grid; place-items: center; }
+.phb-ic { width: 52px; height: 52px; display: grid; place-items: center; }
 .phb-ic svg { width: 100%; height: 100%; }
 .phb-ic-ico { border-radius: 50%; background: var(--c); color: #fff; }
 .phb-ic-ico svg { width: 24px; height: 24px; }
@@ -341,7 +367,8 @@ button.phb-carte:hover:not(:disabled) { transform: translateY(-2px); box-shadow:
 .phb-chk input { width: 18px; height: 18px; accent-color: #0d6470; flex: none; }
 .phb-chk select { font: inherit; padding: 5px 10px; border-radius: 10px; border: 1.5px solid var(--bord); background: var(--bouton); color: var(--t); }
 .phb-garde { display: grid; grid-template-columns: minmax(180px, 260px) 1fr; gap: 16px; align-items: start; }
-.phb-apercu, .phb-portrait { background: linear-gradient(#c7eef6 0 62%, #f1d79a 62%); border-radius: 14px; padding: 8px; }
+.phb-apercu, .phb-portrait { border-radius: 14px; padding: 8px;
+  background: linear-gradient(#4f93d6, #d3eaf4 44%, #3a86b2 44%, #2fc4c4 54%, #a6ece2 58%, #f1e2bc 58%, #d8bd86); }
 .phb-apercu svg, .phb-portrait svg { width: 100%; height: auto; display: block; }
 .phb-frise { display: flex; gap: 12px; overflow-x: auto; padding: 4px 4px 10px; }
 .phb-photo { flex: 0 0 170px; margin: 0; padding: 8px 8px 10px; background: #fff; border-radius: 6px; box-shadow: 0 6px 16px rgba(0, 0, 0, .18); color: #1f3036;
@@ -373,7 +400,8 @@ button.phb-carte:hover:not(:disabled) { transform: translateY(-2px); box-shadow:
 .phb-jeu-infos b { font-variant-numeric: tabular-nums; }
 .phb-canevas { display: block; width: 100%; height: min(320px, 46vh); border-radius: 14px; border: 2px solid var(--bord); touch-action: none; cursor: none; }
 .phb-canevas.course { cursor: pointer; }
-.phb-devin { display: grid; place-items: center; padding: 6px 0; background: linear-gradient(#c7eef6 0 66%, #f1d79a 66%); border-radius: 14px; margin-bottom: 8px; }
+.phb-devin { display: grid; place-items: center; padding: 6px 0; border-radius: 14px; margin-bottom: 8px;
+  background: linear-gradient(#3f86cf, #cfe8f3 46%, #3a86b2 46%, #2fc4c4 58%, #a6ece2 62%, #f1e2bc 62%, #d8bd86); }
 .phb-devin-perso { width: min(280px, 70%); aspect-ratio: 2 / 1; }
 .phb-devin-perso svg { width: 100%; height: 100%; display: block; transition: transform .25s; }
 .phb-devin-perso.gauche svg { transform: scaleX(-1); }
