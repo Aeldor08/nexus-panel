@@ -25,10 +25,14 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 - Moteur côté serveur (`philibert.py`, routes `/api/philibert…`) : temps qui passe même NEXUS fermé, valeurs et récompenses calculées par le serveur (anti-triche), données dans `data\philibert.json` ; moments marquants dans le journal d'activité (catégorie « Philibert ») ; tests `outils/tests/test_philibert.py`
 
 ### Corrigé
+- `NE_PAS_PARTAGER.md` : le nom du fichier `data\focus.json` était abîmé
+
+## [1.0.10] - 2026-11-16
+
+### Corrigé
 - Souvenirs : le texte d'un post-it n'est plus effacé quand on change sa couleur, son écriture, sa taille ou sa police juste après avoir écrit (le texte en attente est enregistré d'abord)
 - Agenda : une note ou une tâche en cours d'écriture n'est plus écrasée par le rechargement automatique (toutes les 5 min, changement de mois) ; l'éditeur écrit toujours dans la bonne note
 - Journal : la zone de texte ne change plus de taille au F5 : elle s'adapte au texte du jour, et si on la redimensionne, la hauteur est retenue pour ce jour
-- `NE_PAS_PARTAGER.md` : le nom du fichier `data\focus.json` était abîmé
 
 ### Modifié
 - Souvenirs : la taille des post-it et des photos du mur se règle même quand la page est verrouillée
