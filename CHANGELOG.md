@@ -31,7 +31,7 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 - `NE_PAS_PARTAGER.md` : le nom du fichier `data\focus.json` était abîmé
 
 ### Modifié
-- Souvenirs : la taille d'un post-it se règle même quand la page est verrouillée (les photos restent figées)
+- Souvenirs : la taille des post-it et des photos du mur se règle même quand la page est verrouillée
 
 ## [1.0.9] - 2026-11-15
 
