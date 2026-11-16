@@ -8,6 +8,8 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+## [1.1.0] - 2026-11-16 - Philibert arrive !
+
 **Philibert arrive !** Un petit iguane vert vient vivre dans NEXUS. Il se promène sous la barre du haut et, d'un clic,
 t'emmène sur son île tropicale : nourris-le de verdure, réchauffe-le au soleil (c'est un lézard à sang froid), joue
 avec lui, décore son île et regarde-le grandir, de l'œuf au vieux sage. Il ne meurt jamais : s'il est malade trop
