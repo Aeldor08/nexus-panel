@@ -14,7 +14,8 @@
   const lane = document.createElement("div");
   lane.className = "phb-lane";
   lane.hidden = true;
-  lane.innerHTML = `<button type="button" class="phb-mini" aria-label="Philibert, ton iguane : ouvrir son île">
+  // « phb-anim » : active ses animations CSS (pattes, demi-tour selon le sens de marche, clignements, hochements)
+  lane.innerHTML = `<button type="button" class="phb-mini phb-anim" aria-label="Philibert, ton iguane : ouvrir son île">
       <span class="phb-flip"></span><span class="phb-bulle" aria-hidden="true" hidden></span>
       <span class="phb-panneau" aria-hidden="true" hidden></span></button>`;
   header.appendChild(lane);
@@ -113,17 +114,19 @@
     setPose("debout");
     if (r < (lent ? .3 : .55)) {                                       // il marche vers un autre endroit
       const W = largeur();
-      // petits trajets (80 à 280 px), vers le côté où il y a de la place
-      const pas = 80 + Math.random() * 200, versGauche = x - pas < 0 ? false : x + pas > W ? true : Math.random() < .5;
+      // petits trajets (96 à 336 px), vers le côté où il y a de la place
+      const pas = 96 + Math.random() * 240, versGauche = x - pas < 0 ? false : x + pas > W ? true : Math.random() < .5;
       const cible = Math.max(0, Math.min(W, x + (versGauche ? -pas : pas)));
-      // vitesse accordée au rythme des pattes (sinon il « glisse ») : un pas de patte ≈ 7 px par cycle de 0,72 s
-      const vitesse = lent ? 10 : 17 + Math.random() * 4;            // px/s
+      // vitesse accordée au rythme des pattes (sinon il « glisse ») : un pas de patte ≈ 8,5 px par cycle de 0,72 s
+      const vitesse = lent ? 12 : 20 + Math.random() * 5;            // px/s
       const d = Math.abs(cible - x) / vitesse;
+      // il regarde toujours là où il va : s'il change de sens, il fait d'abord demi-tour (0,3 s), puis il part
+      const tourne = (cible < x) !== gauche;
       gauche = cible < x;
       classe("gauche", gauche);
-      classe("marche", true);
-      placer(cible, d);
-      return suite(d * 1000 + 300);
+      const partir = () => { classe("marche", true); placer(cible, d); suite(d * 1000 + 300); };
+      if (tourne) { clearTimeout(timer); timer = setTimeout(partir, 340); return; }
+      return partir();
     }
     if (r < .7) { classe("regarde", true); return suite(1400 + Math.random() * 1200); }       // il regarde autour
     if (r < .82) { classe("hoche", true); return suite(1600); }                               // hochements de tête

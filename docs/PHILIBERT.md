@@ -266,7 +266,8 @@ courbes douces pour les déplacements et à rebond pour ce qui apparaît.
 - **Dessin** : ombrage en dégradé, reflets, rangées d'écailles, épines du fanon, yeux plus expressifs (deux
   reflets), pattes en deux segments à cinq doigts, queue en deux parties.
 - **Marche** : paires diagonales, genou plié pendant le passage, corps qui ondule, queue en S ; vitesse accordée au
-  rythme des pattes (il ne « glisse » plus). En haut de la page : quelques images par pas seulement (léger).
+  rythme des pattes (il ne « glisse » plus). Il regarde toujours là où il va : s'il change de sens, il fait d'abord
+  demi-tour (0,3 s), puis il part (en haut de la page comme sur l'île). En haut de la page : quelques images par pas seulement (léger).
 - **Île** : palmes qui ondulent au vent le jour, écume qui respire autour de l'île, reflets sur la mer, soleil et
   ses rayons qui tournent lentement, étoiles qui scintillent, lucioles la nuit, papillons au printemps et en été,
   crabes qui trottinent ; Philibert respire au repos et se déplace par `transform` (unités de conteneur `cqw`).

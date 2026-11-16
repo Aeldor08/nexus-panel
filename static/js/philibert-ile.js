@@ -671,12 +671,17 @@
     if (r < .5) {
       const lent = e.malade || e.jauges.chaleur < 35;
       const cible = 38 + Math.random() * 26, duree = Math.abs(cible - flaneX) * (lent ? .7 : .42);   // ≈ rythme des pattes
+      // demi-tour d'abord s'il change de sens (0,3 s), puis il part dans la direction où il regarde
+      const tourne = perso.classList.contains("gauche") !== (cible < flaneX);
       perso.classList.toggle("gauche", cible < flaneX);
-      perso.classList.add("marche");
-      perso.style.transitionDuration = duree.toFixed(1) + "s";
-      flaneX = cible;
-      rendreScene();
-      setTimeout(() => { perso.classList.remove("marche"); perso.style.transitionDuration = ""; }, duree * 1000 + 100);
+      const partir = () => {
+        perso.classList.add("marche");
+        perso.style.transitionDuration = duree.toFixed(1) + "s";
+        flaneX = cible;
+        rendreScene();
+        setTimeout(() => { perso.classList.remove("marche"); perso.style.transitionDuration = ""; }, duree * 1000 + 100);
+      };
+      if (tourne) setTimeout(partir, 340); else partir();
     } else if (r < .7) anim("hoche", 1500);
     else if (r < .85) anim("fanon", 1400);
     else anim("regarde", 1600);
