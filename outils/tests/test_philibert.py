@@ -1,6 +1,6 @@
 """Tests sans navigateur de Philibert, l'iguane de NEXUS (règles : docs/PHILIBERT.md).
 Horloge simulée, dossier de données temporaire : rien de personnel n'est touché.
-Couvre : éclosion et temps qui passe, rythme ralenti la nuit, planchers pendant les absences, chaleur jour/nuit
+Couvre : saisons, course au rocher chaud, album et étapes, éclosion et temps qui passe, rythme ralenti la nuit, planchers pendant les absences, chaleur jour/nuit
 (rocher, pluie, lampe), aliments refusés, maladie → remède / repos au chaud, vétérinaire (gel des jauges, retour,
 carte postale, coût jamais bloquant), aucune mort même après des semaines, pension et vacances, évolution et
 variantes, boutique et garde-robe, mini-jeux et anti-triche, réglages, recommencer, sauvegarde, routes de l'API.
@@ -31,6 +31,7 @@ def ok(c, m):
 H, J = 3600, 86400
 horloge = [datetime(2026, 6, 1, 10, 0).timestamp()]          # un lundi, 10 h (heure locale)
 P.maintenant = lambda: horloge[0]
+P.SAISON_FORCEE = "printemps"                                # saison neutre (chaleur +0) sauf dans les tests des saisons
 notes, discord = [], []
 
 
@@ -456,6 +457,80 @@ ok(erreur(p.action, "recommencer", {}) is not None and p.s["stade"] == "bebe", "
 r = p.action("recommencer", {"confirmer": "NOUVEL OEUF"})
 ok(r["etat"]["stade"] == "oeuf" and p.s["reglages"]["visible"] is False, "nouvel œuf (réglages gardés)")
 ok(erreur(p.action, "_avancer", {}) is not None and erreur(p.action, "__init__", {}) is not None, "actions internes inaccessibles")
+
+# ---- saisons de l'île -------------------------------------------------------------------------
+P.SAISON_FORCEE = None
+ok(P.saison(datetime(2026, 4, 10).timestamp()) == "printemps" and P.saison(datetime(2026, 7, 10).timestamp()) == "ete"
+   and P.saison(datetime(2026, 10, 10).timestamp()) == "automne" and P.saison(datetime(2026, 1, 10).timestamp()) == "hiver"
+   and P.saison(datetime(2026, 12, 24).timestamp()) == "hiver", "saisons selon le mois réel")
+P.METEO_FORCEE = None
+debut = int(datetime(2026, 7, 1).timestamp() // (2 * H))
+ete = sum(P._ciel_brut("graine-test", b) == "pluie" for b in range(debut, debut + 360))
+debut = int(datetime(2026, 10, 1).timestamp() // (2 * H))
+pluies = sum(P._ciel_brut("graine-test", b) == "pluie" for b in range(debut, debut + 360))
+ok(pluies > ete * 2, f"saison des pluies : bien plus d'averses qu'en été ({pluies} contre {ete} sur 360 tranches de 2 h)")
+temps = {}
+for sa in ("ete", "hiver"):
+    P.SAISON_FORCEE = sa
+    p = nouveau()
+    a_heure(23)
+    p.s["j"]["chaleur"] = 60
+    p.etat()
+    horloge[0] += 5 * H
+    temps[sa] = p.etat()["jauges"]["chaleur"]
+ok(temps["ete"] - temps["hiver"] >= 8, f"nuit d'été plus douce que nuit de saison fraîche ({temps['ete']} / {temps['hiver']})")
+e = p.etat()
+ok(e["ciel"]["saison"] == "hiver" and e["ciel"]["saison_nom"] == "Saison fraîche" and e["promo"] == "chou_vert", "saison exposée à la page (nom, texte, produit de saison)")
+p.s["coquillages"] = 10
+p.action("acheter", {"article": "chou_vert"})
+ok(p.s["coquillages"] == 9, "produit de saison : un coquillage de moins à la boutique")
+p.action("acheter", {"article": "courge"})
+ok(p.s["coquillages"] == 6, "les autres aliments gardent leur prix")
+ok("fraicheur" in p.s["faits"], "fiche « Le savais-tu ? » de la saison fraîche")
+p.s["saisons_vues"] = ["printemps", "ete", "automne"]
+horloge[0] += H
+p.etat()
+ok("saisons" in p.s["succes"], "succès « Les quatre saisons »")
+P.SAISON_FORCEE = "printemps"
+P.METEO_FORCEE = "soleil"
+
+# ---- course au rocher chaud ---------------------------------------------------------------------
+p = nouveau()
+a_heure(12)
+p.etat()
+p.s["j"]["chaleur"] = 50
+g = p.jeu_debut("course")
+ok(g["duree"] == 25, "Course au rocher chaud : partie ouverte par le serveur (25 s)")
+ok(erreur(p.jeu_fin, g["jeton"], 10, 0, True) is not None, "arrivée annoncée trop tôt : refusée")
+horloge[0] += 26
+c0 = p.s["coquillages"]
+r = p.jeu_fin(g["jeton"], 9999, 0, True)
+ok(r["score"] == 40 and p.s["position"] == "rocher" and p.s["j"]["chaleur"] >= 60, f"arrivé : score borné, il finit sur le rocher chaud ({p.s['j']['chaleur']:.0f})")
+ok(p.s["coquillages"] - c0 == r["gain"] + P.SUCCES["coureur"][2] and "coureur" in p.s["succes"], f"gain calculé par le serveur (+{r['gain']}) et succès « Coureur du soleil »")
+g = p.jeu_debut("course")
+horloge[0] += 26
+r = p.jeu_fin(g["jeton"], 6, 0, False)
+ok(r["gain"] == 2 and p.s["stats"]["courses_gagnees"] == 1, "pas arrivé : petite récompense quand même")
+
+# ---- album et étapes de la vie -------------------------------------------------------------------
+p = nouveau()
+ok([x["stade"] for x in p.s["etapes"]] == ["bebe"], "étape : l'éclosion est photographiée")
+p.s["age_s"] = 8 * J
+horloge[0] += 600
+p.etat()
+ok([x["stade"] for x in p.s["etapes"]] == ["bebe", "juvenile", "adulte"] and p.s["etapes"][-1]["variante"], "étapes : juvénile puis adulte (avec sa variante)")
+p.s["portes"] = {"tete": "chapeau"}
+titre = p.titre()
+p.action("recommencer", {"confirmer": "NOUVEL OEUF"})
+ok(len(p.s["album"]) == 1 and p.s["album"][0]["titre"] == titre and p.s["album"][0]["portes"] == {"tete": "chapeau"}
+   and p.s["album"][0]["age_jours"] >= 8, "nouvel œuf : l'ancien Philibert entre dans l'album")
+p.action("recommencer", {"confirmer": "NOUVEL OEUF"})
+ok(len(p.s["album"]) == 1, "un œuf qui n'a pas éclos n'entre pas dans l'album")
+horloge[0] += 700
+p.etat()
+p.action("recommencer", {"confirmer": "NOUVEL OEUF"})
+c = p.carnet()
+ok(len(c["album"]) == 2 and c["album"][0]["stade"] == "bebe" and c["etapes"] == [], "album gardé d'un œuf à l'autre (le plus récent d'abord)")
 
 # ---- routes de l'API --------------------------------------------------------------------------
 os.chdir(BASE)

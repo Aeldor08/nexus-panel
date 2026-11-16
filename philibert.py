@@ -32,6 +32,19 @@ SANTE_MIN = 5
 JAUGES = ("faim", "bonheur", "energie", "proprete", "sante", "chaleur")
 GAINS_JEUX_JOUR = 60
 METEO_FORCEE: str | None = None  # tests : "soleil", "nuages", "pluie"
+SAISON_FORCEE: str | None = None  # tests : "printemps", "ete", "automne", "hiver"
+# Saisons de l'île (mois réels) : probabilités de pluie et de nuages, chaleur en plus ou en moins, fruit ou
+# légume de saison (1 coquillage de moins à la boutique)
+SAISONS = {
+    "printemps": {"nom": "Printemps", "pluie": .15, "nuages": .45, "chaleur": 0, "promo": "fleur_pissenlit",
+                  "texte": "Les fleurs de pissenlit et d'hibiscus éclosent partout sur l'île."},
+    "ete": {"nom": "Été", "pluie": .08, "nuages": .3, "chaleur": 5, "promo": "mangue",
+            "texte": "Saison sèche et chaude : le soleil tape sur le rocher, c'est la saison des mangues."},
+    "automne": {"nom": "Saison des pluies", "pluie": .26, "nuages": .58, "chaleur": -2, "promo": "figue",
+                "texte": "Les averses sont fréquentes : pense à la lampe chauffante. Les figues sont mûres."},
+    "hiver": {"nom": "Saison fraîche", "pluie": .14, "nuages": .55, "chaleur": -6, "promo": "chou_vert",
+              "texte": "Les nuits sont plus fraîches : Philibert a besoin de plus de chaleur. Le chou vert est de saison."},
+}
 
 
 def maintenant() -> float:
@@ -59,9 +72,17 @@ def heure_de_dormir(t: float) -> bool:
     return h >= 21 or h < 7
 
 
+def saison(t: float) -> str:
+    if SAISON_FORCEE:
+        return SAISON_FORCEE
+    m = datetime.fromtimestamp(t).month
+    return "printemps" if 3 <= m <= 5 else "ete" if 6 <= m <= 8 else "automne" if 9 <= m <= 11 else "hiver"
+
+
 def _ciel_brut(graine: str, bloc: int) -> str:
     r = _alea(graine, "meteo", bloc)
-    return "pluie" if r < .15 else "nuages" if r < .45 else "soleil"
+    sa = SAISONS[saison(bloc * 2 * H)]
+    return "pluie" if r < sa["pluie"] else "nuages" if r < sa["nuages"] else "soleil"
 
 
 def meteo(t: float, graine: str) -> str:
@@ -170,6 +191,8 @@ FAITS = {
     "chute": "Il grimpe très haut et peut tomber de plusieurs mètres sans se faire mal.",
     "refus": "Insectes, viande, croquettes : un iguane vert n'en a pas besoin, il ne mange que des plantes.",
     "eau": "Beaucoup d'iguanes aiment faire leurs besoins dans l'eau de leur bain.",
+    "ponte": "Dans la nature, les femelles iguanes pondent souvent pendant la saison sèche, dans un terrier creusé dans le sable ou la terre.",
+    "fraicheur": "Quand il fait plus frais, un iguane bouge moins et mange moins : il a besoin de chaleur pour être actif.",
 }
 SUCCES = {
     "eclosion": ("Bienvenue, Philibert !", "Voir l'œuf éclore", 5),
@@ -193,6 +216,8 @@ SUCCES = {
     "coquet": ("Coquet", "Avoir 3 accessoires", 5),
     "decorateur": ("Décorateur", "Installer 3 décorations sur l'île", 5),
     "tresor": ("Trésor de l'île", "Avoir 100 coquillages en poche", 0),
+    "coureur": ("Coureur du soleil", "Arriver au rocher chaud avec 15 rayons de soleil ou plus", 10),
+    "saisons": ("Les quatre saisons", "Vivre les quatre saisons de l'île", 15),
 }
 EVENEMENTS = {
     "croquettes": {"texte": "Un touriste a oublié des croquettes pour chat sur la plage.", "aliment": "croquettes",
@@ -203,7 +228,7 @@ EVENEMENTS = {
     "bouteille": {"texte": "Une bouteille à la mer s'est échouée. Il y a un message dedans !", "choix": {"lire": "Lire le message"}},
     "crabe": {"texte": "Un petit crabe tourne autour de Philibert : il a l'air de vouloir jouer.", "choix": {"jouer": "Les laisser jouer"}},
 }
-JEUX = {"feuilles": "Pluie de feuilles", "devin": "Gauche ou droite ?", "rythme": "Le hochement"}
+JEUX = {"feuilles": "Pluie de feuilles", "devin": "Gauche ou droite ?", "rythme": "Le hochement", "course": "Course au rocher chaud"}
 
 
 class PhilibertErreur(Exception):
@@ -239,7 +264,7 @@ class Philibert:
 
     # -- données -----------------------------------------------------------------
     @staticmethod
-    def _nouveau(now: float, reglages: dict | None = None) -> dict:
+    def _nouveau(now: float, reglages: dict | None = None, album: list | None = None) -> dict:
         return {
             "v": VERSION, "graine": secrets.token_hex(8), "ne": now, "eclos": None, "maj": now, "contact": now,
             "age_s": 0.0, "stade": "oeuf", "variante": None,
@@ -256,12 +281,14 @@ class Philibert:
             "stats": {"repas": 0, "verdure": 0, "fleurs": 0, "friandises": 0, "refus": 0, "bains": 0, "bains_mer": 0,
                       "soleil": 0, "jeux": 0, "caresses": 0, "nettoyages": 0, "remedes": 0, "maladies": 0, "gueris": 0,
                       "sejours_veto": 0, "mues": 0, "gronder": 0, "feliciter": 0, "nuits_eteintes": 0,
-                      "coquillages_gagnes": 0, "meilleur_feuilles": 0, "meilleur_rythme": 0, "meilleur_devin": 0},
+                      "coquillages_gagnes": 0, "meilleur_feuilles": 0, "meilleur_rythme": 0, "meilleur_devin": 0,
+                      "meilleur_course": 0, "courses_gagnees": 0},
             "gouts": [], "moy": {"sante": 0.0, "bonheur": 0.0, "n": 0.0}, "regime": [], "friandises_t": [],
             "carnet": [], "cartes": [], "succes": {}, "succes_vus": [], "faits": [],
             "reglages": {"visible": True, "vitesse": "normale", "sons": True, "notif_windows": False, "discord": False,
                          **(reglages or {})},
             "jeu": None, "jeux_jour": {"jour": "", "gagnes": 0}, "ramasse": 0.0, "bonne": None,
+            "album": list(album or []), "etapes": [], "saisons_vues": [],
             "cd": {}, "bain_sante_jour": "", "dernier_froid": False, "nouveau": [],
         }
 
@@ -364,6 +391,7 @@ class Philibert:
             c = {"soleil": 62, "arc": 62, "nuages": 52, "pluie": 38}[ciel]
             if ph != "jour":
                 c -= 6
+        c += SAISONS[saison(t)]["chaleur"]
         if s["lampe"]["possede"] and s["lampe"]["allumee"]:
             c = max(c, 72 if ph == "nuit" else 76)
         return c
@@ -378,6 +406,15 @@ class Philibert:
                 self._eclore(t + dt)
             return
         s["age_s"] += dt * f
+        sa = saison(t)
+        if sa not in s["saisons_vues"]:
+            s["saisons_vues"].append(sa)
+            if sa == "ete":
+                self._fait("ponte")
+            elif sa == "hiver":
+                self._fait("fraicheur")
+            if len(s["saisons_vues"]) >= 4:
+                self._succes("saisons", t)
         nuit = heure_de_dormir(t)
         eveille = s["eveil_nuit"] > t
         absent = t - s["contact"] > ABSENCE_S
@@ -537,6 +574,7 @@ class Philibert:
         s["stade"], s["eclos"], s["age_s"] = "bebe", t, 0.0
         s["prochaine_mue"] = 2 * JOUR
         self._note(t, "eclosion", "Crac ! L'œuf a éclos : voici Philibert, un tout petit iguane vert.")
+        self._etape(t)
         self._fait("oeufs")
         self._succes("eclosion", t)
         self.journal("philibert", "éclosion", "ok", "Philibert est né")
@@ -579,8 +617,16 @@ class Philibert:
                 texte = "Philibert est maintenant juvénile : sa crête pousse et il grimpe partout."
                 self._fait("taille")
             self._note(t, "evolution", texte)
+            self._etape(t)
             self._succes(s["stade"], t)
             self.journal("philibert", f"évolution : {STADES[s['stade']].lower()}", "ok", self.titre())
+
+    def _etape(self, t: float) -> None:
+        """Une photo de chaque étape de sa vie (album illustré du carnet)."""
+        s = self.s
+        s["etapes"].append({"t": round(t), "stade": s["stade"], "variante": s["variante"], "portes": dict(s["portes"]),
+                            "age_jours": round(s["age_s"] / JOUR, 1), "titre": self.titre()})
+        del s["etapes"][:-10]
 
     def _fin_mue(self, t: float, bain: bool) -> None:
         s = self.s
@@ -740,7 +786,9 @@ class Philibert:
             "ventre_rond": s["corpulence"] > 75, "discipline": round(s["discipline"]), "uv": round(s["uv"]),
             "niveau": niveau, "humeur": humeur, "besoins": besoins, "dort": dort, "sieste": s["sieste"] and not nuit, "grognon": grognon,
             "position": s["position"], "lumiere": s["lumiere"], "lampe": dict(s["lampe"]),
-            "ciel": {"phase": phase_du_ciel(now), "meteo": meteo(now, s["graine"]), "heure": round(_heure(now), 2)},
+            "ciel": {"phase": phase_du_ciel(now), "meteo": meteo(now, s["graine"]), "heure": round(_heure(now), 2),
+                     "saison": saison(now), "saison_nom": SAISONS[saison(now)]["nom"], "saison_texte": SAISONS[saison(now)]["texte"]},
+            "promo": SAISONS[saison(now)]["promo"],
             "crottes": s["crottes"], "mue": bool(s["mue"]),
             "malade": {"cause": s["malade"]["cause"], "texte": MALADIES[s["malade"]["cause"]], "depuis": s["malade"]["depuis"]} if s["malade"] else None,
             "veto": {"retour": s["veto"]["retour"], "reste_s": max(0, round(s["veto"]["retour"] - now)), "raisons": s["veto"]["raisons"],
@@ -772,7 +820,8 @@ class Philibert:
         return {
             "aliments": ALIMENTS, "pieges": {k: v["nom"] for k, v in PIEGES.items()}, "objets": OBJETS,
             "succes": {k: {"nom": v[0], "texte": v[1], "gain": v[2]} for k, v in SUCCES.items()},
-            "faits_total": len(FAITS), "variantes": VARIANTES, "stades": STADES, "jeux": JEUX,
+            "faits_total": len(FAITS), "variantes": VARIANTES,
+            "saisons": {k: {"nom": v["nom"], "texte": v["texte"], "promo": v["promo"]} for k, v in SAISONS.items()}, "stades": STADES, "jeux": JEUX,
         }
 
     def carnet(self) -> dict:
@@ -787,6 +836,7 @@ class Philibert:
                 "succes": {k: {"nom": v[0], "texte": v[1], "gain": v[2], "quand": s["succes"].get(k)} for k, v in SUCCES.items()},
                 "cartes": list(reversed(s["cartes"])),
                 "faits": [{"id": f, "texte": FAITS[f]} for f in s["faits"]], "faits_total": len(FAITS),
+                "etapes": list(s["etapes"]), "album": list(reversed(s["album"])), "saisons_vues": list(s["saisons_vues"]),
             }
 
     # -- actions -------------------------------------------------------------------
@@ -1084,6 +1134,8 @@ class Philibert:
             qte = 1
         if art in ALIMENTS:
             prix, nom = ALIMENTS[art]["prix"], ALIMENTS[art]["nom"]
+            if prix and art == SAISONS[saison(now)]["promo"]:
+                prix = max(1, prix - 1)                        # de saison : un coquillage de moins
             if not prix:
                 raise PhilibertErreur("Le trèfle pousse sur l'île : il est gratuit.")
         elif art in OBJETS:
@@ -1198,7 +1250,15 @@ class Philibert:
             raise PhilibertErreur("Confirmation manquante.")
         ancien = self.titre()
         reglages = dict(self.s["reglages"])
-        self.s = self._nouveau(now, reglages)
+        o = self.s
+        album = list(o.get("album") or [])
+        if o["stade"] != "oeuf":                     # un œuf qui n'a pas éclos n'entre pas dans l'album
+            album.append({"titre": ancien, "stade": o["stade"], "variante": o["variante"], "portes": dict(o["portes"]),
+                          "ne": round(o["ne"]), "eclos": o["eclos"] and round(o["eclos"]), "fin": round(now),
+                          "age_jours": round(o["age_s"] / JOUR, 1), "succes": len(o["succes"]), "faits": len(o["faits"]),
+                          "repas": o["stats"]["repas"], "jeux": o["stats"]["jeux"], "mues": o["stats"]["mues"],
+                          "sejours_veto": o["stats"]["sejours_veto"], "coquillages_gagnes": o["stats"]["coquillages_gagnes"]})
+        self.s = self._nouveau(now, reglages, album[-30:])
         self._note(now, "naissance", f"Nouveau départ : {ancien} est parti vivre sur une île voisine, et un nouvel œuf est apparu dans le sable.")
         self.journal("philibert", "nouvel œuf", "ok", f"après {ancien}")
         return {"message": "Un nouvel œuf est apparu dans le sable chaud.", "reaction": "oeuf"}
@@ -1223,6 +1283,8 @@ class Philibert:
             out = {"jeton": jeton, "jeu": jeu, "graine": s["jeu"]["graine"]}
             if jeu == "feuilles":
                 out["duree"] = 30
+            elif jeu == "course":
+                out["duree"] = 25
             elif jeu == "devin":
                 out["manches"] = 5
             else:
@@ -1275,13 +1337,32 @@ class Philibert:
                 return {"bon": False, "score": g["score"], "attendu": list(g["suite"]), "fini": True}
             raise PhilibertErreur("Ce jeu ne se joue pas coup par coup.")
 
-    def jeu_fin(self, jeton: str, score=None, insectes=None) -> dict:
+    def jeu_fin(self, jeton: str, score=None, insectes=None, arrivee=None) -> dict:
         now = maintenant()
         with self._lock:
             self._avancer(now)
             g = self._jeu_courant(jeton, now)
             s, j = self.s, self.s["j"]
-            if g["jeu"] == "feuilles":
+            if g["jeu"] == "course":
+                if now - g["debut"] < 22:
+                    raise PhilibertErreur("La course n'est pas terminée.")
+                try:
+                    sc = max(0, min(40, int(score or 0)))
+                except (TypeError, ValueError):
+                    sc = 0
+                arrive = bool(arrivee)
+                gain, bonheur = min(10, sc // 3 + (3 if arrive else 0)), min(20, 6 + sc // 2)
+                s["stats"]["meilleur_course"] = max(s["stats"]["meilleur_course"], sc if arrive else 0)
+                if arrive:
+                    s["stats"]["courses_gagnees"] += 1
+                    j["chaleur"] = _borne(j["chaleur"] + 10)
+                    if not heure_de_dormir(now):
+                        s["position"], s["rocher_depuis"] = "rocher", now
+                    if sc >= 15:
+                        self._succes("coureur", now)
+                self._fait("sang_froid")
+                txt = f"{sc} rayon{'s' if sc > 1 else ''} de soleil" + (", arrivé sur le rocher chaud" if arrive else ", pas tout à fait arrivé")
+            elif g["jeu"] == "feuilles":
                 if now - g["debut"] < 27:
                     raise PhilibertErreur("La partie n'est pas terminée.")
                 try:
