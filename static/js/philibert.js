@@ -24,7 +24,7 @@
   const PANCARTE = `<svg class="phb-svg" viewBox="0 0 128 64" role="img" aria-label=""><path d="M40 60 C52 55 74 55 88 60 Z" fill="#e6c98b"/>
     <rect x="61" y="24" width="5" height="34" fill="#9b6a3c"/><rect x="40" y="12" width="48" height="20" rx="3" fill="#c98f52" stroke="#7d5229" stroke-width="1.4"/>
     <path d="M46 19 h36 M46 25 h28" stroke="#7d5229" stroke-width="2" stroke-linecap="round"/></svg>`;
-  const LARG = 96;
+  const LARG = () => mini.offsetWidth || 115;        // largeur réelle (plus petite sur téléphone)
   let e = null, x = -1, gauche = false, timer = 0, cligneT = 0, html = "", pose = "debout", bulleTemp = 0, poll = 0;
 
   const ICONES = {
@@ -37,7 +37,7 @@
   const besoinsVrais = () => (e && e.besoins || []).filter(b => b.id !== "ventre");
   const visible = () => !!(e && e.reglages && e.reglages.visible);
   const gm = () => document.body.classList.contains("gamemode");
-  const largeur = () => Math.max(LARG, lane.clientWidth - LARG);
+  const largeur = () => Math.max(LARG(), lane.clientWidth - LARG());
   const nuitHeure = () => { const h = e && e.ciel ? e.ciel.heure : 12; return h >= 21 || h < 7; };
 
   function libelle() {

@@ -312,6 +312,11 @@ et de plages des Caraïbes ; conseils de peintres pour le ciel et les cumulus.
 - **Objets et aliments** dessinés comme les vrais (mangue dégradée vert-jaune-rouge, papaye ouverte et ses graines,
   feuille de mûrier dentée, trèfle à chevrons, chou vert nervuré, flacon de remède ambré…), carte postale avec une
   tortue verte à écailles, pancarte en planche de bois.
+- **Taille** : fenêtre plus grande (jusqu'à 1600 px de large) et **scène sur toute la largeur** (plus de bandes
+  unies sur les côtés) ; si l'écran est bas, seul le haut du ciel est rogné (20 % en général, 25 % au plus) et le
+  soleil et la lune passent toujours plus bas que cette marge ; textes, jauges (3 × 2) et tuiles un peu plus grands
+  dans une grande fenêtre ; le Philibert qui se promène en haut est 20 % plus grand (115 × 58 px, 86 × 43 sur
+  téléphone).
 - **Mini-jeux** : mêmes dessins que l'île (palmes au-dessus de la pluie de feuilles, vraies feuilles nervurées,
   hibiscus, scarabée ; cocotiers en parallaxe, crabes, noix qui roulent, rocher, nuages et leurs ombres dans la
   course) ; le fond de plage est peint une seule fois sur un canevas hors écran.

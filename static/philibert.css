@@ -9,11 +9,11 @@
    ===================================================================== */
 
 /* ---------- Le couloir et Philibert du haut ---------- */
-:root body.phb-on > header { margin-bottom: 66px; }
-.phb-lane { position: absolute; left: 0; right: 0; top: calc(100% + 8px); height: 50px; pointer-events: none; z-index: 6; }
+:root body.phb-on > header { margin-bottom: 78px; }
+.phb-lane { position: absolute; left: 0; right: 0; top: calc(100% + 8px); height: 60px; pointer-events: none; z-index: 6; }
 .phb-lane[hidden] { display: none; }
 .phb-mini { --phb-tf: steps(3, end); --phb-cycle: .72s;
-  position: absolute; left: 0; bottom: 0; width: 96px; height: 48px; margin: 0; padding: 0; border: 0; background: none;
+  position: absolute; left: 0; bottom: 0; width: 115px; height: 58px; margin: 0; padding: 0; border: 0; background: none;
   color: inherit; font: inherit; text-transform: none; letter-spacing: normal; cursor: pointer;
   pointer-events: none;                                    /* seul son corps dessiné est cliquable (ci-dessous) */
   transform: translateX(0); transition-property: transform; transition-timing-function: cubic-bezier(.3, .1, .7, .9); will-change: transform; }
@@ -26,21 +26,21 @@
 .phb-mini.saut .phb-flip > svg { animation: phb-saut .55s cubic-bezier(.34, 1.56, .64, 1); }
 @keyframes phb-saut { 35% { transform: translateY(-9px) scale(1.02, .97); } 70% { transform: translateY(0) scale(1.04, .94); } }
 
-.phb-bulle { position: absolute; bottom: 34px; left: 74px; min-width: 24px; height: 22px; padding: 0 5px; display: grid; place-items: center;
-  border-radius: 12px; background: #fffef8; border: 1.5px solid #34495e; color: #2c3e50; font: 700 13px/1 "Trebuchet MS", system-ui, sans-serif;
+.phb-bulle { position: absolute; bottom: 41px; left: 89px; min-width: 28px; height: 26px; padding: 0 6px; display: grid; place-items: center;
+  border-radius: 14px; background: #fffef8; border: 1.5px solid #34495e; color: #2c3e50; font: 700 15px/1 "Trebuchet MS", system-ui, sans-serif;
   box-shadow: 0 3px 8px rgba(0, 0, 0, .22); pointer-events: none; transform-origin: 6px 100%;
   animation: phb-pop .42s cubic-bezier(.34, 1.56, .64, 1); }
 @keyframes phb-pop { from { transform: scale(.3); opacity: 0; } }
 .phb-bulle[hidden] { display: none; }
 .phb-bulle::after { content: ""; position: absolute; left: 4px; bottom: -6px; border: 5px solid transparent; border-top-color: #34495e; border-bottom: 0; }
-.phb-mini.gauche .phb-bulle { left: auto; right: 74px; transform-origin: calc(100% - 6px) 100%; }
+.phb-mini.gauche .phb-bulle { left: auto; right: 89px; transform-origin: calc(100% - 6px) 100%; }
 .phb-mini.gauche .phb-bulle::after { left: auto; right: 4px; }
-.phb-bulle svg { width: 15px; height: 15px; display: block; }
+.phb-bulle svg { width: 18px; height: 18px; display: block; }
 .phb-bulle.phb-b-appel { background: #ffd166; border-color: #8a5a00; color: #3a2400; }
-.phb-bulle.phb-b-zzz b { display: inline-block; font-size: 11px; color: #3b5b8c; animation: phb-zzz 2.6s ease-in-out infinite; }
+.phb-bulle.phb-b-zzz b { display: inline-block; font-size: 13px; color: #3b5b8c; animation: phb-zzz 2.6s ease-in-out infinite; }
 @keyframes phb-zzz { 0%, 100% { transform: translateY(1px); opacity: .55; } 50% { transform: translateY(-2px); opacity: 1; } }
-.phb-panneau { position: absolute; left: 90px; bottom: 7px; max-width: calc(100vw - 150px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  padding: 3px 9px; border-radius: 10px; font: 600 12px/1.3 "Trebuchet MS", system-ui, sans-serif; text-transform: none; letter-spacing: normal;
+.phb-panneau { position: absolute; left: 108px; bottom: 9px; max-width: calc(100vw - 170px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding: 3px 10px; border-radius: 10px; font: 600 13px/1.3 "Trebuchet MS", system-ui, sans-serif; text-transform: none; letter-spacing: normal;
   color: #3d2a14; background: rgba(255, 248, 232, .95); border: 1px solid #c98f52; pointer-events: none; }
 .phb-panneau[hidden] { display: none; }
 
@@ -93,10 +93,14 @@
 /* =====================================================================
    L'île (fenêtre)
    ===================================================================== */
-.phb-dlg { --phb-sh: clamp(200px, calc(100vh - 470px), 460px);
+/* Taille : la scène occupe toute la largeur de la fenêtre (rapport 2 : 1, aucune bande sur les côtés). Sa hauteur
+   visible est limitée par la place qui reste sous l'en-tête (--phb-tete) en gardant --phb-bas pour les jauges et les
+   soins ; si l'écran est trop bas, seul le haut du ciel est rogné (20 % en général, 25 % au plus sur un tout petit écran,
+   la largeur de la fenêtre suit) : le soleil et la lune restent toujours plus bas que cette marge. */
+.phb-dlg { --phb-tete: 64px; --phb-bas: 395px; --phb-vue: max(200px, calc(100dvh - 24px - var(--phb-tete) - var(--phb-bas)));
   --fond: #fdf6e6; --carte: #fffdf7; --t: #1f3036; --t2: #4b5b60; --bord: #e6d6b1; --bouton: #ffffff; --prim: #0d6470; --prim-t: #ffffff;
   --tete1: #0d6470; --tete2: #158390; --tete-t: #ffffff; --tete-t2: #e0f6f3; --parole: #e9f7f5; --parole-b: #a9d9d3; --ombre: rgba(70, 50, 10, .12);
-  width: min(1140px, calc(100vw - 24px)); max-width: none; height: min(920px, calc(100vh - 24px)); max-height: none;
+  width: min(1600px, calc(100vw - 24px), max(820px, calc(var(--phb-vue) * 2.5))); max-width: none; height: min(1440px, calc(100dvh - 24px)); max-height: none;
   margin: auto; padding: 0; border: 0; border-radius: 22px; overflow: hidden;
   background: var(--fond); color: var(--t); font: 15px/1.45 "Segoe UI Variable Text", "Segoe UI", "Trebuchet MS", system-ui, sans-serif;
   text-transform: none; letter-spacing: normal; text-shadow: none; box-shadow: 0 30px 90px rgba(0, 0, 0, .55); }
@@ -105,7 +109,7 @@
 .phb-dlg::backdrop { background: rgba(3, 18, 28, .74); }
 .phb-dlg * { box-sizing: border-box; }
 .phb-dlg .phb-ico { width: 1.2em; height: 1.2em; flex: none; display: inline-block; vertical-align: -.22em; }
-.phb-ile { position: relative; display: flex; flex-direction: column; height: 100%; }
+.phb-ile { position: relative; display: flex; flex-direction: column; height: 100%; container-type: inline-size; }
 
 /* en-tête : médaillon, nom, âge, météo, saison, coquillages */
 .phb-tete-ile { display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; padding: 9px 12px;
@@ -130,8 +134,9 @@
 .phb-dlg .phb-fermer:hover:not(:disabled) { background: rgba(255, 255, 255, .26); }
 
 /* ---------- la scène ---------- */
-.phb-scene-zone { flex: 0 0 auto; background: linear-gradient(#5aa9d6 0 50%, #1d8fa8 50% 100%); }
-.phb-scene { position: relative; width: min(100%, calc(var(--phb-sh) * 2)); aspect-ratio: 2 / 1; margin: 0 auto; overflow: hidden;
+.phb-scene-zone { flex: 0 0 auto; position: relative; overflow: hidden; height: min(50cqw, max(37.5cqw, var(--phb-vue)));
+  background: linear-gradient(#5aa9d6 0 50%, #1d8fa8 50% 100%); }
+.phb-scene { position: absolute; left: 0; bottom: 0; width: 100%; aspect-ratio: 2 / 1; overflow: hidden;
   container-type: inline-size; contain: layout paint; }
 .phb-decor, .phb-crottes, .phb-effets { position: absolute; inset: 0; }
 .phb-effets { pointer-events: none; z-index: 4; overflow: hidden; }
@@ -410,16 +415,31 @@ button.phb-carte:hover:not(:disabled) { transform: translateY(-2px); box-shadow:
 .phb-chip.grand { width: 22px; height: 22px; }
 .phb-chip.vu { background: var(--prim); border-color: var(--prim); animation: phb-pop .3s cubic-bezier(.34, 1.56, .64, 1); }
 
+/* ---------- Grande fenêtre : textes, icônes et tuiles un peu plus grands ---------- */
+@container (min-width: 1180px) {
+  .phb-tete-ile h2 { font-size: 23px; }
+  .phb-puces, .phb-puce { font-size: 14px; }
+  .phb-bas { font-size: 16px; gap: 12px 20px; grid-template-columns: minmax(440px, 500px) minmax(0, 1fr); }
+  .phb-jauges { grid-template-columns: repeat(3, minmax(0, 1fr)); }   /* 3 × 2 : une rangée de moins */
+  .phb-jauge { grid-template-columns: 32px minmax(0, 1fr) auto; padding: 7px 12px 8px 7px; }
+  .phb-j-ic { width: 32px; height: 32px; } .phb-j-ic .phb-ico { width: 18px; height: 18px; }
+  .phb-j-nom, .phb-jauge b, .phb-pastille, .phb-besoin { font-size: 14px; }
+  .phb-parole p { font-size: 16px; }
+  .phb-actions { grid-template-columns: repeat(auto-fill, minmax(98px, 1fr)); }
+  .phb-dlg .phb-tuile { font-size: 14px; padding: 10px 6px 9px; }
+  .phb-tuile-ic { width: 42px; height: 42px; } .phb-tuile-ic .phb-ico { width: 23px; height: 23px; }
+}
+
 /* ---------- Téléphone ---------- */
 @media (max-width: 760px) {
-  :root body.phb-on > header { margin-bottom: 54px; }
-  .phb-lane { height: 40px; top: calc(100% + 6px); }
-  .phb-mini { width: 72px; height: 36px; }
-  .phb-bulle { left: 56px; bottom: 26px; }
-  .phb-mini.gauche .phb-bulle { right: 56px; }
-  .phb-panneau { left: 66px; }
+  :root body.phb-on > header { margin-bottom: 64px; }
+  .phb-lane { height: 48px; top: calc(100% + 6px); }
+  .phb-mini { width: 86px; height: 43px; }
+  .phb-bulle { left: 67px; bottom: 31px; }
+  .phb-mini.gauche .phb-bulle { right: 67px; }
+  .phb-panneau { left: 80px; }
   .phb-dlg { width: 100vw; height: 100dvh; max-height: none; border-radius: 0; font-size: 14px; }
-  .phb-scene { width: 100%; }
+  .phb-scene-zone { height: 50cqw; }
   .phb-bas { grid-template-columns: 1fr; grid-template-areas: "etat" "jauges" "actions" "actions2"; padding: 10px 12px 14px; }
   .phb-actions { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
   .phb-dlg .phb-tuile { padding: 8px 4px 7px; font-size: 12px; }

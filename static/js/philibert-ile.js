@@ -242,10 +242,10 @@
     const h = e.ciel.heure;
     if (e.ciel.phase === "nuit") {
       const k = ((h + 24 - 21) % 24) / 9;
-      return { x: (12 + k * 76) * 10, y: (30 - Math.sin(Math.PI * k) * 22) * 5, soleil: false, haut: Math.sin(Math.PI * k) };
+      return { x: (12 + k * 76) * 10, y: (46 - Math.sin(Math.PI * k) * 19) * 5, soleil: false, haut: Math.sin(Math.PI * k) };
     }
     const k = Math.min(1, Math.max(0, (h - 6) / 15));
-    return { x: (9 + k * 82) * 10, y: (46 - Math.sin(Math.PI * k) * 36) * 5, soleil: true, haut: Math.sin(Math.PI * k) };
+    return { x: (9 + k * 82) * 10, y: (50 - Math.sin(Math.PI * k) * 23) * 5, soleil: true, haut: Math.sin(Math.PI * k) };
   }
   // Phase réelle de la Lune (mois synodique de 29,53 jours depuis la nouvelle lune du 6 janvier 2000)
   function phaseLune() {
@@ -389,7 +389,7 @@
     const nbNuages = met === "pluie" ? 7 : met === "nuages" ? 6 : 3;
     const cn = met === "pluie" ? COUL_NUAGE.pluie : nuit ? COUL_NUAGE.nuit : ph === "jour" ? (met === "nuages" ? COUL_NUAGE.nuages : COUL_NUAGE.jour) : COUL_NUAGE.rose;
     const nuages = Array.from({ length: nbNuages }, (_, i) => {
-      const top = 3 + (i * 37) % 31, larg = 13 + (34 - top) * .5 + (i * 7) % 6;
+      const top = 9 + (i * 37) % 27, larg = 13 + (36 - top) * .5 + (i * 7) % 6;
       return `<div class="phb-nuage" style="top:${top}%;--d:${80 + i * 27}s;--r:-${(i * 41) % 80}s;width:${larg.toFixed(1)}%;opacity:${nuit ? .7 : .96}">${N.nuage("phbd-n" + i, 101 + i * 13, { ...cn, plat: top > 22 })}</div>`;
     }).join("");
     // mer : texture de vagues en perspective (plus serrées et plus fines vers l'horizon)
@@ -447,8 +447,8 @@
         </g>
       </svg>
       <div class="phb-l phb-nuages" aria-hidden="true">${nuages}</div>
-      ${jourSec ? `<div class="phb-l phb-mouettes" aria-hidden="true">${[0, 1].map(i => `<div class="phb-mouette" style="top:${12 + i * 9}%;--d:${30 + i * 9}s;--r:-${i * 11}s">${N.goeland()}</div>`).join("")}
-        <div class="phb-mouette plane" style="top:6%;--d:70s;--r:-20s">${N.fregate()}</div></div>` : ""}
+      ${jourSec ? `<div class="phb-l phb-mouettes" aria-hidden="true">${[0, 1].map(i => `<div class="phb-mouette" style="top:${22 + i * 8}%;--d:${30 + i * 9}s;--r:-${i * 11}s">${N.goeland()}</div>`).join("")}
+        <div class="phb-mouette plane" style="top:17%;--d:70s;--r:-20s">${N.fregate()}</div></div>` : ""}
       <svg class="phb-l" viewBox="0 0 1000 500" preserveAspectRatio="none" aria-hidden="true">
         <defs><linearGradient id="phbd-mer" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${melange(P.mer[0], P.c[2], .35)}"/><stop offset=".08" stop-color="${P.mer[0]}"/><stop offset="1" stop-color="${P.mer[1]}"/></linearGradient>
           <radialGradient id="phbd-lagon" cx=".5" cy=".5" r=".5"><stop offset=".62" stop-color="${P.lagon[0]}"/><stop offset=".74" stop-color="${P.lagon[1]}"/>
@@ -1007,8 +1007,8 @@
         <div class="phb-tete-ile"></div>
         <div class="phb-scene-zone"><div class="phb-scene"><div class="phb-decor"></div><div class="phb-crottes"></div>
           <button class="phb-perso phb-anim" data-phb="caresser" aria-label="Caresser Philibert"><span class="phb-flip"></span></button>
-          <div class="phb-effets" aria-hidden="true"></div>
-          <div class="phb-bandeaux" aria-live="polite"></div></div></div>
+          <div class="phb-effets" aria-hidden="true"></div></div>
+          <div class="phb-bandeaux" aria-live="polite"></div></div>
         <div class="phb-feuille" hidden></div>
         <div class="phb-bas"></div></div>`;
     }
