@@ -34,6 +34,8 @@
     photo: `<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10.2" r="2"/><path d="M21 16.5l-5.2-5.2-9 8.5"/>`,
     drapeau: `<path d="M5.5 21V4M5.5 4.5h11l-2.2 4 2.2 4h-11"/>`,
     maison: `<path d="M4 11.5 12 5l8 6.5M6.5 10v9.5h11V10"/><path d="M10 19.5v-5h4v5"/>`,
+    son: `<path d="M4 9.5h3.6L12.5 5v14l-4.9-4.5H4z"/><path d="M15.6 9.2a4 4 0 0 1 0 5.6M18.2 6.6a7.6 7.6 0 0 1 0 10.8"/>`,
+    muet: `<path d="M4 9.5h3.6L12.5 5v14l-4.9-4.5H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/>`,
     loupe: `<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/>`,
   };
   function ico(nom, cls = "") {

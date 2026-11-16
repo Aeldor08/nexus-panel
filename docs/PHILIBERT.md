@@ -25,7 +25,7 @@ Deux principes guident toutes les règles :
 | `static/js/philibert-nature.js` | Les éléments de nature réalistes partagés par l'île et les mini-jeux (cocotier, nuages, oiseaux, crabe fantôme, papillons, rocher, noix de coco, feuilles, hibiscus, scarabée) |
 | `static/js/philibert-ile.js` | L'île (fenêtre), les soins, la boutique, la garde-robe, le carnet, les réglages |
 | `static/js/philibert-jeux.js` | Les quatre mini-jeux |
-| `static/js/philibert-icones.js` | Les icônes dessinées de l'île (actions, jauges, météo, saisons) |
+| `static/js/philibert-icones.js` | Les icônes dessinées de l'île (actions, jauges, météo, saisons, son) |
 | `static/js/home.js` | La tuile « Philibert » du sommaire (humeur, besoin, âge, coquillages, accès directs) |
 | `static/philibert.css` | Styles (l'île garde son propre univers de couleurs, lisible avec tous les profils) |
 | `outils/tests/test_philibert.py` | Tests sans navigateur (horloge simulée), inscrits dans `run_all.py` |
@@ -158,6 +158,9 @@ lentement quand il refroidit) :
 - **Sieste** : le jour, s'il tombe sous 15 d'énergie, il fait une sieste jusqu'à 50.
 - **Attention / discipline** : il appelle (« ! » dans sa bulle) soit pour un **vrai besoin** (une jauge sous 30,
   malade, crottes, mue, froid), soit par **caprice** (de temps en temps, moins souvent quand la discipline monte).
+  « Il veut jouer / il réclame de l'attention » (le besoin *ennui* et les caprices) n'apparaît **que si son bonheur
+  est à 30 ou moins** (`SEUIL_ATTENTION`) : un caprice en cours disparaît dès qu'il est plus heureux ; la page applique
+  la même règle (bulle « ! », pastille « Il t'appelle »).
   *Gronder (doucement)* un caprice : discipline +10. Gronder un vrai besoin : il est triste, et on lui montre ce qui
   ne va pas. *Féliciter* juste après une bonne action (repas de verdure, bain, retour du rocher) : discipline +4,
   bonheur +6. Ignorer un caprice deux heures : discipline +3 ; ignorer un vrai besoin : bonheur −5.
@@ -204,15 +207,32 @@ récompense calculée par le serveur, **60 coquillages par jour au plus** gagné
 
 - On commence avec 20 coquillages. On en gagne aux mini-jeux, en **ramassant** sur la plage (1 à 3, toutes les
   3 h), avec certains évènements et les succès.
-- **Boutique** : aliments, remède (8), lampe chauffante (40, une fois), accessoires (chapeau de paille 25,
-  lunettes de soleil 20, collier de fleurs 18, couronne d'hibiscus 30, foulard 15), déco de l'île (hamac 30,
-  château de sable 12, coquillages 10, parasol 20, bouée 15).
-- **Garde-robe** : un accessoire par emplacement (tête, yeux, cou), visible sur l'île et en haut de la page.
+- **Boutique** : aliments, remède (8), lampe chauffante (40, une fois), 15 accessoires et 9 décorations. Chaque objet
+  a une **rareté** (`RARETES`) : *commun*, *rare*, *très rare*, *légendaire*. Les pièces rares sont faites à la main
+  par les artisans de l'île voisine, en un seul exemplaire : c'est ce qui justifie leur prix.
+
+  | Emplacement | Communs | Rares et plus |
+  |---|---|---|
+  | Tête | chapeau de paille 25, couronne d'hibiscus 30, bob de pêcheur 35 | tricorne de pirate 180 (rare), couronne d'or 450 (très rare), diadème de nacre 800 (légendaire) |
+  | Yeux | lunettes de soleil 20, lunettes en cœur 45 | monocle doré 150 (rare) |
+  | Cou | foulard 15, collier de fleurs 18, nœud papillon 30 | collier de perles 220 (rare), médaille d'or 400 (très rare), cape royale 900 (légendaire, posée sur le dos) |
+  | Île | château de sable 12, coquillages 10, bouée 15, parasol 20, hamac 30 | statue tiki 120 et petit phare 260 (rares), coffre au trésor 500 (très rare), bénitier et sa perle 750 (légendaire) |
+
+  Avec ≈ 60 coquillages par jour aux jeux et les ramassages, une pièce légendaire demande une bonne dizaine de jours.
+  Les **soins essentiels ne sont jamais bloqués** : remède et nourriture restent à 10 coquillages au plus, le trèfle
+  est gratuit et un séjour chez la vétérinaire ne demande jamais plus que ce qu'on a. Succès « Pièce de collection »
+  pour un premier objet légendaire. Dans la boutique : ruban et bordure de couleur (bleu, violet, or ; reflet doré
+  qui passe sur les pièces légendaires).
+- **Garde-robe** : un accessoire par emplacement (tête, yeux, cou), visible sur l'île et en haut de la page. Placement
+  vérifié sur chaque stade (bébé, juvénile, adulte, vieux sage) et chaque posture (debout, à plat au soleil,
+  endormi) : chapeaux et couronnes posés sur le crâne, derrière les yeux ; colliers et foulard derrière l'écaille
+  de la joue puis sous la gorge (un peu plus bas sur le vieux sage, à cause de ses bajoues) ; la cape se pose sur le
+  dos, sous les pattes de devant, et suit la marche ; la médaille est plus petite sur le bébé.
 
 ## 12. Carnet
 
 Historique (naissance, éclosion, maladies, séjours chez le vétérinaire, mues, évolutions… 300 lignes au plus),
-statistiques (repas, friandises, bains, jeux, refus, séjours, saisons…), **succès** (23), **cartes postales** reçues,
+statistiques (repas, friandises, bains, jeux, refus, séjours, saisons…), **succès** (24), **cartes postales** reçues,
 fiches **« Le savais-tu ? »** débloquées (20), âge en jours.
 
 **Album** : une photo de chaque étape de sa vie (éclosion, juvénile, adulte avec sa variante, vieux sage) et
@@ -230,6 +250,14 @@ son île.
   heureux, « Zzz » la nuit, nuage gris quand il est malade.
 - **Notification Windows** (facultative, via le navigateur, comme les alertes de NEXUS) quand il tombe malade ou
   part chez le vétérinaire — jamais en mode jeu. **Discord** (facultatif) via le bot de NEXUS s'il est configuré.
+- **Bruits de l'île** (réglage *ambiance*, et bouton dans l'en-tête de l'île) : tout est synthétisé (Web Audio, aucun
+  fichier) et très discret — houle et écume toujours, pluie (et tonnerre lointain en saison des pluies), vent par
+  ciel couvert ou en saison fraîche, goélands le jour au soleil, grillons et petites grenouilles la nuit. Seulement
+  quand l'île est ouverte, l'onglet visible, hors mode jeu et avec les petits sons activés ; coupés avec « réduire
+  les animations ».
+- **Couleurs de l'interface** (réglage *theme*) : *automatique* (sombre si le fond du profil du panel est sombre ou
+  s'il fait nuit sur l'île), *clair* ou *sombre*. Contrastes vérifiés : texte ≥ 12 : 1, texte secondaire ≥ 7 : 1,
+  pastilles et encadrés ≥ 7 : 1, rubans de rareté ≥ 5,8 : 1. La scène, elle, suit toujours l'heure de l'île.
 - **Réglages** : afficher/masquer Philibert en haut, vitesse (normale / lente), sons, notifications Windows,
   Discord, mode vacances, recommencer avec un nouvel œuf (double confirmation).
 

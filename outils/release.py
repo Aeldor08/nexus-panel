@@ -86,13 +86,29 @@ def section_changelog(texte: str, ver: str) -> str:
     return m.group(1).strip() if m else ""
 
 
-def dater_changelog(ver: str, date: str) -> None:
+def entete_version(ver: str, date: str, titre: str = "") -> str:
+    """« ## [1.1.0] - 2026-11-16 » ou, avec un titre, « ## [1.1.0] - 2026-11-16 - Philibert arrive ! » (lu par version.py)."""
+    return f"## [{ver}] - {date}" + (f" - {titre}" if titre else "")
+
+
+def verifier_titre(titre: str) -> str:
+    titre = " ".join((titre or "").split())
+    if len(titre) > 80 or "[" in titre or "]" in titre:
+        raise Arret("--titre : une courte phrase sur une ligne (80 caractères au plus, sans crochets)")
+    return titre
+
+
+def titre_release(ver: str, titre: str = "") -> str:
+    return f"NEXUS {ver} — {titre}" if titre else f"NEXUS {ver}"
+
+
+def dater_changelog(ver: str, date: str, titre: str = "") -> None:
     p = BASE / "CHANGELOG.md"
     t = p.read_text(encoding="utf-8")
     m = re.search(r"^## \[Non publié\][^\n]*\n(.*?)(?=^## \[|\Z)", t, re.M | re.S)
     if not m or not re.search(r"^\s*- ", m.group(1), re.M):
         raise Arret("CHANGELOG.md : la section « ## [Non publié] » est vide. Note les changements avant de publier.")
-    t = t[:m.start()] + f"## [Non publié]\n\n## [{ver}] - {date}\n{m.group(1)}" + t[m.end():]
+    t = t[:m.start()] + f"## [Non publié]\n\n{entete_version(ver, date, titre)}\n{m.group(1)}" + t[m.end():]
     p.write_text(t, encoding="utf-8", newline="\n")
 
 
@@ -200,10 +216,13 @@ def main() -> int:
     ap.add_argument("--sans-publier", action="store_true", help="tout préparer sans pousser ni créer la release")
     ap.add_argument("--construire-seulement", action="store_true", help="seulement l'archive et son SHA256 (CI)")
     ap.add_argument("--depot", default="", help="propriétaire/nom écrit dans l'archive (par défaut : origin)")
+    ap.add_argument("--titre", default="", help="titre de la version (ex. « Philibert arrive ! ») : dans l'en-tête du "
+                                                "CHANGELOG (« ## [X.Y.Z] - date - titre ») et comme titre de la release GitHub")
     ap.add_argument("--branche", action="store_true",
                     help="publier depuis une branche de release (ex. sans une fonction pas encore prête) : "
                          "seul le tag est poussé, main n'est pas touchée")
     a = ap.parse_args()
+    titre = verifier_titre(a.titre)
     git = outil("git")
     if not git:
         raise Arret("git introuvable")
@@ -241,7 +260,7 @@ def main() -> int:
     if not a.actuelle:
         etape(f"Version {actuelle} → {ver}")
         (BASE / "VERSION").write_text(ver + "\n", encoding="utf-8", newline="\n")
-        dater_changelog(ver, time.strftime("%Y-%m-%d"))
+        dater_changelog(ver, time.strftime("%Y-%m-%d"), titre)
         _cmd(git, "add", "VERSION", "CHANGELOG.md")
         _cmd(git, "commit", "-m", f"Version {ver}")
     notes = section_changelog((BASE / "CHANGELOG.md").read_text(encoding="utf-8"), ver)
@@ -257,7 +276,8 @@ def main() -> int:
         _cmd(git, "tag", "-d", tag, check=False)           # pas de tag local orphelin
         raise
     if a.sans_publier:
-        print(f"\nPrêt (non publié) : tag {tag} local, {archive.name} et {somme.name} dans dist\\.")
+        print(f"\nPrêt (non publié) : tag {tag} local, {archive.name} et {somme.name} dans dist\\."
+              + (f" Titre : « {titre_release(ver, titre)} »." if titre else ""))
         return 0
     etape("Envoi sur GitHub")
     if not a.branche:
@@ -269,8 +289,10 @@ def main() -> int:
     existe = subprocess.run([gh, "release", "view", tag, "--repo", depot], cwd=BASE, capture_output=True).returncode == 0
     if existe:                                              # créée entre-temps par la CI (release.yml)
         _cmd(gh, "release", "upload", tag, str(archive), str(somme), "--repo", depot, "--clobber")
+        if titre:
+            _cmd(gh, "release", "edit", tag, "--repo", depot, "--title", titre_release(ver, titre))
     else:
-        _cmd(gh, "release", "create", tag, str(archive), str(somme), "--repo", depot, "--title", f"NEXUS {ver}",
+        _cmd(gh, "release", "create", tag, str(archive), str(somme), "--repo", depot, "--title", titre_release(ver, titre),
              "--notes-file", str(notes_f), "--verify-tag")
     print(f"\n✔ Release {tag} publiée : https://github.com/{depot}/releases/tag/{tag}")
     return 0

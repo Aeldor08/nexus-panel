@@ -387,6 +387,31 @@ ok(1 <= r["gain"] <= 3, f"ramasser des coquillages sur la plage (+{r['gain']})")
 r = p.action("ramasser")
 ok(r["reaction"] == "non" and "gain" not in r, "pas deux ramassages en moins de 3 h")
 
+# objets rares et chers, sans jamais bloquer les soins
+ok(all(o["rarete"] in P.RARETES for o in P.OBJETS.values()), "chaque objet de la boutique a une rareté connue")
+leg = [k for k, o in P.OBJETS.items() if o["rarete"] == "legendaire"]
+ok(len(leg) >= 3 and min(P.OBJETS[k]["prix"] for k in leg) >= 700, "au moins 3 pièces légendaires, à 700 coquillages ou plus")
+ok(all(P.OBJETS[k]["prix"] >= 120 for k, o in P.OBJETS.items() if o["rarete"] != "commun"), "les pièces rares coûtent cher (120 coquillages ou plus)")
+ok(P.OBJETS["remede"]["prix"] <= 10 and max(a["prix"] for a in P.ALIMENTS.values()) <= 10, "remède et nourriture restent bon marché")
+ok(all(o["emplacement"] in P.EMPLACEMENTS for o in P.OBJETS.values() if o["type"] == "accessoire"), "chaque accessoire a son emplacement")
+p = nouveau()
+p.s["coquillages"] = 100
+ok(erreur(p.action, "acheter", {"article": "cape"}) is not None and p.s["coquillages"] == 100, "trop cher : refusé, aucun coquillage perdu")
+ok(p.action("acheter", {"article": "remede"}) and p.s["inventaire"]["remede"] >= 1, "le remède reste toujours achetable")
+p.s["coquillages"] = 2000
+p.action("acheter", {"article": "cape"})
+p.action("porter", {"article": "cape"})
+p.etat()
+ok("cape" in p.s["accessoires"] and p.s["portes"]["cou"] == "cape" and "collection" in p.s["succes"], "cape royale achetée, portée, succès « Pièce de collection »")
+ok(erreur(p.action, "acheter", {"article": "cape"}) is not None, "une pièce unique ne s'achète qu'une fois")
+p.action("acheter", {"article": "benitier"})
+ok("benitier" in p.s["deco"], "le bénitier se pose sur l'île")
+p.action("reglages", {"theme": "sombre", "ambiance": False})
+ok(p.s["reglages"]["theme"] == "sombre" and p.s["reglages"]["ambiance"] is False, "réglages : couleurs sombres, bruits de l'île coupés")
+p.action("reglages", {"theme": "violet"})
+ok(p.s["reglages"]["theme"] == "sombre", "réglage de couleurs inconnu : ignoré")
+ok("raretes" in p.catalogue() and p.catalogue()["objets"]["diademe"]["rarete"] == "legendaire", "le catalogue donne la rareté")
+
 # ---- mini-jeux et anti-triche --------------------------------------------------------------
 p = nouveau()
 a_heure(11)
@@ -435,7 +460,37 @@ ok(erreur(p.jeu_debut, "devin") is not None, "la nuit, il dort : pas de jeux")
 ok(erreur(p.jeu_coup, "n'importe quoi", "gauche") is not None, "jeton inventé refusé")
 
 # ---- attention et discipline -----------------------------------------------------------------
+# « il veut jouer / il réclame de l'attention » : seulement quand son bonheur est à 30 ou moins
 p = nouveau()
+soigner_bien(p, 1)
+p.s["j"]["bonheur"], p.s["discipline"] = 80, 0
+p.s["appel"], p.s["appel_pause"] = None, 0
+caprices = 0
+for _ in range(400):                                        # ≈ 66 h simulées, toujours content
+    horloge[0] += 600
+    p.s["j"]["bonheur"] = 80
+    p.s["j"]["faim"] = p.s["j"]["energie"] = p.s["j"]["proprete"] = p.s["j"]["sante"] = p.s["j"]["chaleur"] = 90
+    p.s["uv"], p.s["crottes"], p.s["malade"], p.s["lumiere"] = 90, 0, None, False
+    e = p.etat()
+    caprices += bool(p.s["appel"] and p.s["appel"]["type"] == "caprice")
+    ok_ennui = not any(b["id"] == "ennui" for b in e["besoins"])
+ok(caprices == 0, "bonheur à 80 : jamais d'appel « il réclame de l'attention » (caprice)")
+ok(ok_ennui, "bonheur à 80 : pas de besoin « il s'ennuie »")
+p.s["j"]["bonheur"] = 80
+p.s["appel"] = {"t": horloge[0], "type": "caprice", "raison": "caprice"}
+e = p.etat()
+ok(e["appel"] is None and e["humeur"] != "appel" and p.s["appel"] is None, "un vieux caprice disparaît quand son bonheur est au-dessus de 30")
+p.s["j"]["bonheur"] = 31
+ok(not any(b["id"] == "ennui" for b in p.etat()["besoins"]), "bonheur à 31 : pas encore « il s'ennuie »")
+p.s["j"]["bonheur"] = 30
+ok(any(b["id"] == "ennui" for b in p.etat()["besoins"]), "bonheur à 30 : « il s'ennuie : joue avec lui »")
+p.s["j"]["bonheur"] = 20
+p.s["appel"], p.s["appel_pause"] = {"t": horloge[0], "type": "caprice", "raison": "caprice"}, 0
+e = p.etat()
+ok(e["appel"] and e["appel"]["type"] == "caprice", "bonheur à 20 : le caprice est montré")
+
+p = nouveau()
+p.s["j"]["bonheur"] = 25                                    # (un caprice n'existe que quand il est malheureux)
 p.s["appel"] = {"t": horloge[0], "type": "caprice", "raison": "caprice"}
 d0 = p.s["discipline"]
 r = p.action("gronder")

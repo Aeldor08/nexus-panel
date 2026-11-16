@@ -37,6 +37,22 @@
   const nuitHeure = () => e.ciel.heure >= 21 || e.ciel.heure < 7;
   const absent = () => ["veto", "pension"].includes(e.niveau);
 
+  // ---- couleurs de l'interface : réglage « clair », « sombre » ou « automatique » ----
+  // Automatique : sombre si le panel l'est (couleur de fond du profil choisi, mesurée) ou s'il fait nuit sur l'île.
+  function panelSombre() {
+    for (const el of [document.body, document.documentElement]) {
+      const m = getComputedStyle(el).backgroundColor.match(/[\d.]+/g);
+      if (!m || (m.length > 3 && +m[3] === 0)) continue;              // fond transparent : on regarde le parent
+      const [r, g, b] = m.slice(0, 3).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); });
+      return .2126 * r + .7152 * g + .0722 * b < .25;
+    }
+    return matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+  function interfaceSombre() {
+    const t = (e && e.reglages && e.reglages.theme) || "auto";
+    return t === "sombre" || (t !== "clair" && ((e && e.ciel.phase === "nuit") || panelSombre()));
+  }
+
   // ---- sons (synthèse très courte, seulement après un geste, si les sons sont activés) ----
   let ctxAudio = null;
   function son(type) {
@@ -57,6 +73,88 @@
     } catch (x) { /* pas de son : tant pis */ }
   }
   window.PhilibertSon = son;
+
+  // ---- bruits de l'île selon la météo (tout est synthétisé : aucun fichier son) ----
+  // Vagues toujours (houle lente), pluie (et tonnerre lointain en saison des pluies), vent (ciel couvert, saison fraîche),
+  // goélands le jour au soleil, grillons et petites grenouilles (« co-kî ») la nuit. Très discret ; seulement fenêtre de
+  // l'île ouverte, onglet visible, hors mode jeu, avec les petits sons ET les bruits de l'île activés.
+  const Ambiance = (() => {
+    let maitre = null, noeuds = [], minut = [], cle = "", bruitBuf = null;
+    const C = () => (ctxAudio = ctxAudio || new (window.AudioContext || window.webkitAudioContext)());
+    const voulu = () => !!(e && e.reglages.sons && e.reglages.ambiance !== false && dlg.open && !document.hidden
+      && !document.body.classList.contains("gamemode") && !absent() && !reduit());
+    function bruit() {
+      if (bruitBuf) return bruitBuf;
+      const c = C(), n = c.sampleRate * 2, b = c.createBuffer(1, n, c.sampleRate), d = b.getChannelData(0);
+      let rose = 0;
+      for (let i = 0; i < n; i++) { rose = rose * .97 + (Math.random() * 2 - 1) * .03; d[i] = (Math.random() * 2 - 1) * .5 + rose * 6; }
+      return (bruitBuf = b);
+    }
+    function source() { const s = C().createBufferSource(); s.buffer = bruit(); s.loop = true; s.start(0, Math.random() * 2); noeuds.push(s); return s; }
+    function filtre(type, f, q = .7) { const x = C().createBiquadFilter(); x.type = type; x.frequency.value = f; x.Q.value = q; noeuds.push(x); return x; }
+    function gain(v) { const g = C().createGain(); g.gain.value = v; noeuds.push(g); return g; }
+    function lfo(freq, ampl, cible) { const o = C().createOscillator(), g = gain(ampl); o.frequency.value = freq; o.connect(g).connect(cible); o.start(); noeuds.push(o); }
+    function chaine(...n) { for (let i = 0; i < n.length - 1; i++) n[i].connect(n[i + 1]); return n[n.length - 1]; }
+    function plus_tard(fn, min, max) { const t = setTimeout(() => { if (maitre) { fn(); plus_tard(fn, min, max); } }, (min + Math.random() * (max - min)) * 1000); minut.push(t); }
+    // un son bref : une note qui glisse de f0 à f1 avec une enveloppe douce
+    function note(type, f0, f1, duree, vol, depart = 0, vibrato = 0) {
+      const c = C(), t = c.currentTime + depart, o = c.createOscillator(), g = c.createGain();
+      o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + duree);
+      if (vibrato) { const v = c.createOscillator(), vg = c.createGain(); v.frequency.value = vibrato; vg.gain.value = f0 * .04; v.connect(vg).connect(o.frequency); v.start(t); v.stop(t + duree + .05); }
+      g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + Math.min(.04, duree / 3)); g.gain.exponentialRampToValueAtTime(.0001, t + duree);
+      o.connect(g).connect(maitre); o.start(t); o.stop(t + duree + .05);
+    }
+    function demarrer() {
+      const c = C();
+      if (c.state === "suspended") c.resume().catch(() => {});
+      const ph = e.ciel.phase, met = e.ciel.meteo, sa = e.ciel.saison, nuit = ph === "nuit";
+      maitre = c.createGain(); maitre.gain.value = .0001; maitre.connect(c.destination);
+      maitre.gain.exponentialRampToValueAtTime(.9, c.currentTime + 2);
+      // houle : bruit grave dont le volume monte et descend lentement (une vague toutes les ~10 s), et l'écume plus aiguë
+      const houle = gain(.025); chaine(source(), filtre("lowpass", 420), houle, maitre); lfo(.1, .018, houle.gain);
+      const ecume = gain(.008); chaine(source(), filtre("bandpass", 1500, .5), ecume, maitre); lfo(.1, .007, ecume.gain);
+      if (met === "pluie") {
+        const p = gain(nuit ? .03 : .036); chaine(source(), filtre("highpass", 1300), filtre("lowpass", 7500), p, maitre); lfo(2.6, .006, p.gain);
+        if (sa === "automne") plus_tard(() => {                         // tonnerre lointain : grondement grave qui roule
+          const t = c.currentTime, s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+          s.buffer = bruit(); f.type = "lowpass"; f.frequency.value = 150; g.gain.setValueAtTime(.0001, t);
+          g.gain.exponentialRampToValueAtTime(.09, t + .5); g.gain.exponentialRampToValueAtTime(.0001, t + 4.5);
+          s.connect(f).connect(g).connect(maitre); s.start(t); s.stop(t + 4.6);
+        }, 22, 55);
+      }
+      if (met === "nuages" || met === "pluie" || sa === "hiver") {         // vent : souffle filtré qui va et vient
+        const f = filtre("bandpass", 480, 1.1), g = gain(met === "pluie" ? .012 : .018);
+        chaine(source(), f, g, maitre); lfo(.05, 260, f.frequency); lfo(.08, .008, g.gain);
+      }
+      if (!nuit && (met === "soleil" || met === "arc")) plus_tard(() => {  // goéland au loin : « kéé-ow » deux ou trois fois
+        const n = 2 + Math.floor(Math.random() * 2);
+        for (let i = 0; i < n; i++) note("triangle", 1500 + Math.random() * 200, 820, .32, .012, i * .42, 9);
+      }, 7, 16);
+      if (nuit && met !== "pluie" && sa !== "hiver") {
+        plus_tard(() => { for (let i = 0; i < 3; i++) note("sine", 4300, 4250, .05, .0035, i * .09); }, .7, 1.4);   // grillons
+        plus_tard(() => { note("sine", 1150, 1180, .09, .009); note("sine", 1750, 2050, .16, .009, .12); }, 3, 8);    // grenouille « co-kî »
+      }
+    }
+    function arreter() {
+      minut.forEach(clearTimeout); minut = [];
+      if (!maitre) return;
+      const m = maitre, n = noeuds, c = C();
+      maitre = null; noeuds = [];
+      try { m.gain.cancelScheduledValues(c.currentTime); m.gain.setValueAtTime(Math.max(.0001, m.gain.value), c.currentTime); m.gain.exponentialRampToValueAtTime(.0001, c.currentTime + .5); } catch (x) { /* déjà fermé */ }
+      setTimeout(() => { n.forEach(x => { try { x.stop && x.stop(); } catch (y) { /* déjà arrêté */ } try { x.disconnect(); } catch (y) { /* rien */ } }); try { m.disconnect(); } catch (y) { /* rien */ } }, 700);
+    }
+    function maj() {
+      let k = "";
+      try { k = voulu() ? [e.ciel.phase, e.ciel.meteo, e.ciel.saison].join("|") : ""; } catch (x) { k = ""; }
+      if (k === cle) return;
+      cle = k;
+      arreter();
+      if (k) try { demarrer(); } catch (x) { arreter(); }                 // pas de son possible : tant pis
+    }
+    document.addEventListener("visibilitychange", maj);
+    dlg.addEventListener("pointerdown", () => { if (ctxAudio && ctxAudio.state === "suspended") ctxAudio.resume().catch(() => {}); });
+    return { maj, actif: () => !!maitre };
+  })();
 
   // ---- aliments et objets, dessinés d'après nature (volume par dégradés, une lumière en haut à gauche) ----
   let nIco = 0;
@@ -196,6 +294,78 @@
         <path d="M12.6 5.6 l-2 5.2 M19.4 5.6 l2 5.2 M12.6 26.4 l-2 -5.2 M19.4 26.4 l2 -5.2" stroke="#f6f1ea" stroke-width="4.4"/>
         <path d="M3 16 a13 11 0 1 0 26 0 a13 11 0 1 0 -26 0 Z M10 16 a6 5 0 1 1 12 0 a6 5 0 1 1 -12 0 Z" fill="${f("r")}" fill-rule="evenodd"/>
         <path d="M3.4 16 a12.6 10.6 0 0 0 25.2 0" stroke="#e8dcc0" stroke-width=".7" fill="none" stroke-dasharray="2 1.6"/>`),
+      bob: () => S(G("b", [[0, "#ddd6aa"], [.6, "#b3aa78"], [1, "#857b50"]]),
+        `${ombre(11)}<path d="M8.4 16.4 C8.4 8.6 12 5.6 16 5.6 C20 5.6 23.6 8.6 23.6 16.4 Z" fill="${f("b")}" stroke="#7a7048" stroke-width=".6"/>
+        <path d="M9 11 q7 -2 14 0" stroke="#857b50" stroke-width=".5" fill="none" stroke-dasharray="1 .7"/>
+        <path d="M3 19.6 C6 15 26 15 29 19.6 C27.6 22.4 4.4 22.4 3 19.6 Z" fill="${f("b")}" stroke="#7a7048" stroke-width=".6"/>
+        <path d="M5.4 19.2 C9 17.2 23 17.2 26.6 19.2" stroke="#857b50" stroke-width=".5" fill="none" stroke-dasharray="1 .7"/>
+        <path d="M9.4 21.4 C10 25 12 27.4 14 28.4" stroke="#6b5a3a" stroke-width=".7" fill="none"/><circle cx="20.4" cy="9" r=".7" fill="#6b6440"/>`),
+      tricorne: () => S(G("t", [[0, "#4a4a55"], [.55, "#22222a"], [1, "#0e0e12"]]) + G("o", [[0, "#fff4b8"], [.4, "#f1c84a"], [1, "#a8741a"]]),
+        `${ombre(13)}<path d="M9 12 C6.4 6.4 2.6 5.2 1 6 C3.6 7 6 9.4 7.2 13 Z" fill="#c4283a" stroke="#7d1220" stroke-width=".4"/>
+        <path d="M11 17 C10.6 9.6 13.4 7.6 16 7.6 C18.6 7.6 21.4 9.6 21 17 Z" fill="${f("t")}"/>
+        <path d="M2 20.6 C4.6 13.6 9.6 14.6 12.4 16.8 C15 15.6 17 15.6 19.6 16.8 C22.4 14.6 27.4 13.6 30 20.6 C22.6 23.6 9.4 23.6 2 20.6 Z" fill="${f("t")}" stroke="#08080a" stroke-width=".5"/>
+        <path d="M2 20.6 C4.6 13.6 9.6 14.6 12.4 16.8 M19.6 16.8 C22.4 14.6 27.4 13.6 30 20.6" stroke="${f("o")}" stroke-width="1.2" fill="none" stroke-linecap="round"/><circle cx="16" cy="18.6" r="1.8" fill="${f("o")}"/>`),
+      couronne_or: () => S(G("o", [[0, "#fff4b8"], [.35, "#f1c84a"], [.7, "#c8901f"], [1, "#8a5a12"]]) + R("r", [[0, "#ffb3be"], [.5, "#d8143a"], [1, "#6e0418"]]) + R("s", [[0, "#b7d4ff"], [.5, "#2456c8"], [1, "#0d2466"]]) + R("e", [[0, "#b8f5cc"], [.5, "#16a04a"], [1, "#05501f"]]),
+        `${ombre(12)}<path d="M5.4 20 L5.6 9.6 L10.4 14.6 L13.4 6.4 L16 12.6 L18.6 6.4 L21.6 14.6 L26.4 9.6 L26.6 20 Z" fill="#8e1c2c"/>
+        <path d="M4.4 22 L4.4 10.4 L10 15.6 L13 7 L16 13.4 L19 7 L22 15.6 L27.6 10.4 L27.6 22 Z" fill="${f("o")}" stroke="#7a4e10" stroke-width=".6" stroke-linejoin="round"/>
+        <rect x="3.8" y="20" width="24.4" height="6" rx="1.4" fill="${f("o")}" stroke="#7a4e10" stroke-width=".6"/>
+        ${[[4.4, 9.8], [13, 6.3], [19, 6.3], [27.6, 9.8]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.4" fill="#fffaf0" stroke="#c9b890" stroke-width=".3"/>`).join("")}
+        <ellipse cx="16" cy="23" rx="2.4" ry="1.8" fill="${f("r")}"/><ellipse cx="9.6" cy="23" rx="1.7" ry="1.4" fill="${f("s")}"/><ellipse cx="22.4" cy="23" rx="1.7" ry="1.4" fill="${f("e")}"/>
+        <path d="M4.4 21.2 h23.4" stroke="#fff6c8" stroke-width=".6" opacity=".7"/>`),
+      diademe: () => S(G("n", [[0, "#fdf7ff"], [.3, "#d8efff"], [.55, "#f7d8ff"], [.8, "#dcfff0"], [1, "#fff3d8"]], 1, 1) + R("p", [[0, "#ffffff"], [.6, "#f4eef6"], [1, "#c8bcd0"]]),
+        `${ombre(12)}<path d="M3 25 C8 17.6 24 17.6 29 25" stroke="#c9d2dc" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <path d="M16 20 C11.4 19.6 9.6 16 10.4 13 C11.4 9.6 14.2 7.6 16 6.8 C17.8 7.6 20.6 9.6 21.6 13 C22.4 16 20.6 19.6 16 20 Z" fill="${f("n")}" stroke="#a9a0c0" stroke-width=".5"/>
+        <path d="M16 19.6 V8.2 M16 19.6 L11.8 11.8 M16 19.6 L20.2 11.8 M16 19.6 L10.8 15.6 M16 19.6 L21.2 15.6" stroke="#b9aed0" stroke-width=".45"/>
+        ${[[5.6, 22.4], [9.4, 20.4], [22.6, 20.4], [26.4, 22.4]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.5" fill="${f("p")}"/>`).join("")}<circle cx="16" cy="6" r="1.8" fill="${f("p")}"/>`),
+      lunettes_coeur: () => S(G("l", [[0, "#ffb0cc"], [.6, "#f0548a"], [1, "#b8285c"]], 1, 1),
+        `${ombre(12, 26)}<path d="M14.6 13.4 q1.4 -1.2 2.8 0" stroke="#f6f0f2" stroke-width="1.4" fill="none"/>
+        ${[8.4, 23.6].map(x => `<path d="M${x} 21.4 C${x - 7} 17.4 ${x - 6.6} 10.6 ${x - 3} 10.6 C${x - 1.2} 10.6 ${x - .3} 11.8 ${x} 12.8 C${x + .3} 11.8 ${x + 1.2} 10.6 ${x + 3} 10.6 C${x + 6.6} 10.6 ${x + 7} 17.4 ${x} 21.4 Z" fill="${f("l")}" stroke="#fff" stroke-width="1.1"/>
+          <path d="M${x - 3.6} 13 q1.4 -1.4 3 -.6" stroke="#fff" stroke-width=".8" fill="none" opacity=".85"/>`).join("")}`),
+      monocle: () => S(G("o", [[0, "#fff4b8"], [.4, "#f1c84a"], [1, "#a8741a"]]),
+        `${ombre(9)}<path d="M18 21.6 C17 25 13 27.6 7 27.4" stroke="${f("o")}" stroke-width="1" fill="none" stroke-dasharray="1.4 .7" stroke-linecap="round"/>
+        <circle cx="18" cy="13" r="8.4" fill="#e8f4ff" fill-opacity=".25" stroke="${f("o")}" stroke-width="2"/><circle cx="18" cy="13" r="8.4" fill="none" stroke="#7a4e10" stroke-width=".4"/>
+        <path d="M12.6 9.4 q3 -2.8 7.2 -2" stroke="#fff" stroke-width="1.1" fill="none" opacity=".8"/>`),
+      noeud: () => S(G("n", [[0, "#ff5a64"], [.55, "#d0202e"], [1, "#86101a"]]),
+        `${ombre(11)}<path d="M16 16 L4.6 9 C3 12.6 3 19.4 4.6 23 Z M16 16 L27.4 9 C29 12.6 29 19.4 27.4 23 Z" fill="${f("n")}" stroke="#6e0c14" stroke-width=".6" stroke-linejoin="round"/>
+        <path d="M6.6 12 l6.4 3.4 M6.6 20 l6.4 -3 M25.4 12 l-6.4 3.4 M25.4 20 l-6.4 -3" stroke="#6e0c14" stroke-width=".5" opacity=".6"/>
+        <rect x="13.2" y="12.6" width="5.6" height="6.8" rx="1.8" fill="${f("n")}" stroke="#6e0c14" stroke-width=".6"/><path d="M5.6 11 l3.6 2" stroke="#fff" stroke-width=".7" opacity=".5"/>`),
+      perles: () => S(R("p", [[0, "#ffffff"], [.55, "#f6eef0"], [.85, "#dcc8d4"], [1, "#b8a2b4"]]),
+        `${ombre(11)}${Array.from({ length: 13 }, (_, i) => { const a = Math.PI * (.08 + .84 * i / 12); return `<circle cx="${(16 - Math.cos(a) * 11.6).toFixed(1)}" cy="${(8 + Math.sin(a) * 15).toFixed(1)}" r="1.9" fill="${f("p")}"/>`; }).join("")}
+        <ellipse cx="16" cy="26.4" rx="1.9" ry="2.4" fill="${f("p")}"/>`),
+      medaille: () => S(G("o", [[0, "#fff4b8"], [.35, "#f1c84a"], [.7, "#c8901f"], [1, "#8a5a12"]]),
+        `${ombre(9)}<path d="M5 4 C5 12 10 16 16 16.6 C22 16 27 12 27 4" stroke="${f("o")}" stroke-width="1.2" fill="none" stroke-dasharray="1.6 .6"/>
+        <circle cx="16" cy="22" r="7" fill="${f("o")}" stroke="#7a4e10" stroke-width=".7"/><circle cx="16" cy="22" r="5.4" fill="none" stroke="#fff2b0" stroke-width=".6" opacity=".8"/>
+        <path d="M11.6 24.6 C11.6 18.6 20.4 18.6 20.4 24.6 Z M16 24.6 V19.4 M16 24.6 L13.2 20.4 M16 24.6 L18.8 20.4" fill="#e9b938" stroke="#8a5a12" stroke-width=".5"/>`),
+      cape: () => S(G("v", [[0, "#e0303f"], [.55, "#a5101e"], [1, "#5e0610"]]) + G("o", [[0, "#fff4b8"], [.4, "#f1c84a"], [1, "#a8741a"]]),
+        `${ombre(12)}<path d="M10 5 C6 12 4 20 3.4 27 C6 28.4 8 26.8 10 28.2 C12 29.4 14 27.6 16 28.6 C18 27.6 20 29.4 22 28.2 C24 26.8 26 28.4 28.6 27 C28 20 26 12 22 5 Z" fill="${f("v")}"/>
+        <path d="M3.4 27 C6 28.4 8 26.8 10 28.2 C12 29.4 14 27.6 16 28.6 C18 27.6 20 29.4 22 28.2 C24 26.8 26 28.4 28.6 27" stroke="${f("o")}" stroke-width="1.3" fill="none"/>
+        <path d="M11 9 C9.6 15 9.2 21 9.6 27.6 M16 8 V28.4 M21 9 C22.4 15 22.8 21 22.4 27.6" stroke="#5e0610" stroke-width="1" opacity=".4"/>
+        <path d="M8 6.4 C11 3.4 21 3.4 24 6.4 C22 8.8 10 8.8 8 6.4 Z" fill="#fbf8f2" stroke="#d9d2c4" stroke-width=".5"/>
+        ${[[11, 6.2], [15, 6.8], [19, 6.6], [22, 5.8]].map(([x, y]) => `<path d="M${x} ${y - .6} l.5 1.4 l-.5 -.3 l-.5 .3 Z" fill="#1a1a1a"/>`).join("")}`),
+      tiki: () => S(G("w", [[0, "#5a3d22"], [.5, "#9a6a3a"], [1, "#4a3018"]], 1, 0),
+        `${ombre(8)}<path d="M9 28.6 V6.4 C9 3.6 11.6 2.2 16 2.2 C20.4 2.2 23 3.6 23 6.4 V28.6 Z" fill="${f("w")}" stroke="#3a2412" stroke-width=".6"/>
+        <path d="M10.6 9.4 h4 M17.4 9.4 h4" stroke="#2a1a0c" stroke-width="1.6" stroke-linecap="round"/><ellipse cx="12.6" cy="12.4" rx="2" ry="1.6" fill="#f2e2c0"/><ellipse cx="19.4" cy="12.4" rx="2" ry="1.6" fill="#f2e2c0"/>
+        <circle cx="12.6" cy="12.4" r=".8" fill="#1a1008"/><circle cx="19.4" cy="12.4" r=".8" fill="#1a1008"/><path d="M15 14.6 l1 3 l1 -3" fill="none" stroke="#2a1a0c" stroke-width=".8"/>
+        <rect x="11.4" y="19" width="9.2" height="3.6" rx="1.4" fill="#2a1a0c"/><path d="M12.4 20.8 h7.2" stroke="#f2e2c0" stroke-width=".9" stroke-dasharray="1.2 .6"/>
+        <path d="M9 25 h14" stroke="#3a2412" stroke-width=".8"/>`),
+      phare: () => S(G("p", [[0, "#ffffff"], [1, "#c9ccd0"]], 1, 0),
+        `${ombre(10)}<path d="M5 29 C6 25 10 23.6 16 23.6 C22 23.6 26 25 27 29 Z" fill="#7a7068"/>
+        <path d="M11.6 24 L13 8.6 H19 L20.4 24 Z" fill="${f("p")}" stroke="#8a9096" stroke-width=".5"/>
+        <path d="M12.2 17.4 L12.6 13.4 H19.4 L19.8 17.4 Z M11.8 22 L12 20.4 H20 L20.2 22 Z" fill="#d9434a"/>
+        <rect x="12.4" y="5" width="7.2" height="3.8" rx=".6" fill="#ffe9a0" stroke="#3a3f44" stroke-width=".6"/><path d="M11.6 5 L16 1.6 L20.4 5 Z" fill="#3a3f44"/>
+        <path d="M20 6.4 L30 3.4 L30 9.6 Z" fill="#ffe9a0" opacity=".55"/>`),
+      coffre: () => S(G("w", [[0, "#9a5e2a"], [1, "#5a3010"]]) + G("o", [[0, "#fff4b8"], [.4, "#f1c84a"], [1, "#a8741a"]]),
+        `${ombre(13)}<path d="M4 15 C4 8.6 8 6.4 16 6.4 C24 6.4 28 8.6 28 15 Z" fill="${f("w")}" stroke="#3a1e08" stroke-width=".6"/>
+        <rect x="4" y="15" width="24" height="13" rx="1" fill="${f("w")}" stroke="#3a1e08" stroke-width=".6"/>
+        <path d="M4 15 H28 M10 6.8 V28 M22 6.8 V28" stroke="${f("o")}" stroke-width="1.4"/>
+        ${[[8, 14], [12, 13], [16, 13.6], [20, 12.8], [24, 14]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.8" fill="${f("o")}" stroke="#8a5a12" stroke-width=".4"/>`).join("")}
+        <rect x="14" y="17" width="4" height="4.4" rx=".8" fill="${f("o")}" stroke="#7a4e10" stroke-width=".4"/><path d="M16 18.6 v1.4" stroke="#3a1e08" stroke-width=".7"/>`),
+      benitier: () => S(G("c", [[0, "#f6f2e8"], [.5, "#d9cfb8"], [1, "#9a8c70"]]) + R("p", [[0, "#ffffff"], [.55, "#f6eef0"], [.85, "#dcc8d4"], [1, "#b8a2b4"]]) + G("m", [[0, "#3fb6a8"], [.5, "#2a6fb0"], [1, "#6a3fa0"]], 1, 0),
+        `${ombre(13)}<path d="M2.6 20 C3 12 9 7.6 16 7.6 C23 7.6 29 12 29.4 20 C25 18.4 21 18.4 16 19 C11 18.4 7 18.4 2.6 20 Z" fill="${f("c")}" stroke="#8a7c60" stroke-width=".5"/>
+        <path d="M2.6 20 C7 18.4 11 18.4 16 19 C21 18.4 25 18.4 29.4 20 C28 25.6 22 28.6 16 28.6 C10 28.6 4 25.6 2.6 20 Z" fill="${f("c")}" stroke="#8a7c60" stroke-width=".5"/>
+        <path d="M5 20.4 C9 19.6 23 19.6 27 20.4 C24 22.6 8 22.6 5 20.4 Z" fill="${f("m")}" opacity=".9"/>
+        <path d="M6 14 q2 -1 3 1 q2 -2 4 0 q2 -2 4 0 q2 -2 4 0 q1 -2 3 -1 M5 24 q2 1 3 -1 q2 2 4 0 q2 2 4 0 q2 2 4 0 q1 2 3 1" stroke="#a89878" stroke-width=".6" fill="none"/>
+        <circle cx="16" cy="18.4" r="3.4" fill="${f("p")}"/><circle cx="14.8" cy="17.2" r="1" fill="#fff"/>`),
       coquillage: () => S(R("s", [[0, "#fff1e6"], [.55, "#ffc2a0"], [1, "#e08a6a"]], .5, .85, .95),
         `<path d="M3.4 19.6 C3.4 10.6 9.4 4.4 16 4.4 C22.6 4.4 28.6 10.6 28.6 19.6 L22 25.6 H10 Z" fill="${f("s")}" stroke="#c47458" stroke-width=".8" stroke-linejoin="round"/>
         <path d="M16 25.4 V5.4 M16 25.4 L11.4 6.4 M16 25.4 L20.6 6.4 M16 25.4 L7.2 9.4 M16 25.4 L24.8 9.4 M16 25.4 L4.6 14.6 M16 25.4 L27.4 14.6" stroke="#d98a6e" stroke-width=".9" fill="none"/>
@@ -554,6 +724,41 @@
           <path d="M928 372 a22 14 0 1 0 44 0 a22 14 0 1 0 -44 0 Z M940 372 a10 6 0 1 1 20 0 a10 6 0 1 1 -20 0 Z" fill="${nuit ? "#7a3a3a" : "#e5484d"}" fill-rule="evenodd"/>
           <path d="M944 359 l-4 8 M956 359 l4 8 M944 385 l-4 -8 M956 385 l4 -8" stroke="${nuit ? "#9a9590" : "#f6f1ea"}" stroke-width="7"/>
           <path d="M928 372 a22 14 0 1 0 44 0 a22 14 0 1 0 -44 0 Z M940 372 a10 6 0 1 1 20 0 a10 6 0 1 1 -20 0 Z" fill="url(#phbd-bo)" fill-rule="evenodd"/></g>` : ""}
+        ${deco.has("tiki") ? `<g>${ombre(404, 392, 18, 3.4, .22)}${portee(404, 390, long * .5, 8, .18)}
+          <defs><linearGradient id="phbd-ti" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${nuit ? "#2a1e14" : "#5a3d22"}"/><stop offset=".5" stop-color="${nuit ? "#4a3624" : "#9a6a3a"}"/><stop offset="1" stop-color="${nuit ? "#20160e" : "#4a3018"}"/></linearGradient></defs>
+          <path d="M393 392 V354 C393 347 397 344 404 344 C411 344 415 347 415 354 V392 Z" fill="url(#phbd-ti)" stroke="#2a1a0c" stroke-width="1"/>
+          <path d="M395.6 358 h5.4 M407 358 h5.4" stroke="#2a1a0c" stroke-width="2.4" stroke-linecap="round"/>
+          <ellipse cx="398.6" cy="362.6" rx="3" ry="2.4" fill="${nuit ? "#8a806a" : "#f2e2c0"}"/><ellipse cx="409.4" cy="362.6" rx="3" ry="2.4" fill="${nuit ? "#8a806a" : "#f2e2c0"}"/>
+          <circle cx="398.6" cy="362.6" r="1.2" fill="#1a1008"/><circle cx="409.4" cy="362.6" r="1.2" fill="#1a1008"/>
+          <path d="M402.4 365.6 l1.6 4.6 l1.6 -4.6" fill="none" stroke="#2a1a0c" stroke-width="1.2"/>
+          <rect x="396.6" y="373.4" width="14.8" height="5.6" rx="2" fill="#2a1a0c"/><path d="M398 376.2 h12" stroke="${nuit ? "#8a806a" : "#f2e2c0"}" stroke-width="1.4" stroke-dasharray="1.8 1"/>
+          <path d="M393 384 h22 M396 389 h16" stroke="#2a1a0c" stroke-width="1" opacity=".7"/><path d="M396 350 q8 -4 16 0" stroke="#fff" stroke-width="1.2" opacity="${nuit ? .05 : .2}" fill="none"/></g>` : ""}
+        ${deco.has("phare") ? `<g><ellipse cx="54" cy="332" rx="34" ry="5" fill="#fff" opacity=".3"/>
+          <path d="M26 334 C30 318 44 314 56 315 C70 316 80 322 82 334 Z" fill="${P.rocher[2]}"/><path d="M34 324 C42 318 54 318 62 320" stroke="${P.rocher[0]}" stroke-width="3" fill="none" opacity=".5" stroke-linecap="round"/>
+          <defs><linearGradient id="phbd-ph" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${nuit ? "#8a8e94" : "#ffffff"}"/><stop offset="1" stop-color="${nuit ? "#4a4e54" : "#b9bec4"}"/></linearGradient></defs>
+          <path d="M45 318 L48 272 H62 L65 318 Z" fill="url(#phbd-ph)" stroke="#6d757c" stroke-width="1"/>
+          <path d="M46.6 300 L47.4 288 H62.6 L63.4 300 Z M45.6 314 L46 308 H64 L64.4 314 Z" fill="${nuit ? "#6a2a2a" : "#d9434a"}"/>
+          <rect x="47.6" y="262" width="14.8" height="10" rx="1" fill="${nuit ? "#ffe9a0" : "#dfe8ee"}" stroke="#3a3f44" stroke-width="1.2"/>
+          <path d="M46 262 L55 254 L64 262 Z" fill="#3a3f44"/><rect x="45.6" y="271.4" width="18.8" height="2" fill="#3a3f44"/>
+          ${nuit ? `<path d="M62 267 L170 244 L170 292 Z" fill="#ffe9a0" opacity=".16"/><circle cx="55" cy="267" r="26" fill="url(#phbd-halo)"/>` : `<path d="M50 264 l2 6" stroke="#fff" stroke-width="1.4" opacity=".6"/>`}</g>` : ""}
+        ${deco.has("coffre") ? `<g>${ombre(760, 444, 30, 4, .22)}
+          <defs><linearGradient id="phbd-cf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${nuit ? "#4a2e14" : "#9a5e2a"}"/><stop offset="1" stop-color="${nuit ? "#2a1808" : "#5a3010"}"/></linearGradient>
+            <linearGradient id="phbd-or" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff4b8"/><stop offset=".4" stop-color="#f1c84a"/><stop offset="1" stop-color="#a8741a"/></linearGradient></defs>
+          <path d="M738 424 C736 410 744 404 760 404 C776 404 784 410 782 424 Z" fill="url(#phbd-cf)" stroke="#3a1e08" stroke-width="1" transform="rotate(-18 738 424)"/>
+          <rect x="738" y="424" width="44" height="20" rx="2" fill="url(#phbd-cf)" stroke="#3a1e08" stroke-width="1"/>
+          ${[[744, 423], [750, 421], [756, 422], [762, 420], [768, 422], [774, 421], [753, 418], [765, 417]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.2" fill="url(#phbd-or)" stroke="#8a5a12" stroke-width=".6"/>`).join("")}
+          <path d="M738 424 H782 M749 424 V444 M771 424 V444" stroke="url(#phbd-or)" stroke-width="2.4"/><rect x="757" y="428" width="6" height="7" rx="1.2" fill="url(#phbd-or)" stroke="#7a4e10" stroke-width=".6"/>
+          <path d="M732 446 C744 440 776 440 788 446 C778 450 742 450 732 446 Z" fill="${P.sable[1]}"/>
+          ${nuit ? "" : `<path d="M753 414 l1 -3 l1 3 l3 1 l-3 1 l-1 3 l-1 -3 l-3 -1 Z M770 416 l.7 -2 l.7 2 l2 .7 l-2 .7 l-.7 2 l-.7 -2 l-2 -.7 Z" fill="#fff"/>`}</g>` : ""}
+        ${deco.has("benitier") ? `<g><ellipse cx="72" cy="476" rx="40" ry="6" fill="#fff" opacity=".25"/>
+          <defs><linearGradient id="phbd-bn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${nuit ? "#8a8676" : "#f6f2e8"}"/><stop offset="1" stop-color="${nuit ? "#4a4638" : "#a89a7c"}"/></linearGradient>
+            <linearGradient id="phbd-mt" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3fb6a8"/><stop offset=".5" stop-color="#2a6fb0"/><stop offset="1" stop-color="#6a3fa0"/></linearGradient>
+            <radialGradient id="phbd-pg" cx=".35" cy=".3" r=".7"><stop offset="0" stop-color="#ffffff"/><stop offset=".6" stop-color="#f4eef6"/><stop offset="1" stop-color="#c8bcd0"/></radialGradient></defs>
+          <path d="M40 470 C41 452 56 444 72 444 C88 444 103 452 104 470 C94 466 84 466 72 468 C60 466 50 466 40 470 Z" fill="url(#phbd-bn)" stroke="#7a6c50" stroke-width="1"/>
+          <path d="M46 456 q4 -3 7 2 q4 -5 9 0 q5 -5 10 0 q5 -5 10 0 q5 -5 9 0 q3 -4 7 -2" stroke="#a89878" stroke-width="1.2" fill="none"/>
+          <path d="M44 470 C54 467 90 467 100 470 C92 476 52 476 44 470 Z" fill="url(#phbd-mt)" opacity="${nuit ? .5 : .9}"/>
+          <circle cx="72" cy="466" r="7" fill="url(#phbd-pg)"/><circle cx="69.6" cy="463.6" r="2" fill="#fff"/>
+          ${nuit ? `<circle cx="72" cy="466" r="16" fill="#f4eef6" opacity=".15"/>` : `<path d="M80 458 l1 -3 l1 3 l3 1 l-3 1 l-1 3 l-1 -3 l-3 -1 Z" fill="#fff"/>`}</g>` : ""}
         ${e.veto ? `<g><ellipse cx="822" cy="322" rx="70" ry="6" fill="#fff" opacity=".25"/>
           <path d="M758 300 C780 304 860 304 884 300 L872 320 C846 324 794 324 770 320 Z" fill="${nuit ? "#4a3424" : "#9a6436"}"/><path d="M764 306 h114 M768 313 h106" stroke="#000" stroke-opacity=".2" stroke-width="1.2"/>
           <path d="M758 300 C780 304 860 304 884 300" stroke="${nuit ? "#6a4a32" : "#c48a52"}" stroke-width="2.4" fill="none"/>
@@ -707,6 +912,8 @@
         <div class="phb-puces">${e.stade === "oeuf" ? `<span>Œuf</span>` : `<span>${esc(e.stade_nom)}</span><span>${age(e.age_jours)}</span><span>${poids(e.poids_g)}${e.ventre_rond ? " · ventre rond" : ""}</span>`}</div></div>
       <div class="phb-ciel-info"><span class="phb-puce" title="Météo de l'île">${ico(met)}${metTxt}</span>
         <span class="phb-puce" title="${esc(e.ciel.saison_texte || "")}">${ico(ICO_SAISON[e.ciel.saison] || "fleur")}${esc(e.ciel.saison_nom || "")}</span></div>
+      <button class="phb-b phb-fermer phb-amb" data-phb="ambiance" aria-pressed="${!!(e.reglages.sons && e.reglages.ambiance !== false)}"
+        aria-label="${e.reglages.sons && e.reglages.ambiance !== false ? "Couper les bruits de l'île" : "Écouter les bruits de l'île"}" title="Bruits de l'île (vagues, pluie, vent, oiseaux…)">${ico(e.reglages.sons && e.reglages.ambiance !== false ? "son" : "muet")}</button>
       <span class="phb-coq" role="img" aria-label="${e.coquillages} coquillages">${icone("coquillage")}<b>${e.coquillages}</b></span>
       <button class="phb-b phb-fermer" data-phb="fermer" aria-label="Fermer l'île de Philibert">${ico("fermer")}</button>`;
   }
@@ -726,7 +933,7 @@
     if (e.niveau === "pension") return "Philibert est chez la voisine : tout est en pause (ses jauges et son âge). Fais-le revenir quand tu veux.";
     if (e.dort) return e.sieste ? "Petite sieste sur le sable chaud…" : "Chut… Philibert dort en haut de son palmier.";
     if (e.malade) return `Il ne se sent pas bien : il a ${e.malade.texte}. Un remède, du repos et de la chaleur l'aideront.`;
-    if (e.appel && e.appel.type === "caprice") return "Philibert te regarde avec insistance… a-t-il vraiment besoin de quelque chose ?";
+    if (e.appel && e.appel.type === "caprice" && e.jauges.bonheur <= 30) return "Philibert te regarde avec insistance… a-t-il vraiment besoin de quelque chose ?";
     const b = e.besoins.filter(x => x.id !== "ventre");
     if (b.length) return b[0].texte;
     if (e.jauges.chaleur < 35) return "Brrr… il fait frisquet pour un lézard à sang froid.";
@@ -738,7 +945,7 @@
     const ev = e.evenement;
     const etat = absent() || e.niveau === "oeuf" ? "" : e.malade ? `<span class="phb-pastille malade">${ico("soin")}Malade</span>`
       : e.niveau === "fatigue" ? `<span class="phb-pastille fatigue">${ico("lune")}${e.grognon ? "Grognon" : "Pas au mieux"}</span>` : `<span class="phb-pastille forme">${ico("coeur")}En forme</span>`;
-    const appel = e.appel ? `<span class="phb-pastille appel" title="${e.appel.type === "caprice" ? "Il réclame de l'attention… mais a-t-il vraiment besoin de quelque chose ?" : "Il a besoin de toi"}">${ico("bulle")}Il t'appelle</span>` : "";
+    const appel = e.appel && (e.appel.type !== "caprice" || e.jauges.bonheur <= 30) ? `<span class="phb-pastille appel" title="${e.appel.type === "caprice" ? "Il réclame de l'attention… mais a-t-il vraiment besoin de quelque chose ?" : "Il a besoin de toi"}">${ico("bulle")}Il t'appelle</span>` : "";
     return `<div class="phb-parole" role="status"><p>${esc(parole())}</p></div>
       <div class="phb-besoins">${etat}${appel}${e.dort ? `<span class="phb-pastille dort">${ico("lune")}${e.sieste ? "Sieste" : "Il dort"}</span>` : ""}
         ${b.map(x => `<span class="phb-besoin">${ico(ICO_BESOIN[x.id] || "bulle")}${esc(x.texte)}</span>`).join("")}</div>
@@ -810,15 +1017,16 @@
       const t = { soins: ["soin", "equipement"], accessoires: ["accessoire"], deco: ["deco"] }[boutiqueOnglet];
       items = Object.entries(O).filter(([, o]) => t.includes(o.type)).map(([id, o]) => {
         const a = id === "lampe" ? e.lampe.possede : (e.accessoires.includes(id) || e.deco.includes(id));
-        return [id, o.nom, o.prix, o.texte, id === "remede" ? `en réserve : ${e.inventaire.remede || 0}` : a ? "déjà à toi" : "", a, false];
+        return [id, o.nom, o.prix, o.texte, id === "remede" ? `en réserve : ${e.inventaire.remede || 0}` : a ? "déjà à toi" : "", a, false, o.rarete || "commun"];
       });
     }
     return `${titre("panier", "Boutique de l'île", `· tu as ${e.coquillages} coquillage${e.coquillages > 1 ? "s" : ""}`)}
       <div class="phb-onglets" role="tablist">${Object.entries(onglets).map(([k, t]) => `<button class="phb-b${k === boutiqueOnglet ? " phb-on" : ""}" role="tab" aria-selected="${k === boutiqueOnglet}" data-phb="boutique-onglet" data-o="${k}">${t}</button>`).join("")}</div>
-      <div class="phb-grille">${items.map(([id, nom, prix, texte, info, possede, promo]) => `<div class="phb-carte phb-article${promo ? " promo" : ""}">
-        ${promo ? `<span class="phb-ruban">de saison · −1</span>` : ""}
+      <div class="phb-grille">${items.map(([id, nom, prix, texte, info, possede, promo, rarete = "commun"]) => `<div class="phb-carte phb-article${promo ? " promo" : ""} r-${rarete}">
+        ${promo ? `<span class="phb-ruban">de saison · −1</span>` : rarete !== "commun" ? `<span class="phb-ruban phb-rare">${ico("etoile")}${esc((cat.raretes || {})[rarete] || rarete)}</span>` : ""}
         <span class="phb-ic">${icone(id)}</span><span>${esc(nom)}</span><small>${esc(texte)}</small>${info ? `<small class="phb-info">${esc(info)}</small>` : ""}
         <button class="phb-b phb-prim" data-phb="acheter" data-article="${id}" ${possede ? "disabled" : ""} aria-label="Acheter ${esc(nom)} pour ${prix} coquillages">${possede ? "✔ À toi" : `<span class="phb-ic-mini">${icone("coquillage")}</span>${prix}`}</button></div>`).join("")}</div>
+      ${["accessoires", "deco"].includes(boutiqueOnglet) ? `<p class="phb-astuce">${ico("etoile")}<span>Les pièces <b>rares</b>, <b>très rares</b> et <b>légendaires</b> sont faites à la main par les artisans de l'île voisine, en un seul exemplaire : elles coûtent cher, mais les soins (remède, nourriture) restent toujours bon marché.</span></p>` : ""}
       ${boutiqueOnglet === "nourriture" ? `<p class="phb-astuce">${ico("nourrir")}<span>Pas d'insectes, de viande ni de croquettes ici : Philibert est herbivore. Le trèfle de l'île est toujours gratuit.</span></p>` : ""}`;
   }
   function feuilleGarde() {
@@ -826,7 +1034,7 @@
     const parSlot = s => e.accessoires.filter(a => cat.objets[a].emplacement === s);
     return `${titre("chapeau", "Garde-robe")}<div class="phb-garde"><div class="phb-apercu">${D.svg({ stade: e.stade === "oeuf" ? "bebe" : e.stade, variante: e.variante, humeur: "joyeux", portes: e.portes, label: "Aperçu de Philibert", uid: "g" })}</div>
       <div>${Object.entries(slots).map(([s, n]) => `<div class="phb-groupe">${n}</div><div class="phb-ligne">${parSlot(s).map(a => `<button class="phb-b${e.portes[s] === a ? " phb-on" : ""}" data-phb="${e.portes[s] === a ? "retirer" : "porter"}" data-article="${a}" data-emplacement="${s}" aria-pressed="${e.portes[s] === a}">
-        <span class="phb-ic-mini">${icone(a)}</span>${esc(cat.objets[a].nom)}</button>`).join("") || `<small class="phb-gris">Rien pour l'instant (voir la boutique).</small>`}</div>`).join("")}</div></div>`;
+        <span class="phb-ic-mini">${icone(a)}</span>${esc(cat.objets[a].nom)}${cat.objets[a].rarete && cat.objets[a].rarete !== "commun" ? `<small class="phb-r-puce r-${cat.objets[a].rarete}">${esc((cat.raretes || {})[cat.objets[a].rarete] || "")}</small>` : ""}</button>`).join("") || `<small class="phb-gris">Rien pour l'instant (voir la boutique).</small>`}</div>`).join("")}</div></div>`;
   }
   function portrait(x) {
     return `<div class="phb-portrait">${D.svg({ stade: x.stade, variante: x.variante, portes: x.portes, humeur: "joyeux", label: x.titre, uid: "a" })}</div>`;
@@ -904,6 +1112,9 @@
     return `${titre("reglages", "Réglages de Philibert")}
       ${chk("visible", "Le voir se promener en haut de la page")}
       ${chk("sons", "Petits sons (seulement dans son île)")}
+      ${chk("ambiance", "Bruits de l'île selon la météo : vagues, pluie, vent, oiseaux, grenouilles la nuit (discrets, avec les petits sons)")}
+      <label class="phb-chk"><span>Couleurs de l'interface</span> <select data-phb-r="theme"><option value="auto"${r.theme === "auto" || !r.theme ? " selected" : ""}>Automatique (selon le thème du panel et la nuit sur l'île)</option>
+        <option value="clair"${r.theme === "clair" ? " selected" : ""}>Clair</option><option value="sombre"${r.theme === "sombre" ? " selected" : ""}>Sombre</option></select></label>
       ${chk("notif_windows", "Notification Windows s'il tombe malade ou part chez le vétérinaire (jamais en mode jeu)")}
       ${chk("discord", "Me prévenir aussi sur Discord (si le bot de NEXUS est configuré)")}
       <label class="phb-chk"><span>Vitesse du temps</span> <select data-phb-r="vitesse"><option value="normale"${r.vitesse === "normale" ? " selected" : ""}>Normale</option>
@@ -935,6 +1146,8 @@
     if (!t) return;
     dlg.dataset.phase = e.ciel.phase;
     dlg.toggleAttribute("data-nuit", e.ciel.phase === "nuit");
+    dlg.toggleAttribute("data-sombre", interfaceSombre());
+    Ambiance.maj();
     dlg.toggleAttribute("data-lumiere", !!e.lumiere);
     t.innerHTML = tete();
     dlg.querySelector(".phb-bas").innerHTML = `${e.niveau === "oeuf" || absent() ? "" : blocJauges()}<div class="phb-etat">${blocEtat()}</div>${boutons()}`;
@@ -1028,7 +1241,7 @@
     flaner();
     if (f && typeof f === "string") ouvrirFeuille(f);
   }
-  dlg.addEventListener("close", () => { clearInterval(pollT); clearTimeout(flanerT); feuille = null; if (window.PhilibertJeux) window.PhilibertJeux.arreter(); rendreFeuille(); });
+  dlg.addEventListener("close", () => { Ambiance.maj(); clearInterval(pollT); clearTimeout(flanerT); feuille = null; if (window.PhilibertJeux) window.PhilibertJeux.arreter(); rendreFeuille(); });
   dlg.addEventListener("cancel", ev => {                              // Échap : ferme d'abord le panneau ouvert
     if (feuille && feuille !== "carte") { ev.preventDefault(); fermerFeuille(); }
   });
@@ -1061,6 +1274,7 @@
     if (a === "nourrir") { feuille = null; rendreFeuille(); dernierAliment = b.dataset.aliment; await action("nourrir", { aliment: b.dataset.aliment }); return; }
     if (a === "bain") { feuille = null; rendreFeuille(); await action("bain", { lieu: b.dataset.lieu }); return; }
     if (a === "lampe") return action("lampe", { on: !e.lampe.allumee });
+    if (a === "ambiance") return action("reglages", e.reglages.sons ? { ambiance: e.reglages.ambiance === false } : { sons: true, ambiance: true });
     if (a === "lumiere") return action("lumiere", { on: !e.lumiere });
     if (a === "acheter") { await action("acheter", { article: b.dataset.article }); return; }
     if (a === "porter") return action("porter", { article: b.dataset.article });
@@ -1093,5 +1307,5 @@
     if (r && r.etat) { dire(r.message); son("ding"); appliquer(r.etat); effet("coquillage", 4); }
     rendreFeuille();
   }
-  window.PhilibertIle = { ouvrir, appliquer, action, icone, fermer: () => dlg.close() };
+  window.PhilibertIle = { ambiance: Ambiance, ouvrir, appliquer, action, icone, fermer: () => dlg.close() };
 })();

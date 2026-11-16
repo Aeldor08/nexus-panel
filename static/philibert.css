@@ -104,7 +104,9 @@
   margin: auto; padding: 0; border: 0; border-radius: 22px; overflow: hidden;
   background: var(--fond); color: var(--t); font: 15px/1.45 "Segoe UI Variable Text", "Segoe UI", "Trebuchet MS", system-ui, sans-serif;
   text-transform: none; letter-spacing: normal; text-shadow: none; box-shadow: 0 30px 90px rgba(0, 0, 0, .55); }
-.phb-dlg[data-nuit] { --fond: #121d36; --carte: #1a2a4b; --t: #eef3ff; --t2: #b9c5e1; --bord: #33507e; --bouton: #1f3461; --prim: #86dfe6; --prim-t: #0b2230;
+/* Mode sombre de l'interface (réglage, ou automatique : panel sombre ou nuit sur l'île). Contrastes vérifiés (WCAG) :
+   texte principal ≥ 12 : 1, texte secondaire ≥ 7 : 1, pastilles et encadrés ≥ 7 : 1. La scène, elle, suit l'heure de l'île. */
+.phb-dlg[data-sombre] { --fond: #121d36; --carte: #1a2a4b; --t: #eef3ff; --t2: #b9c5e1; --bord: #33507e; --bouton: #1f3461; --prim: #86dfe6; --prim-t: #0b2230;
   --tete1: #0a1730; --tete2: #16295a; --tete-t2: #c9d8f5; --parole: #1c3260; --parole-b: #3e5f97; --ombre: rgba(0, 0, 0, .3); }
 .phb-dlg::backdrop { background: rgba(3, 18, 28, .74); }
 .phb-dlg * { box-sizing: border-box; }
@@ -132,6 +134,7 @@
 .phb-dlg .phb-fermer { width: 38px; height: 38px; padding: 0; display: grid; place-items: center; border-radius: 50%;
   background: rgba(255, 255, 255, .14); color: #fff; border: 1px solid rgba(255, 255, 255, .35); box-shadow: none; }
 .phb-dlg .phb-fermer:hover:not(:disabled) { background: rgba(255, 255, 255, .26); }
+.phb-dlg .phb-amb[aria-pressed="false"] { opacity: .7; }
 
 /* ---------- la scène ---------- */
 .phb-scene-zone { flex: 0 0 auto; position: relative; overflow: hidden; height: min(50cqw, max(37.5cqw, var(--phb-vue)));
@@ -309,7 +312,7 @@
 .phb-dlg .phb-tuile[aria-pressed="true"] { border-color: var(--c); box-shadow: inset 0 0 0 1.5px var(--c); }
 .phb-tuile-ic { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 15%, var(--bouton)); }
 .phb-tuile-ic .phb-ico { width: 21px; height: 21px; }
-.phb-dlg[data-nuit] .phb-tuile-ic { color: #fff; background: var(--c); }
+.phb-dlg[data-sombre] .phb-tuile-ic { color: #fff; background: var(--c); }
 .phb-tuile-txt { text-align: center; }
 .phb-tuile-txt small { display: block; font-weight: 500; font-size: 11.5px; color: var(--t2); }
 
@@ -325,7 +328,33 @@
 .phb-dlg .phb-b small { font-weight: 400; color: var(--t2); }
 .phb-dlg .phb-prim, .phb-dlg .phb-b.phb-on { background: var(--prim); color: var(--prim-t); border-color: color-mix(in srgb, var(--prim) 70%, #000); }
 .phb-dlg .phb-danger { color: #a3241b; border-color: #d9a29b; }
-.phb-dlg[data-nuit] .phb-danger { color: #ffb4aa; border-color: #a35a52; }
+.phb-dlg[data-sombre] .phb-danger { color: #ffb4aa; border-color: #a35a52; }
+.phb-dlg[data-sombre] .phb-astuce, .phb-dlg[data-sombre] .phb-faits li, .phb-dlg[data-sombre] .phb-conseil { background: #17352a; color: #d8f2d6; border-color: #356a4a; }
+.phb-dlg[data-sombre] .phb-astuce .phb-ico, .phb-dlg[data-sombre] .phb-faits .phb-ico { color: #86d897; }
+.phb-dlg[data-sombre] .phb-pastille.forme { background: #163a26; color: #bff2cf; border-color: #2f6a46; }
+.phb-dlg[data-sombre] .phb-pastille.fatigue { background: #3a2e10; color: #ffe2a0; border-color: #6e5820; }
+.phb-dlg[data-sombre] .phb-pastille.malade { background: #4a1a18; color: #ffc8c0; border-color: #8a3a32; }
+.phb-dlg[data-sombre] .phb-pastille.dort { background: #1a2a52; color: #ccd8ff; border-color: #3a5090; }
+.phb-dlg[data-sombre] .phb-besoin { background: #3a2c10; color: #ffe2ac; border-color: #6e5420; }
+.phb-dlg[data-sombre] .phb-evt { background: #352c10; color: #ffecb6; border-color: #8a7232; }
+.phb-dlg[data-sombre] .phb-bandeau { background: #1f3156; color: #eef3ff; }
+.phb-dlg[data-sombre] .phb-postale { background: #1d2a46; color: #eef3ff; border-color: #7a6630; }
+.phb-dlg[data-sombre] .phb-postale small { color: #b9c5e1; }
+.phb-dlg[data-sombre] .phb-histo li, .phb-dlg[data-sombre] .phb-chk select { color: var(--t); }
+
+/* rareté des objets de la boutique : bleu (rare), violet (très rare), or (légendaire, avec un reflet qui passe) */
+.phb-article.r-rare { border-color: #4f86d9; }
+.phb-article.r-tres_rare { border-color: #9a5ce0; box-shadow: 0 2px 0 var(--ombre), 0 0 0 1px rgba(154, 92, 224, .25); }
+.phb-article.r-legendaire { border-color: #d6a32a; box-shadow: 0 2px 0 var(--ombre), 0 0 14px rgba(240, 190, 60, .35);
+  background: linear-gradient(115deg, var(--bouton) 40%, rgba(255, 236, 170, .55) 50%, var(--bouton) 60%) 0 0 / 260% 100%; animation: phb-reflet-or 4.5s ease-in-out infinite; }
+@keyframes phb-reflet-or { 0% { background-position: 100% 0; } 60%, 100% { background-position: 0 0; } }
+.phb-ruban.phb-rare { display: inline-flex; align-items: center; gap: 3px; background: #2f63b8; }
+.phb-ruban.phb-rare .phb-ico { width: 11px; height: 11px; }
+.r-tres_rare > .phb-ruban.phb-rare { background: #6f3cb8; }
+.r-legendaire > .phb-ruban.phb-rare { background: linear-gradient(90deg, #e2ae34, #f7d773); color: #2a1a00; }
+.phb-r-puce { margin-left: 6px; padding: 0 6px; border-radius: 8px; font-size: 11px; font-weight: 800; color: #fff; background: #2f63b8; }
+.phb-dlg .phb-b .phb-r-puce { color: #fff; font-weight: 800; }
+.phb-r-puce.r-tres_rare { background: #6f3cb8; } .phb-r-puce.r-legendaire { background: #7e560c; }
 .phb-lien { padding: 0; border: 0; background: none; color: inherit; text-decoration: underline; font: inherit; font-weight: 700; cursor: pointer; }
 
 /* ---------- Panneaux (nourrir, boutique, carnet…) ---------- */
@@ -448,10 +477,11 @@ button.phb-carte:hover:not(:disabled) { transform: translateY(-2px); box-shadow:
   .phb-garde, .phb-postale { grid-template-columns: 1fr; }
   .phb-perso { width: 20%; }
   .phb-tete-ile h2 { font-size: 18px; }
-  .phb-tete-ile { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; }
+  .phb-tete-ile { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; }
   .phb-ciel-info { grid-row: 2; grid-column: 1 / -1; }
-  .phb-coq { grid-row: 1; grid-column: 3; }
-  .phb-dlg .phb-fermer { grid-row: 1; grid-column: 4; }
+  .phb-dlg .phb-amb { grid-row: 1; grid-column: 3; }
+  .phb-coq { grid-row: 1; grid-column: 4; }
+  .phb-dlg .phb-fermer:not(.phb-amb) { grid-row: 1; grid-column: 5; }
 }
 
 /* ---------- Réduire les animations : Philibert immobile, île figée, tout reste utilisable ---------- */

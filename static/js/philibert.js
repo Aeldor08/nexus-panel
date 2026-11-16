@@ -35,6 +35,8 @@
     soleil: `<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="4.6" fill="#ffc83d"/><g stroke="#ffb020" stroke-width="1.8" stroke-linecap="round"><path d="M10 1v2.4M10 16.6V19M1 10h2.4M16.6 10H19M3.6 3.6l1.7 1.7M14.7 14.7l1.7 1.7M3.6 16.4l1.7-1.7M14.7 5.3l1.7-1.7"/></g></svg>`,
   };
 
+  // « il réclame de l'attention » (caprice) : seulement quand son bonheur est à 30 ou moins (même règle que le serveur)
+  const appelVrai = () => !!(e && e.appel && (e.appel.type !== "caprice" || e.jauges.bonheur <= 30));
   const besoinsVrais = () => (e && e.besoins || []).filter(b => b.id !== "ventre");
   const visible = () => !!(e && e.reglages && e.reglages.visible);
   const gm = () => document.body.classList.contains("gamemode");
@@ -72,7 +74,7 @@
     if (e.stade === "oeuf") return montrerBulle(null);
     if (e.dort) return montrerBulle("Zzz");
     if (e.malade) return montrerBulle("nuage");
-    if (e.appel || besoinsVrais().some(b => b.id !== "lumiere")) return montrerBulle("!");
+    if (appelVrai() || besoinsVrais().some(b => b.id !== "lumiere")) return montrerBulle("!");
     if (e.jauges.chaleur < 35) return montrerBulle("flocon");
     montrerBulle(null);
   }

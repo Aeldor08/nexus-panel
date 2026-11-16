@@ -172,43 +172,138 @@
     </g></g>`;
   }
 
-  // ---- accessoires (dessinés comme de vrais objets : paille tressée, verres fumés, fleurs, perles, coton) ----
-  function accessoires(portes, u) {
+  // ---- accessoires (dessinés comme de vrais objets : paille tressée, feutre, or ciselé, nacre, verres, perles, velours) ----
+  // tete et yeux suivent la tête (hochements) ; cou est autour du cou ; dos (cape) se pose sur le dos, sous les pattes de devant.
+  // Chaque pièce est placée d'après les repères de la tête : dessus du crâne y ≈ 26,4 vers x = 99, œil (101,4 ; 30,6),
+  // tympan (89,8 ; 31,6), nuque x ≈ 85-89, gorge et haut du fanon x ≈ 96-103, y ≈ 40.
+  const COLLIER = [[85, 32.8], [84.4, 37], [85.4, 41.6], [88.6, 44], [91.6, 46], [94.6, 46.6], [96.8, 46.4]];
+  const surCollier = n => {             // n points répartis le long du tour de cou (deux courbes de Bézier)
+    const A = [COLLIER[0], COLLIER[1], COLLIER[2], COLLIER[3]], B = [COLLIER[3], COLLIER[4], COLLIER[5], COLLIER[6]], P = [];
+    for (let i = 0; i < n; i++) { const t = i / (n - 1) * 2; P.push(t <= 1 ? bz(A, t) : bz(B, t - 1)); }
+    return P;
+  };
+  const tourCou = `M85 32.8 C84.4 37 85.4 41.6 88.6 44 C91.6 46 94.6 46.6 96.8 46.4`;
+  const etincelle = (x, y, k = 1) => `<path d="M${x} ${y - 1.2 * k} L${x + .3 * k} ${y - .3 * k} L${x + 1.2 * k} ${y} L${x + .3 * k} ${y + .3 * k} L${x} ${y + 1.2 * k} L${x - .3 * k} ${y + .3 * k} L${x - 1.2 * k} ${y} L${x - .3 * k} ${y - .3 * k} Z" fill="#fff" opacity=".9"/>`;
+  function accessoires(portes, u, stade) {
     const p = portes || {};
-    let tete = "", yeux = "", cou = "";
+    let tete = "", yeux = "", cou = "", dos = "";
+    const dyCou = stade === "sage" ? 1.2 : 0;        // grosses bajoues du vieux sage : le tour de cou est un peu plus bas
+    const or = k => `<linearGradient id="${u}-${k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff4b8"/><stop offset=".35" stop-color="#f1c84a"/><stop offset=".7" stop-color="#c8901f"/><stop offset="1" stop-color="#8a5a12"/></linearGradient>`;
+    // ----- tête -----
     if (p.tete === "chapeau") tete = `<g class="phb-acc">
       <defs><linearGradient id="${u}-ch" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3dc98"/><stop offset=".6" stop-color="#d9b866"/><stop offset="1" stop-color="#b38f43"/></linearGradient></defs>
       <path d="M94.6 26.6 C94.4 21.6 97.4 19.6 101 19.6 C104.6 19.6 107.6 21.6 107.4 26.6 Z" fill="url(#${u}-ch)" stroke="#9a7634" stroke-width=".4"/>
       <path d="M95.2 22.8 q5.8 -1.2 11.6 0 M94.8 24.6 q6.2 -1.2 12.4 0" stroke="#a8843c" stroke-width=".3" fill="none" stroke-dasharray=".7 .5"/>
       <path d="M94.7 24.9 q6.3 -1.1 12.6 0 l0 1.4 q-6.3 -1.1 -12.6 0 Z" fill="#b83a3f"/><path d="M94.8 25 q6.2 -1 12.4 0" stroke="#e06b6f" stroke-width=".3" fill="none"/>
-      <ellipse cx="101" cy="26.7" rx="11" ry="2.2" fill="url(#${u}-ch)" stroke="#9a7634" stroke-width=".4"/>
-      <ellipse cx="101" cy="26.7" rx="8.6" ry="1.3" fill="none" stroke="#a8843c" stroke-width=".3" stroke-dasharray=".8 .5"/>
-      <path d="M91 27.2 q10 2.2 20 0" stroke="#8a6a2e" stroke-width=".35" fill="none" opacity=".6"/></g>`;
+      <ellipse cx="101" cy="26.9" rx="11" ry="2.2" fill="url(#${u}-ch)" stroke="#9a7634" stroke-width=".4"/>
+      <ellipse cx="101" cy="26.9" rx="8.6" ry="1.3" fill="none" stroke="#a8843c" stroke-width=".3" stroke-dasharray=".8 .5"/>
+      <path d="M91 27.4 q10 2.2 20 0" stroke="#8a6a2e" stroke-width=".35" fill="none" opacity=".6"/></g>`;
     if (p.tete === "couronne") tete = `<g class="phb-acc">
       <defs><radialGradient id="${u}-hb" cx=".5" cy=".5" r=".55"><stop offset="0" stop-color="#8e1230"/><stop offset=".3" stop-color="#d8344f"/><stop offset="1" stop-color="#ff7a8a"/></radialGradient></defs>
-      <path d="M92.6 27.8 q8.4 -3.6 16.4 -.4" stroke="#4f7d34" stroke-width="1" fill="none"/>
-      ${[[93.4, 27.2, .55], [97, 25.4, .6], [101, 24.8, .7], [105, 25.4, .6], [108.4, 27.2, .5]].map(([x, y, k], i) => `<g transform="translate(${x} ${y}) scale(${k})">
+      <path d="M92.6 27.9 q8.4 -3.6 16.4 -.4" stroke="#4f7d34" stroke-width="1" fill="none"/>
+      ${[[93.4, 27.3, .55], [97, 25.6, .6], [101, 25, .7], [105, 25.6, .6], [108.4, 27.3, .5]].map(([x, y, k], i) => `<g transform="translate(${x} ${y}) scale(${k})">
         ${i % 2 ? [0, 72, 144, 216, 288].map(a => `<path d="M0 0 C-2.4 -1.2 -2.2 -4.6 0 -4.8 C2.2 -4.6 2.4 -1.2 0 0 Z" transform="rotate(${a})" fill="url(#${u}-hb)" stroke="#a51f3a" stroke-width=".25"/>`).join("")
         : `<ellipse rx="2.4" ry="1.4" fill="#5d9a3e"/><path d="M-2 0 h4" stroke="#3f6e2a" stroke-width=".3"/>`}
         ${i % 2 ? `<path d="M0 0 l2.4 -2.6" stroke="#f4d24a" stroke-width=".5"/><circle cx="2.5" cy="-2.7" r=".55" fill="#ffe36a"/>` : ""}</g>`).join("")}</g>`;
+    if (p.tete === "bob") tete = `<g class="phb-acc">
+      <defs><linearGradient id="${u}-bo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9d2a6"/><stop offset=".6" stop-color="#b3aa78"/><stop offset="1" stop-color="#8a8054"/></linearGradient></defs>
+      <path d="M93.6 28.6 C94.2 31.6 95.6 35.4 97.4 38.8" stroke="#6b5a3a" stroke-width=".35" fill="none"/>
+      <path d="M95 26.4 C95 21.8 97.8 20.2 101 20.2 C104.2 20.2 107 21.8 107 26.4 Z" fill="url(#${u}-bo)" stroke="#7a7048" stroke-width=".4"/>
+      <path d="M95.4 23.4 q5.6 -1.4 11.2 0" stroke="#8a8054" stroke-width=".3" fill="none" stroke-dasharray=".6 .45"/>
+      <path d="M92 27.6 C93.6 25.4 108.4 25.4 110 27.6 C109.2 29.4 92.8 29.4 92 27.6 Z" fill="url(#${u}-bo)" stroke="#7a7048" stroke-width=".4"/>
+      <path d="M93.4 27.9 C96 26.6 106 26.6 108.6 27.9" stroke="#8a8054" stroke-width=".3" fill="none" stroke-dasharray=".6 .45"/>
+      <circle cx="104.6" cy="22.6" r=".45" fill="#6b6440"/><path d="M97 21.6 q2 -1 4 -.8" stroke="#fff" stroke-width=".5" fill="none" opacity=".35"/></g>`;
+    if (p.tete === "tricorne") tete = `<g class="phb-acc">
+      <defs><linearGradient id="${u}-tr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a4a55"/><stop offset=".5" stop-color="#22222a"/><stop offset="1" stop-color="#0e0e12"/></linearGradient>${or("tro")}</defs>
+      <path d="M95.4 23.8 C93.4 19.6 89.6 18.4 87 19.2 C89.4 19.8 91.6 21.4 93 24.4 Z" fill="#c4283a" stroke="#7d1220" stroke-width=".3"/>
+      <path d="M88.4 19.4 l1.6 1.8 M89.8 19.6 l1.4 2.2 M91.2 20.2 l1.2 2.4" stroke="#ff8a96" stroke-width=".3" opacity=".8"/>
+      <path d="M96.6 25.6 C96.2 21 98.6 19.8 101 19.8 C103.4 19.8 105.8 21 105.4 25.6 Z" fill="url(#${u}-tr)"/>
+      <path d="M90.8 26.8 C92.4 22.6 95.6 23.2 97.4 24.6 C99.4 23.8 102.6 23.8 104.6 24.6 C106.4 23.2 109.6 22.6 111.2 26.8 C106.4 28.6 95.6 28.6 90.8 26.8 Z" fill="url(#${u}-tr)" stroke="#08080a" stroke-width=".35"/>
+      <path d="M90.8 26.8 C92.4 22.6 95.6 23.2 97.4 24.6 M104.6 24.6 C106.4 23.2 109.6 22.6 111.2 26.8" stroke="url(#${u}-tro)" stroke-width=".75" fill="none" stroke-linecap="round"/>
+      <circle cx="101" cy="25.4" r="1.2" fill="url(#${u}-tro)" stroke="#8a5a12" stroke-width=".2"/><path d="M98.4 21.4 q2.2 -1 4.4 -.6" stroke="#fff" stroke-width=".4" fill="none" opacity=".25"/></g>`;
+    if (p.tete === "couronne_or") tete = `<g class="phb-acc">
+      <defs>${or("co")}<radialGradient id="${u}-cr" cx=".35" cy=".3" r=".7"><stop offset="0" stop-color="#ffb3be"/><stop offset=".5" stop-color="#d8143a"/><stop offset="1" stop-color="#6e0418"/></radialGradient>
+        <radialGradient id="${u}-cs" cx=".35" cy=".3" r=".7"><stop offset="0" stop-color="#b7d4ff"/><stop offset=".5" stop-color="#2456c8"/><stop offset="1" stop-color="#0d2466"/></radialGradient>
+        <radialGradient id="${u}-ce" cx=".35" cy=".3" r=".7"><stop offset="0" stop-color="#b8f5cc"/><stop offset=".5" stop-color="#16a04a"/><stop offset="1" stop-color="#05501f"/></radialGradient></defs>
+      <g transform="rotate(5 101 26)">
+        <path d="M95 25.6 L95.2 20.8 L97.6 23.4 L99.4 19.2 L101 22.6 L102.6 19.2 L104.4 23.4 L106.8 20.8 L107 25.6 Z" fill="#8e1c2c"/>
+        <path d="M94.4 26.6 L94.4 21.4 L97.4 24 L99.2 19.6 L101 23 L102.8 19.6 L104.6 24 L107.6 21.4 L107.6 26.6 Z" fill="url(#${u}-co)" stroke="#7a4e10" stroke-width=".35" stroke-linejoin="round" fill-opacity=".92"/>
+        <rect x="94.2" y="24.4" width="13.6" height="2.6" rx=".6" fill="url(#${u}-co)" stroke="#7a4e10" stroke-width=".35"/>
+        ${[[94.4, 21.1], [99.2, 19.3], [102.8, 19.3], [107.6, 21.1]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".75" fill="#fffaf0" stroke="#c9b890" stroke-width=".15"/>`).join("")}
+        <ellipse cx="101" cy="25.7" rx="1.25" ry=".95" fill="url(#${u}-cr)"/><ellipse cx="97.6" cy="25.7" rx=".9" ry=".75" fill="url(#${u}-cs)"/><ellipse cx="104.4" cy="25.7" rx=".9" ry=".75" fill="url(#${u}-ce)"/>
+        <path d="M94.6 24.9 h13" stroke="#fff6c8" stroke-width=".3" opacity=".7"/>${etincelle(99.2, 19.3, .9)}${etincelle(105.6, 24.6, .6)}</g></g>`;
+    if (p.tete === "diademe") tete = `<g class="phb-acc">
+      <defs><linearGradient id="${u}-na" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fdf7ff"/><stop offset=".3" stop-color="#d8efff"/><stop offset=".55" stop-color="#f7d8ff"/><stop offset=".8" stop-color="#dcfff0"/><stop offset="1" stop-color="#fff3d8"/></linearGradient>
+        <linearGradient id="${u}-ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#c9d2dc"/><stop offset="1" stop-color="#8a96a4"/></linearGradient>
+        <radialGradient id="${u}-pr" cx=".35" cy=".3" r=".7"><stop offset="0" stop-color="#ffffff"/><stop offset=".6" stop-color="#f4eef6"/><stop offset="1" stop-color="#c8bcd0"/></radialGradient></defs>
+      <path d="M92.8 27.9 C95.6 25 106.4 25 109.2 27.9" stroke="url(#${u}-ag)" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+      <path d="M101 25.8 C98.4 25.6 97.4 23.6 97.8 22 C98.4 20.2 100 19.2 101 18.8 C102 19.2 103.6 20.2 104.2 22 C104.6 23.6 103.6 25.6 101 25.8 Z" fill="url(#${u}-na)" stroke="#a9a0c0" stroke-width=".3"/>
+      <path d="M101 25.6 V19.4 M101 25.6 L98.6 21.4 M101 25.6 L103.4 21.4 M101 25.6 L98 23.6 M101 25.6 L104 23.6" stroke="#b9aed0" stroke-width=".25" opacity=".8"/>
+      ${[[94.6, 26.6], [96.6, 25.9], [105.4, 25.9], [107.4, 26.6]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".8" fill="url(#${u}-pr)"/>`).join("")}
+      <circle cx="101" cy="18.4" r="1" fill="url(#${u}-pr)"/><path d="M101 26 v1.4" stroke="#c9d2dc" stroke-width=".3"/><ellipse cx="101" cy="28.3" rx=".7" ry=".95" fill="url(#${u}-pr)"/>
+      ${etincelle(99.2, 20.4, .8)}${etincelle(103.8, 24, .55)}${etincelle(95.6, 25, .5)}</g>`;
+    // ----- yeux -----
     if (p.yeux === "lunettes") yeux = `<g class="phb-acc">
       <defs><linearGradient id="${u}-lu" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b5676"/><stop offset=".55" stop-color="#16202e"/><stop offset="1" stop-color="#0a0f16"/></linearGradient></defs>
       <path d="M90.2 31.2 L97.6 30.2" stroke="#1d1f24" stroke-width=".9" stroke-linecap="round"/>
       <path d="M97.4 28.2 C99.4 27 104 27 105.8 28.6 C106.6 31.6 105.2 34.2 101.6 34.4 C98.6 34.4 97 32.2 97.4 28.2 Z" fill="url(#${u}-lu)" stroke="#111318" stroke-width=".7"/>
       <path d="M98.8 29 q2 -1 4.6 -.4" stroke="#9fc4ef" stroke-width=".55" fill="none" opacity=".8"/><path d="M103.8 32.4 l1 -1.4" stroke="#fff" stroke-width=".4" opacity=".35"/></g>`;
+    if (p.yeux === "lunettes_coeur") yeux = `<g class="phb-acc">
+      <defs><linearGradient id="${u}-lc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffb0cc"/><stop offset=".6" stop-color="#f0548a"/><stop offset="1" stop-color="#b8285c"/></linearGradient></defs>
+      <path d="M90.2 31.4 L97.2 30.4" stroke="#f6f0f2" stroke-width=".9" stroke-linecap="round"/><path d="M90.2 31.4 L97.2 30.4" stroke="#d24a7c" stroke-width=".35" stroke-linecap="round"/>
+      <path d="M101.6 34.6 C96.4 31.6 96.6 27.2 99.4 27.2 C100.8 27.2 101.4 28.1 101.6 28.8 C101.8 28.1 102.4 27.2 103.8 27.2 C106.6 27.2 106.8 31.6 101.6 34.6 Z" fill="url(#${u}-lc)" fill-opacity=".88" stroke="#fff" stroke-width=".7"/>
+      <path d="M101.6 34.6 C96.4 31.6 96.6 27.2 99.4 27.2 C100.8 27.2 101.4 28.1 101.6 28.8 C101.8 28.1 102.4 27.2 103.8 27.2 C106.6 27.2 106.8 31.6 101.6 34.6 Z" fill="none" stroke="#c2366a" stroke-width=".3"/>
+      <path d="M98.4 29 q1 -1 2.2 -.4" stroke="#fff" stroke-width=".55" fill="none" opacity=".85"/></g>`;
+    if (p.yeux === "monocle") yeux = `<g class="phb-acc">
+      <defs>${or("mo")}</defs>
+      <path d="M101.6 34 C100 38 95.6 41 90.4 41.6 C88.6 41.8 87.4 41.2 86.8 40.2" stroke="url(#${u}-mo)" stroke-width=".45" fill="none" stroke-dasharray=".7 .35" stroke-linecap="round"/>
+      <circle cx="101.5" cy="30.6" r="3.35" fill="#e8f4ff" fill-opacity=".14" stroke="url(#${u}-mo)" stroke-width=".8"/>
+      <circle cx="101.5" cy="30.6" r="3.35" fill="none" stroke="#7a4e10" stroke-width=".2"/>
+      <path d="M99.2 28.8 q1.4 -1.2 3.2 -.9" stroke="#fff" stroke-width=".5" fill="none" opacity=".75"/>${etincelle(104.3, 28.3, .6)}</g>`;
+    // ----- cou -----
     if (p.cou === "collier") cou = `<g class="phb-acc">
       <defs><radialGradient id="${u}-pe" cx=".35" cy=".3" r=".7"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#f3e6cf"/><stop offset="1" stop-color="#c7ad86"/></radialGradient></defs>
-      <path d="M86.2 33.4 C86 37.6 87.4 41.6 90 43.6 C92.6 45.4 95 45.8 96.8 45.6" stroke="#6b5435" stroke-width=".35" fill="none"/>
-      ${[[86.2, 34, 1.15], [86.4, 36.6, 1.25], [87.1, 39.2, 1.3], [88.4, 41.6, 1.3], [90.4, 43.5, 1.3], [92.8, 44.9, 1.25], [95.4, 45.6, 1.15]].map(([x, y, r], i) => i % 3 === 1
+      <path d="${tourCou}" stroke="#6b5435" stroke-width=".35" fill="none"/>
+      ${surCollier(8).map(([x, y], i) => [x, y, 1.05 + Math.sin(i / 7 * Math.PI) * .25]).map(([x, y, r], i) => i % 3 === 1
         ? `<path d="M${x - r} ${y + .3} C${x - r} ${y - r * 1.2} ${x + r} ${y - r * 1.2} ${x + r} ${y + .3} Z" fill="#f2c7a8" stroke="#b9846a" stroke-width=".25"/><path d="M${x} ${y + .2} v${-r * .8} M${x - r * .5} ${y + .2} l.2 ${-r * .7} M${x + r * .5} ${y + .2} l-.2 ${-r * .7}" stroke="#b9846a" stroke-width=".2"/>`
         : `<circle cx="${x}" cy="${y}" r="${r * .85}" fill="url(#${u}-pe)" stroke="#a88f6a" stroke-width=".2"/>`).join("")}</g>`;
     if (p.cou === "foulard") cou = `<g class="phb-acc">
       <defs><linearGradient id="${u}-fo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d8404a"/><stop offset="1" stop-color="#93212b"/></linearGradient></defs>
-      <path d="M85.2 33.4 C89.4 35.6 94 38.8 97.2 41.4 C94.6 44.4 91.6 46.8 88.6 48.6 C87 44.6 86 39 85.2 33.4 Z" fill="url(#${u}-fo)" stroke="#7d1a22" stroke-width=".4"/>
-      <path d="M86.6 36 C88.6 39.6 90.8 42.6 94.2 43.2 M86.8 40.6 C88.2 43 89.6 45.2 91.4 46.4" stroke="#7d1a22" stroke-width=".35" fill="none" opacity=".55"/>
-      ${[[88.4, 37.6], [91.4, 39.6], [87.8, 42.6], [90.8, 44.2], [94.2, 41.6], [88.6, 46.4]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".55" fill="#fff4ee" opacity=".9"/>`).join("")}
-      <path d="M84.6 32.4 c-1.6 -.6 -2.6 .6 -2 1.8 c.8 1.4 2.4 .8 2.6 -.2 Z" fill="#b5303a" stroke="#7d1a22" stroke-width=".3"/></g>`;
-    return { tete, yeux, cou };
+      <path d="M84.6 33.6 C85.4 37.6 88.6 40.6 92 41.8 C93.6 42.4 95 42.8 96 43 C94 45.6 91.2 48.4 88 50.2 C86.4 46.4 84.8 40.4 84.6 33.6 Z" fill="url(#${u}-fo)" stroke="#7d1a22" stroke-width=".4"/>
+      <path d="M85.6 37.4 C87 41 89.4 43.4 92.6 44.2 M86.4 42 C87.6 44.4 88.8 46.4 90.4 47.6" stroke="#7d1a22" stroke-width=".35" fill="none" opacity=".55"/>
+      ${[[86.4, 38.8], [89.4, 41.8], [86.8, 43.6], [89.8, 45.6], [92.8, 43.6], [87.8, 47.8]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".55" fill="#fff4ee" opacity=".9"/>`).join("")}
+      <path d="M84.4 32.6 c-1.6 -.6 -2.6 .6 -2 1.8 c.8 1.4 2.4 .8 2.6 -.2 Z" fill="#b5303a" stroke="#7d1a22" stroke-width=".3"/></g>`;
+    if (p.cou === "noeud") cou = `<g class="phb-acc" transform="translate(98 41.4) scale(.82) translate(-98 -41.4)">
+      <defs><linearGradient id="${u}-nd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff5a64"/><stop offset=".55" stop-color="#d0202e"/><stop offset="1" stop-color="#86101a"/></linearGradient></defs>
+      <path d="M98 41.4 L93.8 38.8 C93.2 40.2 93.2 42.6 93.8 44 Z M98 41.4 L102.2 38.8 C102.8 40.2 102.8 42.6 102.2 44 Z" fill="url(#${u}-nd)" stroke="#6e0c14" stroke-width=".35" stroke-linejoin="round"/>
+      <path d="M94.6 40 l2.4 1.2 M94.6 42.8 l2.4 -1 M101.4 40 l-2.4 1.2 M101.4 42.8 l-2.4 -1" stroke="#6e0c14" stroke-width=".25" opacity=".6"/>
+      <rect x="96.9" y="40.2" width="2.2" height="2.4" rx=".7" fill="url(#${u}-nd)" stroke="#6e0c14" stroke-width=".3"/><path d="M94.4 39.6 l1.6 .9" stroke="#fff" stroke-width=".35" opacity=".45"/></g>`;
+    if (p.cou === "perles") cou = `<g class="phb-acc">
+      <defs><radialGradient id="${u}-pl" cx=".35" cy=".3" r=".72"><stop offset="0" stop-color="#ffffff"/><stop offset=".55" stop-color="#f6eef0"/><stop offset=".85" stop-color="#dcc8d4"/><stop offset="1" stop-color="#b8a2b4"/></radialGradient></defs>
+      ${surCollier(12).map(([x, y]) => `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r=".95" fill="url(#${u}-pl)"/>`).join("")}
+      <path d="M92.6 47.2 v.6" stroke="#c9bcc6" stroke-width=".25"/><ellipse cx="92.6" cy="48.8" rx=".95" ry="1.2" fill="url(#${u}-pl)"/>${etincelle(88.8, 42.2, .5)}</g>`;
+    if (p.cou === "medaille") cou = `<g class="phb-acc">
+      <defs>${or("me")}</defs>
+      <path d="${tourCou}" stroke="url(#${u}-me)" stroke-width=".55" fill="none" stroke-dasharray=".8 .3"/>
+      <path d="M92.6 46.3 L92.6 46.9" stroke="url(#${u}-me)" stroke-width=".6"/>
+      <g transform="${stade === "bebe" ? "translate(92.6 46.6) scale(.72) translate(-92.6 -46.6)" : ""}">
+      <circle cx="92.6" cy="49.2" r="2.7" fill="url(#${u}-me)" stroke="#7a4e10" stroke-width=".35"/><circle cx="92.6" cy="49.2" r="2.05" fill="none" stroke="#fff2b0" stroke-width=".3" opacity=".8"/>
+      <path d="M90.9 50.3 C90.9 48 94.3 48 94.3 50.3 Z M92.6 50.3 V48.3 M92.6 50.3 L91.5 48.7 M92.6 50.3 L93.7 48.7" fill="#e9b938" stroke="#8a5a12" stroke-width=".25"/>${etincelle(91.4, 47.9, .7)}</g></g>`;
+    if (p.cou === "cape") {
+      dos = `<g class="phb-acc phb-cape">
+        <defs><linearGradient id="${u}-ve" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e0303f"/><stop offset=".55" stop-color="#a5101e"/><stop offset="1" stop-color="#5e0610"/></linearGradient>${or("ga")}</defs>
+        <path d="M89.2 30 C82 28.2 74 28.6 66 30 C62.6 30.6 60.4 31.6 59.6 32.6 C59 36 59.4 40 60.6 43.4 C62.6 44.6 64.2 43.4 65.8 44.6 C67.6 45.8 69.4 44.2 71.2 45.2 C73.2 46.2 75 44.6 77 45.4 C79 46.2 80.6 44.6 82.4 45 C84.6 45.4 86.2 44 87.6 42.4 Z" fill="url(#${u}-ve)"/>
+        <path d="M60.6 43.4 C62.6 44.6 64.2 43.4 65.8 44.6 C67.6 45.8 69.4 44.2 71.2 45.2 C73.2 46.2 75 44.6 77 45.4 C79 46.2 80.6 44.6 82.4 45 C84.6 45.4 86.2 44 87.6 42.4" stroke="url(#${u}-ga)" stroke-width=".9" fill="none" stroke-linecap="round"/>
+        <path d="M66.4 31 C65.4 35 65.8 39.6 67.4 44.6 M73.4 30.2 C72.6 34.4 73 39.6 74.4 45.2 M80.2 30.2 C79.6 34.6 80 39.4 81.2 44.8" stroke="#5e0610" stroke-width="1.1" fill="none" opacity=".35" stroke-linecap="round"/>
+        <path d="M62 32 C70 29.6 80 29.4 88 30.6" stroke="#ff8a90" stroke-width=".6" fill="none" opacity=".4"/>
+        <path d="M84.4 29.4 C88.4 28.6 90.6 31 90 34.6 C89.6 38 88.6 41 86.6 43 C84.6 41.6 83.6 37.4 83.6 33.4 C83.6 31.6 83.8 30.2 84.4 29.4 Z" fill="#fbf8f2" stroke="#d9d2c4" stroke-width=".35"/>
+        ${[[85.6, 31.6], [87.6, 33.8], [85.4, 36.2], [87.4, 38.6], [85.8, 40.6]].map(([x, y]) => `<path d="M${x} ${y} l.35 1.1 l-.35 -.25 l-.35 .25 Z" fill="#1a1a1a"/>`).join("")}
+        <circle cx="88.4" cy="41.6" r=".9" fill="url(#${u}-ga)" stroke="#7a4e10" stroke-width=".2"/></g>`;
+    }
+    if (dyCou && cou) cou = `<g transform="translate(0 ${dyCou})">${cou}</g>`;
+    // chapeaux, couronnes, diadème : posés sur le crâne, derrière les yeux (jamais sur l'œil), un peu inclinés comme le front
+    if (tete) tete = `<g transform="translate(-4.2 -.5) rotate(-4 97 26)">${tete}</g>`;
+    return { tete, yeux, cou, dos };
   }
 
   // ---- l'œuf : coquille souple et un peu cabossée d'œuf de reptile, à moitié enfoui dans son nid de sable ----
@@ -249,7 +344,7 @@
     const echelle = { bebe: "translate(64 57) scale(.66) translate(-64 -57)", juvenile: "translate(64 57) scale(.84) translate(-64 -57)" }[o.stade] || "";
     const teteEch = { bebe: "translate(86 36) scale(1.16) translate(-86 -36)", juvenile: "translate(86 36) scale(1.06) translate(-86 -36)" }[o.stade] || "";
     const queueEch = { bebe: "translate(45 40.4) scale(.78 1) translate(-45 -40.4)", juvenile: "translate(45 40.4) scale(.9 1) translate(-45 -40.4)" }[o.stade] || "";
-    const acc = accessoires(o.portes, u);
+    const acc = accessoires(o.portes, u, o.stade);
     const dort = h === "dort";
     const pose = o.pose || "debout";
     const dosF = teinte(c.dos, -.22);
@@ -332,6 +427,7 @@
         <path d="M86.6 33.6 C85 36.8 84.6 40.4 85.4 43.6" stroke="${dosF}" stroke-width=".5" fill="none" opacity=".35"/>
         <path d="M41.6 37 C49 31.8 59 30.4 68 30.6 C76 30.8 82.4 29.6 88.6 30.6 M88.8 41.2 ${ventreB}" stroke="${dosF}" stroke-width=".5" stroke-opacity=".8" fill="none"/>
         ${mue}
+        ${acc.dos}
         ${patte("phb-p-ar", [51, 43.4], [56.4, 48.6], [52.4, 54.8], { ...PA, w: [5.8, 3.4, 2.3], fill: `url(#${u}-m)`, doigt: teinte(c.membre, -.08), arriere: true, lum: true, tex: leger ? "" : `${u}-e`, a: J.ar, g: J.gar })}
         ${patte("phb-p-av", [80, 43], [76.6, 48.4], [80.6, 54.8], { ...PA, w: [4.4, 3, 2.1], fill: `url(#${u}-m)`, doigt: teinte(c.membre, -.08), lum: true, tex: leger ? "" : `${u}-e`, a: J.av, g: J.gav })}
         <g class="phb-tete"><g transform="${teteEch}">

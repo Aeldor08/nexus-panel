@@ -20,6 +20,7 @@ TESTS = [
     ("test_maj.py", []),
     ("test_focus_sante.py", []),
     ("test_philibert.py", [str(BASE)]),
+    ("test_release_titre.py", []),
 ]
 
 

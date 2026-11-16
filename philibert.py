@@ -31,6 +31,8 @@ PLANCHERS = {"faim": 20, "bonheur": 25, "proprete": 20, "chaleur": 20, "energie"
 SANTE_MIN = 5
 JAUGES = ("faim", "bonheur", "energie", "proprete", "sante", "chaleur")
 GAINS_JEUX_JOUR = 60
+# « Il veut jouer / il réclame de l'attention » (ennui, caprice) : seulement quand son bonheur est à 30 ou moins
+SEUIL_ATTENTION = 30
 METEO_FORCEE: str | None = None  # tests : "soleil", "nuages", "pluie"
 SAISON_FORCEE: str | None = None  # tests : "printemps", "ete", "automne", "hiver"
 # Saisons de l'île (mois réels) : probabilités de pluie et de nuages, chaleur en plus ou en moins, fruit ou
@@ -141,21 +143,53 @@ PIEGES = {
     "jambon": {"nom": "Jambon", "astuce": "Pas de viande : un iguane vert mange des feuilles, des fleurs et un peu de fruits."},
     "poisson": {"nom": "Poisson", "astuce": "Il nage très bien, mais il ne pêche pas : pas de poisson au menu."},
 }
+# Rareté : « commun », « rare », « tres_rare », « legendaire ». Les pièces rares sont chères parce qu'elles sont rares
+# (fabriquées à la main par les artisans de l'île voisine, en un seul exemplaire) ; les soins essentiels (remède,
+# nourriture) restent toujours bon marché, et un séjour chez la vétérinaire n'est jamais bloqué faute de coquillages.
+RARETES = {"commun": "Commun", "rare": "Rare", "tres_rare": "Très rare", "legendaire": "Légendaire"}
 OBJETS = {
     "remede": {"nom": "Remède de l'île", "type": "soin", "prix": 8, "texte": "À donner quand il est malade (il agit mieux au chaud)."},
     "lampe": {"nom": "Lampe chauffante", "type": "equipement", "prix": 40, "unique": True,
               "texte": "À céramique : elle chauffe sans éclairer. Pour la nuit et les jours de pluie."},
+    # --- tête ---
     "chapeau": {"nom": "Chapeau de paille", "type": "accessoire", "emplacement": "tete", "prix": 25, "unique": True, "texte": "Pour le soleil des tropiques."},
     "couronne": {"nom": "Couronne d'hibiscus", "type": "accessoire", "emplacement": "tete", "prix": 30, "unique": True, "texte": "Très chic."},
+    "bob": {"nom": "Bob de pêcheur", "type": "accessoire", "emplacement": "tete", "prix": 35, "unique": True, "texte": "En toile délavée, avec sa petite cordelette."},
+    "tricorne": {"nom": "Tricorne de pirate", "type": "accessoire", "emplacement": "tete", "prix": 180, "unique": True, "rarete": "rare",
+                 "texte": "Feutre noir et galon doré, retrouvé dans une épave. Il n'en reste que quelques-uns."},
+    "couronne_or": {"nom": "Couronne d'or", "type": "accessoire", "emplacement": "tete", "prix": 450, "unique": True, "rarete": "tres_rare",
+                    "texte": "Or ciselé, rubis, saphir et émeraude : forgée pour le roi des iguanes."},
+    "diademe": {"nom": "Diadème de nacre", "type": "accessoire", "emplacement": "tete", "prix": 800, "unique": True, "rarete": "legendaire",
+                "texte": "Nacre irisée et perles fines, une seule pièce au monde. Le trésor des artisans de l'île voisine."},
+    # --- yeux ---
     "lunettes": {"nom": "Lunettes de soleil", "type": "accessoire", "emplacement": "yeux", "prix": 20, "unique": True, "texte": "La classe à la plage."},
+    "lunettes_coeur": {"nom": "Lunettes en cœur", "type": "accessoire", "emplacement": "yeux", "prix": 45, "unique": True, "texte": "Verres roses en forme de cœur."},
+    "monocle": {"nom": "Monocle doré", "type": "accessoire", "emplacement": "yeux", "prix": 150, "unique": True, "rarete": "rare",
+                "texte": "Cerclé d'or, avec sa chaînette. Pour un iguane distingué."},
+    # --- cou ---
     "collier": {"nom": "Collier de fleurs", "type": "accessoire", "emplacement": "cou", "prix": 18, "unique": True, "texte": "Un collier fleuri, façon île."},
     "foulard": {"nom": "Foulard", "type": "accessoire", "emplacement": "cou", "prix": 15, "unique": True, "texte": "Un petit foulard à pois."},
+    "noeud": {"nom": "Nœud papillon", "type": "accessoire", "emplacement": "cou", "prix": 30, "unique": True, "texte": "Rouge, pour les grandes occasions."},
+    "perles": {"nom": "Collier de perles", "type": "accessoire", "emplacement": "cou", "prix": 220, "unique": True, "rarete": "rare",
+               "texte": "De vraies perles du lagon, patiemment assorties."},
+    "medaille": {"nom": "Médaille d'or", "type": "accessoire", "emplacement": "cou", "prix": 400, "unique": True, "rarete": "tres_rare",
+                 "texte": "Frappée d'un coquillage, sur une chaîne d'or. Remise aux iguanes les plus choyés."},
+    "cape": {"nom": "Cape royale", "type": "accessoire", "emplacement": "cou", "prix": 900, "unique": True, "rarete": "legendaire",
+             "texte": "Velours rouge, galon d'or et col d'hermine. Taillée sur mesure, il n'en existe qu'une."},
+    # --- déco de l'île ---
     "hamac": {"nom": "Hamac", "type": "deco", "prix": 30, "unique": True, "texte": "Entre le palmier et un piquet."},
     "chateau": {"nom": "Château de sable", "type": "deco", "prix": 12, "unique": True, "texte": "Avec un petit drapeau."},
     "coquillages_deco": {"nom": "Coquillages décoratifs", "type": "deco", "prix": 10, "unique": True, "texte": "Une jolie rangée sur le sable."},
     "parasol": {"nom": "Parasol", "type": "deco", "prix": 20, "unique": True, "texte": "Rayé, pour l'ombre."},
     "bouee": {"nom": "Bouée", "type": "deco", "prix": 15, "unique": True, "texte": "Elle flotte près du bord."},
+    "tiki": {"nom": "Statue tiki", "type": "deco", "prix": 120, "unique": True, "rarete": "rare", "texte": "Sculptée dans un tronc de cocotier par un artisan de l'île voisine."},
+    "phare": {"nom": "Petit phare", "type": "deco", "prix": 260, "unique": True, "rarete": "rare", "texte": "Sur son rocher, au large. Il s'allume la nuit."},
+    "coffre": {"nom": "Coffre au trésor", "type": "deco", "prix": 500, "unique": True, "rarete": "tres_rare", "texte": "À moitié enfoui, plein de pièces d'or qui brillent au soleil."},
+    "benitier": {"nom": "Bénitier et sa perle", "type": "deco", "prix": 750, "unique": True, "rarete": "legendaire",
+                 "texte": "Un grand coquillage du lagon, avec une perle géante. Une merveille."},
 }
+for _o in OBJETS.values():
+    _o.setdefault("rarete", "commun")
 EMPLACEMENTS = ("tete", "yeux", "cou")
 VARIANTES = {"insulaire": "l'Insulaire", "royal": "le Royal", "gourmand": "le Gourmand", "nageur": "le Nageur",
              "convalescent": "le Convalescent"}
@@ -218,6 +252,7 @@ SUCCES = {
     "tresor": ("Trésor de l'île", "Avoir 100 coquillages en poche", 0),
     "coureur": ("Coureur du soleil", "Arriver au rocher chaud avec 15 rayons de soleil ou plus", 10),
     "saisons": ("Les quatre saisons", "Vivre les quatre saisons de l'île", 15),
+    "collection": ("Pièce de collection", "Acheter un objet légendaire", 0),
 }
 EVENEMENTS = {
     "croquettes": {"texte": "Un touriste a oublié des croquettes pour chat sur la plage.", "aliment": "croquettes",
@@ -285,7 +320,7 @@ class Philibert:
                       "meilleur_course": 0, "courses_gagnees": 0},
             "gouts": [], "moy": {"sante": 0.0, "bonheur": 0.0, "n": 0.0}, "regime": [], "friandises_t": [],
             "carnet": [], "cartes": [], "succes": {}, "succes_vus": [], "faits": [],
-            "reglages": {"visible": True, "vitesse": "normale", "sons": True, "notif_windows": False, "discord": False,
+            "reglages": {"visible": True, "vitesse": "normale", "sons": True, "ambiance": True, "theme": "auto", "notif_windows": False, "discord": False,
                          **(reglages or {})},
             "jeu": None, "jeux_jour": {"jour": "", "gagnes": 0}, "ramasse": 0.0, "bonne": None,
             "album": list(album or []), "etapes": [], "saisons_vues": [],
@@ -343,6 +378,7 @@ class Philibert:
             "feuilles": st["meilleur_feuilles"] >= 20, "devin": st["meilleur_devin"] >= 5, "rythme": st["meilleur_rythme"] >= 6,
             "semaine": s["age_s"] >= 7 * JOUR, "coquet": len(s["accessoires"]) >= 3, "decorateur": len(s["deco"]) >= 3,
             "tresor": s["coquillages"] >= 100,
+            "collection": any(OBJETS[x]["rarete"] == "legendaire" for x in s["accessoires"] + s["deco"] if x in OBJETS),
         }
         for k, c in conds.items():
             if c:
@@ -541,6 +577,8 @@ class Philibert:
             return
         # appels (vrais besoins ou caprices)
         a = s["appel"]
+        if a and a["type"] == "caprice" and j["bonheur"] > SEUIL_ATTENTION:     # il est redevenu content : plus d'appel
+            s["appel"], a = None, None
         if a and t >= a["t"] + 2 * H:
             if a["type"] == "besoin":
                 j["bonheur"] = max(min(j["bonheur"], PLANCHERS["bonheur"]) if absent else 0, j["bonheur"] - 5)
@@ -552,7 +590,7 @@ class Philibert:
             vrais = [x for x in b if x["id"] not in ("ventre", "lumiere")]
             if vrais:
                 s["appel"] = {"t": t, "type": "besoin", "raison": vrais[0]["id"]}
-            elif _alea(s["graine"], "caprice", int(t // PAS)) < .035 * (1 - s["discipline"] / 130):
+            elif j["bonheur"] <= SEUIL_ATTENTION and _alea(s["graine"], "caprice", int(t // PAS)) < .035 * (1 - s["discipline"] / 130):
                 s["appel"] = {"t": t, "type": "caprice", "raison": "caprice"}
         # évènements de l'île (le jour, éveillé)
         e = s["evenement"]
@@ -714,7 +752,7 @@ class Philibert:
             out.append({"id": "fatigue", "texte": "Il est fatigué : laisse-le se reposer."})
         if j["proprete"] < 30 or s["crottes"] >= 2:
             out.append({"id": "proprete", "texte": "Son coin est sale : nettoie, ou offre-lui un bain."})
-        if j["bonheur"] < 30:
+        if j["bonheur"] <= SEUIL_ATTENTION:
             out.append({"id": "ennui", "texte": "Il s'ennuie : joue avec lui ou caresse-le."})
         if s["mue"]:
             out.append({"id": "mue", "texte": "Il mue : un bain tiède l'aiderait."})
@@ -769,7 +807,7 @@ class Philibert:
             humeur = "malade"
         elif grognon:
             humeur = "grognon"
-        elif s["appel"]:
+        elif s["appel"] and (s["appel"]["type"] != "caprice" or j["bonheur"] <= SEUIL_ATTENTION):
             humeur = "appel"
         elif j["chaleur"] < 35:
             humeur = "froid"
@@ -779,6 +817,8 @@ class Philibert:
             humeur = "calme"
         jeux = s["jeux_jour"]
         a = s["appel"]
+        if a and a["type"] == "caprice" and j["bonheur"] > SEUIL_ATTENTION:
+            s["appel"] = a = None
         return {
             "nom": "Philibert", "titre": self.titre(), "stade": s["stade"], "stade_nom": STADES[s["stade"]], "variante": s["variante"],
             "age_jours": round(s["age_s"] / JOUR, 2), "ne": s["ne"], "eclos": s["eclos"],
@@ -820,7 +860,7 @@ class Philibert:
         return {
             "aliments": ALIMENTS, "pieges": {k: v["nom"] for k, v in PIEGES.items()}, "objets": OBJETS,
             "succes": {k: {"nom": v[0], "texte": v[1], "gain": v[2]} for k, v in SUCCES.items()},
-            "faits_total": len(FAITS), "variantes": VARIANTES,
+            "faits_total": len(FAITS), "variantes": VARIANTES, "raretes": RARETES,
             "saisons": {k: {"nom": v["nom"], "texte": v["texte"], "promo": v["promo"]} for k, v in SAISONS.items()}, "stades": STADES, "jeux": JEUX,
         }
 
@@ -1238,11 +1278,13 @@ class Philibert:
 
     def _a_reglages(self, now: float, p: dict) -> dict:
         r = self.s["reglages"]
-        for k in ("visible", "sons", "notif_windows", "discord"):
+        for k in ("visible", "sons", "ambiance", "notif_windows", "discord"):
             if k in p:
                 r[k] = bool(p[k])
         if p.get("vitesse") in ("normale", "lente"):
             r["vitesse"] = p["vitesse"]
+        if p.get("theme") in ("auto", "clair", "sombre"):            # couleurs de l'interface de l'île
+            r["theme"] = p["theme"]
         return {"message": "Réglages enregistrés."}
 
     def _a_recommencer(self, now: float, p: dict) -> dict:
