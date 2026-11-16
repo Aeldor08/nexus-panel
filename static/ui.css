@@ -53,7 +53,7 @@
   background: linear-gradient(135deg, transparent 50%, var(--cyan) 50% 58%, transparent 58% 70%, var(--cyan) 70% 78%, transparent 78%); opacity: .7; }
 .nx-rs:hover { opacity: 1; }
 .nx-locked .nx-rs { display: none; }
-.nx-locked .sv-note > .sv-rs { display: block; }      /* post-it : taille réglable même page verrouillée */
+.nx-locked .sv-item > .sv-rs { display: block; }      /* mur des Souvenirs (post-it et photos) : taille réglable même page verrouillée */
 .nx-locked .ag-panel > h2.nx-drag { cursor: default; touch-action: auto; }
 .btn.on { border-color: var(--yellow); color: var(--yellow); }
 @media (pointer: coarse) { .nx-rs { width: 34px; height: 34px; } }

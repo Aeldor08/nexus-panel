@@ -200,6 +200,9 @@ def main() -> int:
     ap.add_argument("--sans-publier", action="store_true", help="tout préparer sans pousser ni créer la release")
     ap.add_argument("--construire-seulement", action="store_true", help="seulement l'archive et son SHA256 (CI)")
     ap.add_argument("--depot", default="", help="propriétaire/nom écrit dans l'archive (par défaut : origin)")
+    ap.add_argument("--branche", action="store_true",
+                    help="publier depuis une branche de release (ex. sans une fonction pas encore prête) : "
+                         "seul le tag est poussé, main n'est pas touchée")
     a = ap.parse_args()
     git = outil("git")
     if not git:
@@ -218,7 +221,7 @@ def main() -> int:
     if _cmd(git, "status", "--porcelain"):
         raise Arret("des fichiers sont modifiés ou non suivis : commite-les (ou ajoute-les à .gitignore) d'abord")
     branche = _cmd(git, "branch", "--show-current")
-    if branche != "main":
+    if branche != "main" and not a.branche:
         raise Arret(f"publie depuis la branche main (actuelle : {branche})")
     gh = outil("gh")
     if not a.sans_publier:
@@ -257,8 +260,9 @@ def main() -> int:
         print(f"\nPrêt (non publié) : tag {tag} local, {archive.name} et {somme.name} dans dist\\.")
         return 0
     etape("Envoi sur GitHub")
-    _cmd(git, "push", "origin", "main")
-    _cmd(git, "push", "origin", tag)
+    if not a.branche:
+        _cmd(git, "push", "origin", "main")
+    _cmd(git, "push", "origin", tag)                       # (avec --branche : seul le tag part, pas la branche)
     notes_f = DIST / f"notes-{ver}.md"
     notes_f.write_text(notes + "\n\nVérifier l'archive : `certutil -hashfile NEXUS-" + ver + ".zip SHA256` doit donner "
                        "le contenu du fichier `.sha256`.\n", encoding="utf-8")
