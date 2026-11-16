@@ -35,6 +35,7 @@ import journal as journal_mod
 import lan
 import launcher as launcher_mod
 import media as media_mod
+import philibert as philibert_mod
 import profiles as profiles_mod
 import reminders as reminders_mod
 import remote as remote_mod
@@ -85,6 +86,13 @@ def _gpu_load():
 
 # Minuteur Pomodoro / mode focus (le temps de travail compte dans les statistiques)
 focus_svc = focus_mod.Focus(journal=activite.noter)
+# Philibert, l'iguane de NEXUS (docs/PHILIBERT.md) : Discord seulement si l'option est cochée dans ses réglages,
+# envoyé dans un fil à part (le bot peut mettre jusqu'à 15 s à répondre)
+def _philibert_discord(titre: str, texte: str) -> None:
+    threading.Thread(target=lambda: discord_bot.notify(titre, texte), name="philibert-discord", daemon=True).start()
+
+
+philibert_svc = philibert_mod.Philibert(journal=activite.noter, notifier=_philibert_discord)
 # Statistiques personnelles : réutilise le mode jeu, le panneau multimédia et la lecture GPU (démarré dans __main__)
 tracker = statistiques_mod.Tracker(game_state=game_mode.state, media_state=media.state, gpu_load=_gpu_load,
                                    en_focus=focus_svc.en_travail)
@@ -1158,6 +1166,47 @@ async def api_focus_action(action: str, request: Request) -> JSONResponse:
     if action not in actions:
         raise BadRequest("action inconnue", 404)
     return JSONResponse(actions[action]())
+
+
+# ---- Philibert (l'iguane) ----------------------------------------------------
+def _philibert(fn, *a):
+    try:
+        return JSONResponse(fn(*a), headers=NO_STORE)
+    except philibert_mod.PhilibertErreur as e:
+        raise BadRequest(str(e))
+
+
+@app.get("/api/philibert")
+def api_philibert() -> JSONResponse:
+    return _philibert(philibert_svc.etat)
+
+
+@app.get("/api/philibert/catalogue")
+def api_philibert_catalogue() -> JSONResponse:
+    return _philibert(philibert_svc.catalogue)
+
+
+@app.get("/api/philibert/carnet")
+def api_philibert_carnet() -> JSONResponse:
+    return _philibert(philibert_svc.carnet)
+
+
+@app.post("/api/philibert/action")
+async def api_philibert_action(request: Request) -> JSONResponse:
+    body = await json_body(request)
+    return _philibert(philibert_svc.action, str(body.get("action") or "")[:30], body)
+
+
+@app.post("/api/philibert/jeu/{etape}")
+async def api_philibert_jeu(etape: str, request: Request) -> JSONResponse:
+    body = await json_body(request)
+    if etape == "debut":
+        return _philibert(philibert_svc.jeu_debut, str(body.get("jeu") or ""))
+    if etape == "coup":
+        return _philibert(philibert_svc.jeu_coup, body.get("jeton"), body.get("choix"), body.get("reponse"))
+    if etape == "fin":
+        return _philibert(philibert_svc.jeu_fin, body.get("jeton"), body.get("score"), body.get("insectes"))
+    raise BadRequest("étape inconnue", 404)
 
 
 @app.get("/api/version")

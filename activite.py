@@ -1,7 +1,8 @@
 """Journal d'activité des actions sensibles, consultable dans le panel (fenêtre « Santé de NEXUS »).
 
 Catégories : deck (boutons, connexions, édition), maj (installation, retour, jeton, réglages), appareil
-(appairage du téléphone, appareil refusé ou retiré), processus (fermeture), focus (sessions Pomodoro).
+(appairage du téléphone, appareil refusé ou retiré), processus (fermeture), focus (sessions Pomodoro),
+philibert (éclosion, évolutions, vétérinaire, vacances de l'iguane).
 Une ligne JSON par évènement dans data/activite.jsonl (données personnelles : hors Git, jamais partagé).
 Jamais de secret dans le journal : ni mot de passe, ni jeton, ni contenu privé.
 """
@@ -16,7 +17,7 @@ import store
 FICHIER = store.DATA_DIR / "activite.jsonl"
 MAX_LIGNES, GARDER = 3000, 2000          # au-delà de 3000 lignes, on garde les 2000 plus récentes
 CATEGORIES = {"deck": "Deck", "maj": "Mises à jour", "appareil": "Appareils", "processus": "Processus",
-              "focus": "Focus"}
+              "focus": "Focus", "philibert": "Philibert"}
 _lock = threading.Lock()
 _n = None                                # nombre de lignes (compté à la première écriture)
 _vus: dict[str, float] = {}              # anti-répétition (ex. un appareil non appairé qui réessaie en boucle)
