@@ -253,6 +253,9 @@ son île.
 
 ## 13. Notifications et réglages
 
+- **Sur le PC seulement** : depuis le téléphone (accès réseau), Philibert n'apparaît pas (ni en haut, ni île, ni tuile,
+  ni réglage) et le serveur refuse `/api/philibert…` (« réservé au PC »), comme les mises à jour.
+
 - **Bulle** sur Philibert en haut de la page quand il a vraiment besoin de soin (« ! »), cœur quand il est
   heureux, « Zzz » la nuit, nuage gris quand il est malade.
 - **Notification Windows** (facultative, via le navigateur, comme les alertes de NEXUS) quand il tombe malade ou
