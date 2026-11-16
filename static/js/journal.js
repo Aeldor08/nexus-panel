@@ -94,12 +94,33 @@
     bind();
   }
 
+  // ---- Taille de la zone de texte, par jour ----
+  // Sans réglage : elle s'adapte au texte du jour (260 px au moins, 900 au plus, puis défilement).
+  // Redimensionnée à la main (poignée en bas à droite) : la hauteur est retenue pour CE jour, sur cet appareil,
+  // et retrouvée telle quelle après F5 (la page ne « saute » plus au rechargement).
+  const H_KEY = "nexus-journal-hauteurs", H_MIN = 260, H_MAX = 900;
+  const hauteurs = () => { try { return JSON.parse(localStorage.getItem(H_KEY) || "{}") || {}; } catch (e) { return {}; } };
+  function retenirHauteur(jour, h) {
+    const m = hauteurs();
+    m[jour] = Math.round(h);
+    const cles = Object.keys(m).sort();
+    while (cles.length > 400) delete m[cles.shift()];        // les 400 jours les plus récents suffisent
+    try { localStorage.setItem(H_KEY, JSON.stringify(m)); } catch (e) {}
+  }
+  function ajusterTexte() {
+    const t = $("jn-text"); if (!t) return;
+    const voulue = hauteurs()[day];
+    if (voulue) t.style.height = voulue + "px";
+    else { t.style.height = "auto"; t.style.height = Math.min(H_MAX, Math.max(H_MIN, t.scrollHeight + 4)) + "px"; }
+  }
+
   function fill() {
     $("jn-title").textContent = parse(day).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
     $("jn-pick").value = day;
     root.querySelectorAll("[data-mood]").forEach(b => b.setAttribute("aria-checked", b.dataset.mood === entry.humeur ? "true" : "false"));
     root.querySelectorAll("[data-act]").forEach(b => b.setAttribute("aria-pressed", entry.activites.includes(b.dataset.act) ? "true" : "false"));
     $("jn-text").value = entry.texte;
+    ajusterTexte();
     $("jn-saved").textContent = entry.modifie ? "enregistré" : "";
     drawFace();
   }
@@ -171,7 +192,21 @@
     $("jn-pick").addEventListener("change", e => { if (e.target.value) go(e.target.value); });
     $("jn-mprev").addEventListener("click", () => { const d = parse(month + "-01"); d.setMonth(d.getMonth() - 1); month = ymd(d).slice(0, 7); loadMonth(); });
     $("jn-mnext").addEventListener("click", () => { const d = parse(month + "-01"); d.setMonth(d.getMonth() + 1); month = ymd(d).slice(0, 7); loadMonth(); });
-    $("jn-text").addEventListener("input", e => { entry.texte = e.target.value; changed(); });
+    $("jn-text").addEventListener("input", e => {
+      entry.texte = e.target.value; changed();
+      if (!hauteurs()[day]) ajusterTexte();                   // pas de taille choisie : elle suit le texte
+    });
+    // redimensionnement À LA MAIN (poignée en bas à droite) : hauteur au début et à la fin du geste ; si elle a
+    // changé, elle est retenue pour ce jour
+    let hDebut = 0;
+    $("jn-text").addEventListener("pointerdown", e => { hDebut = e.currentTarget.offsetHeight; });
+    addEventListener("pointerup", () => {
+      const t = $("jn-text");
+      if (!hDebut || !t) return;
+      const h = t.offsetHeight;
+      if (Math.abs(h - hDebut) > 2) retenirHauteur(day, h);
+      hDebut = 0;
+    });
     $("jn-text").addEventListener("blur", () => flush());
     $("jn-q").addEventListener("input", e => { clearTimeout(qTimer); qTimer = setTimeout(() => search(e.target.value), 300); });
     const relock = $("jn-relock");

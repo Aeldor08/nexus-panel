@@ -113,7 +113,9 @@
         list = list.concat(more.occurrences.filter(o => !have.has(o.id)));
       }
       if (ticket !== refreshing) return;          // une demande plus récente est partie entre-temps
-      occ = list; todos = data.todos; notes = data.notes;
+      occ = list;
+      // modifs en attente ou en cours d'envoi : on garde celles de la page (le serveur aura les mêmes juste après)
+      if (!saveTimer && !saveEnCours) { todos = data.todos; notes = data.notes; }
       events = Object.fromEntries(data.evenements.map(e => [e.id, e]));
       defaults = data.reglages; REPEAT = data.repetitions || REPEAT;
       range = r; loaded = true;
@@ -122,15 +124,16 @@
   }
 
   // ---- To-do et notes : enregistrement différé (regroupe les frappes) ----
-  let saveTimer;
+  let saveTimer, saveEnCours = 0;
   function saveNotebook(now) {
     clearTimeout(saveTimer);
     const run = async () => {
-      saveTimer = null;
+      saveTimer = null; saveEnCours++;
       try {
         await api("/api/agenda/carnet", { todos, notes }, "PUT");
         const s = $("n-saved"); if (s) s.textContent = "Enregistré ✔";
       } catch (e) { toast("Enregistrement impossible : " + e.message, true); }
+      finally { saveEnCours--; }
     };
     if (now) run(); else saveTimer = setTimeout(run, 600);
   }
@@ -397,11 +400,14 @@
     $("n-title").value = n.title || "";
     $("n-text").value = n.text || "";
     const onEdit = () => {
-      n.title = $("n-title").value; n.text = $("n-text").value; n.updated = Date.now();
+      // toujours la note ACTUELLE du carnet (après un rechargement, l'ancien objet n'en fait plus partie)
+      let cur = notes.find(x => x.id === n.id);
+      if (!cur) { cur = n; notes.push(cur); }
+      cur.title = $("n-title").value; cur.text = $("n-text").value; cur.updated = Date.now();
       $("n-saved").textContent = "…";
       saveNotebook();
       const b = $("n-list").querySelector(`[data-note="${n.id}"] span`);
-      if (b) b.textContent = n.title || "Sans titre";
+      if (b) b.textContent = cur.title || "Sans titre";
     };
     $("n-title").addEventListener("input", onEdit);
     $("n-text").addEventListener("input", onEdit);
@@ -439,7 +445,7 @@
     if (ev.target.closest("[data-cancel]")) { editing = null; renderForm(); renderDay(); return; }    const dt = ev.target.closest("[data-del-todo]");
     if (dt) { todos = todos.filter(t => t.id !== dt.dataset.delTodo); saveNotebook(true); renderTodos(); renderCal(); return; }
     const nb = ev.target.closest("[data-note]");
-    if (nb) { noteId = nb.dataset.note; renderNotes(); }
+    if (nb) { if (saveTimer) saveNotebook(true); noteId = nb.dataset.note; renderNotes(); }
   });
   root.addEventListener("change", ev => {
     if (ev.target.closest("#a-form")) { syncForm(); return; }

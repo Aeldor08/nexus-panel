@@ -187,6 +187,15 @@ function SvWall(host, hooks) {
     try { await api(`/api/souvenirs/notes/${id}/modifier`, { texte: value }); const n = data.notes.find(x => x.id === id); if (n) n.texte = value; }
     catch (e) { toast("Note : " + e.message, true); }
   }
+  // texte tapé pas encore enregistré (moins de 600 ms) : enregistré tout de suite, AVANT une autre action
+  // (couleur, écriture, taille, police, épingle, suppression, rechargement du mur) — sinon il serait effacé
+  async function flushTexts() {
+    const ids = Object.keys(noteTimers);
+    await Promise.all(ids.map(id => {
+      const t = canvas.querySelector(`[data-ntext="${id}"]`);
+      return t ? saveText(id, t.value) : (clearTimeout(noteTimers[id]), delete noteTimers[id], null);
+    }));
+  }
   canvas.addEventListener("input", ev => {
     const t = ev.target.closest("[data-ntext]");
     if (!t) return;
@@ -240,7 +249,7 @@ function SvWall(host, hooks) {
   canvas.addEventListener("change", async ev => {          // police
     const s = ev.target.closest("[data-nfonte]");
     if (!s) return;
-    try { await api(`/api/souvenirs/notes/${s.dataset.nfonte}/modifier`, { fonte: s.value }); await load(data.jour); }
+    try { await flushTexts(); await api(`/api/souvenirs/notes/${s.dataset.nfonte}/modifier`, { fonte: s.value }); await load(data.jour); }
     catch (e) { toast("Note : " + e.message, true); }
   });
   canvas.addEventListener("click", async ev => {
@@ -249,6 +258,7 @@ function SvWall(host, hooks) {
     const id = b.dataset.nid || b.dataset.npin || b.dataset.ndel, n = data.notes.find(x => x.id === id);
     if (!n) return;
     try {
+      await flushTexts();
       if (b.dataset.ncolor) await api(`/api/souvenirs/notes/${id}/modifier`, { couleur: b.dataset.ncolor });
       else if (b.dataset.nink) await api(`/api/souvenirs/notes/${id}/modifier`, { encre: b.dataset.nink });
       else if (b.dataset.nfont) await api(`/api/souvenirs/notes/${id}/modifier`, { police: n.police + Number(b.dataset.nfont) });
@@ -266,6 +276,7 @@ function SvWall(host, hooks) {
 
   // ---- API ----
   async function load(day) {
+    await flushTexts();                                       // jamais de texte perdu au rechargement du mur
     if (data && data.jour !== day) editingId = null;          // autre jour : plus de note en cours d'édition
     try { data = await api(`/api/souvenirs/jour/${day}`); }
     catch (e) { toast("Souvenirs : " + e.message, true); return null; }
