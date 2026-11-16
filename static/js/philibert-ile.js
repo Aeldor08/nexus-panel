@@ -140,8 +140,8 @@
       if (!maitre) return;
       const m = maitre, n = noeuds, c = C();
       maitre = null; noeuds = [];
-      try { m.gain.cancelScheduledValues(c.currentTime); m.gain.setValueAtTime(Math.max(.0001, m.gain.value), c.currentTime); m.gain.exponentialRampToValueAtTime(.0001, c.currentTime + .5); } catch (x) { /* déjà fermé */ }
-      setTimeout(() => { n.forEach(x => { try { x.stop && x.stop(); } catch (y) { /* déjà arrêté */ } try { x.disconnect(); } catch (y) { /* rien */ } }); try { m.disconnect(); } catch (y) { /* rien */ } }, 700);
+      try { m.gain.cancelScheduledValues(c.currentTime); m.gain.setValueAtTime(Math.max(.0001, m.gain.value), c.currentTime); m.gain.exponentialRampToValueAtTime(.0001, c.currentTime + .2); } catch (x) { /* déjà fermé */ }
+      setTimeout(() => { n.forEach(x => { try { x.stop && x.stop(); } catch (y) { /* déjà arrêté */ } try { x.disconnect(); } catch (y) { /* rien */ } }); try { m.disconnect(); } catch (y) { /* rien */ } }, 350);
     }
     function maj() {
       let k = "";
@@ -1245,7 +1245,19 @@
     flaner();
     if (f && typeof f === "string") ouvrirFeuille(f);
   }
-  dlg.addEventListener("close", () => { Ambiance.maj(); clearInterval(pollT); clearTimeout(flanerT); feuille = null; if (window.PhilibertJeux) window.PhilibertJeux.arreter(); rendreFeuille(); });
+  // Fermeture : le son et le reste s'arrêtent tout de suite (dès que l'attribut « open » disparaît), sans attendre
+  // l'évènement « close » qui peut arriver une demi-seconde plus tard sur une page chargée ; et un « close » tardif
+  // n'abîme plus une île rouverte entre-temps.
+  function quandFerme() {
+    if (dlg.open) return;
+    Ambiance.maj();
+    clearInterval(pollT); clearTimeout(flanerT);
+    feuille = null;
+    if (window.PhilibertJeux) window.PhilibertJeux.arreter();
+    rendreFeuille();
+  }
+  dlg.addEventListener("close", quandFerme);
+  new MutationObserver(() => { if (dlg.open) Ambiance.maj(); else quandFerme(); }).observe(dlg, { attributes: true, attributeFilter: ["open"] });
   dlg.addEventListener("cancel", ev => {                              // Échap : ferme d'abord le panneau ouvert
     if (feuille && feuille !== "carte") { ev.preventDefault(); fermerFeuille(); }
   });
