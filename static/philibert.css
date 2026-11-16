@@ -1,0 +1,272 @@
+/* =====================================================================
+   Philibert, l'iguane de NEXUS (js/philibert*.js, règles dans docs/PHILIBERT.md)
+   - en haut : un petit couloir sous la barre du haut, où il se promène (il ne recouvre aucun bouton) ;
+   - son île : une fenêtre qui garde son propre univers (couleurs fixes, lisibles avec tous les profils).
+   Animations : transform/opacity seulement pour ce qui bouge en continu ; coupées en mode jeu (theme.css),
+   en pause onglet caché (html.nx-pause) et avec « réduire les animations » (fin de ce fichier).
+   ===================================================================== */
+
+/* ---------- Le couloir et Philibert du haut ---------- */
+:root body.phb-on > header { margin-bottom: 66px; }
+.phb-lane { position: absolute; left: 0; right: 0; top: calc(100% + 8px); height: 50px; pointer-events: none; z-index: 6; }
+.phb-lane[hidden] { display: none; }
+.phb-mini { position: absolute; left: 0; bottom: 0; width: 96px; height: 48px; margin: 0; padding: 0; border: 0; background: none;
+  color: inherit; font: inherit; text-transform: none; letter-spacing: normal; cursor: pointer;
+  pointer-events: none;                                    /* seul son corps dessiné est cliquable (ci-dessous) */
+  transform: translateX(0); transition-property: transform; transition-timing-function: linear; will-change: transform; }
+.phb-mini svg path, .phb-mini svg circle, .phb-mini svg rect, .phb-mini svg ellipse:not(.phb-ombre) { pointer-events: visiblePainted; cursor: pointer; }
+.phb-mini:focus { outline: none; }
+.phb-mini:focus-visible { outline: 2px solid var(--yellow, #f6c400); outline-offset: 3px; border-radius: 10px; }
+.phb-flip { display: block; width: 100%; height: 100%; transition: transform .25s ease; }
+.phb-flip > svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.phb-anim.gauche .phb-flip { transform: scaleX(-1); }
+
+.phb-bulle { position: absolute; bottom: 34px; left: 74px; min-width: 24px; height: 22px; padding: 0 5px; display: grid; place-items: center;
+  border-radius: 12px; background: #fffef8; border: 1.5px solid #34495e; color: #2c3e50; font: 700 13px/1 "Trebuchet MS", system-ui, sans-serif;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .25); pointer-events: none; }
+.phb-bulle[hidden] { display: none; }
+.phb-bulle::after { content: ""; position: absolute; left: 4px; bottom: -6px; border: 5px solid transparent; border-top-color: #34495e; border-bottom: 0; }
+.phb-mini.gauche .phb-bulle { left: auto; right: 74px; }
+.phb-mini.gauche .phb-bulle::after { left: auto; right: 4px; }
+.phb-bulle svg { width: 15px; height: 15px; display: block; }
+.phb-bulle.phb-b-appel { background: #ffd166; border-color: #8a5a00; color: #3a2400; }
+.phb-bulle.phb-b-zzz b { display: inline-block; font-size: 11px; color: #3b5b8c; animation: phb-zzz 2.6s ease-in-out infinite; }
+@keyframes phb-zzz { 0%, 100% { transform: translateY(1px); opacity: .55; } 50% { transform: translateY(-2px); opacity: 1; } }
+.phb-panneau { position: absolute; left: 90px; bottom: 7px; max-width: calc(100vw - 150px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding: 3px 9px; border-radius: 10px; font: 600 12px/1.3 "Trebuchet MS", system-ui, sans-serif; text-transform: none; letter-spacing: normal;
+  color: #3d2a14; background: rgba(255, 248, 232, .95); border: 1px solid #c98f52; pointer-events: none; }
+.phb-panneau[hidden] { display: none; }
+
+/* ---------- Animations du dessin (partagées : haut, île, mini-jeux) ---------- */
+.phb-p-av { transform-origin: 80px 43px; } .phb-p-ar { transform-origin: 51px 43px; }
+.phb-p-av-loin { transform-origin: 75px 42px; } .phb-p-ar-loin { transform-origin: 46.5px 42px; }
+.phb-queue { transform-origin: 44px 41px; } .phb-tete { transform-origin: 86px 37px; } .phb-fanon { transform-origin: 92px 40px; }
+.phb-paupiere { transform-origin: 101.2px 27.5px; transform: scaleY(0); }
+.phb-corps-tout { transition: transform .4s ease; }
+/* marche : 2 images par pas (steps) → très peu de dessin */
+@keyframes phb-pas { 0%, 100% { transform: rotate(-15deg); } 50% { transform: rotate(15deg); } }
+@keyframes phb-queue { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+.phb-anim.marche .phb-p-av, .phb-anim.marche .phb-p-ar-loin { animation: phb-pas .5s steps(1) infinite; }
+.phb-anim.marche .phb-p-ar, .phb-anim.marche .phb-p-av-loin { animation: phb-pas .5s steps(1) infinite -.25s; }
+.phb-anim.marche .phb-queue { animation: phb-queue 1s steps(1) infinite; }
+.phb-anim.cligne .phb-paupiere { transform: scaleY(1); }
+@keyframes phb-hoche { 50% { transform: translateY(2.6px) rotate(5deg); } }
+@keyframes phb-hoche-g { 40% { transform: translateY(6px) rotate(11deg); } }
+@keyframes phb-fanon { to { transform: scale(1.08, 1.5); } }
+@keyframes phb-mange { 50% { transform: translateY(3.4px) rotate(8deg); } }
+@keyframes phb-non { 25% { transform: rotate(-7deg); } 75% { transform: rotate(5deg); } }
+.phb-anim.hoche .phb-tete { animation: phb-hoche .34s ease-in-out 4; }
+.phb-anim.hoche-petit .phb-tete { animation: phb-hoche .26s ease-in-out 2; }
+.phb-anim.hoche-grand .phb-tete { animation: phb-hoche-g .8s ease-in-out 1; }
+.phb-anim.fanon .phb-fanon { animation: phb-fanon .22s ease-in-out 6 alternate; }
+.phb-anim.mange .phb-tete { animation: phb-mange .3s ease-in-out 4; }
+.phb-anim.refus .phb-tete { animation: phb-non .3s ease-in-out 4; }
+.phb-anim.triste .phb-tete { transform: translateY(2.4px) rotate(7deg); transition: transform .3s; }
+.phb-anim.regarde .phb-tete { transform: rotate(-9deg) translateY(-1px); transition: transform .5s; }
+/* à plat ventre (soleil) et endormi : corps posé, pattes écartées */
+.phb-anim.plat .phb-corps-tout, .phb-pose-plat .phb-corps-tout, .phb-pose-dort .phb-corps-tout { transform: translateY(5.5px); }
+.phb-anim.plat .phb-patte, .phb-pose-plat .phb-patte, .phb-pose-dort .phb-patte { transform: scaleY(.38) rotate(-30deg); }
+.phb-pose-nage .phb-patte, .phb-pose-nage .phb-ombre { opacity: 0; }
+
+/* =====================================================================
+   L'île (fenêtre)
+   ===================================================================== */
+.phb-dlg { --phb-sh: clamp(200px, calc(100vh - 400px), 470px);
+  width: min(1120px, calc(100vw - 24px)); max-width: none; height: min(900px, calc(100vh - 24px)); max-height: none;
+  margin: auto; padding: 0; border: 0; border-radius: 18px; overflow: hidden;
+  background: #fff8e8; color: #1f3036; font: 15px/1.45 "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+  text-transform: none; letter-spacing: normal; text-shadow: none; box-shadow: 0 24px 80px rgba(0, 0, 0, .55); }
+.phb-dlg::backdrop { background: rgba(3, 18, 28, .74); }
+.phb-dlg * { box-sizing: border-box; }
+.phb-ile { position: relative; display: flex; flex-direction: column; height: 100%; }
+.phb-tete-ile { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; padding: 10px 14px 10px 18px; background: #0d6470; color: #fff; }
+.phb-titres { display: flex; align-items: baseline; gap: 4px 12px; flex-wrap: wrap; margin-right: auto; min-width: 0; }
+.phb-tete-ile h2 { margin: 0; font: 700 22px/1.2 "Trebuchet MS", system-ui, sans-serif; letter-spacing: .3px; color: #fff; text-transform: none; }
+.phb-tete-ile h2::before, .phb-tete-ile h2::after { content: none; }
+.phb-sous { font-size: 14px; color: #dff6f4; }
+.phb-meteo { font-size: 13px; color: #dff6f4; }
+.phb-coq { padding: 3px 12px; border-radius: 20px; background: #fff3d1; color: #5a3b00; font-weight: 700; font-variant-numeric: tabular-nums; }
+.phb-dlg .phb-fermer { background: #0a4f58; color: #fff; border-color: #6fb6bd; }
+
+.phb-scene-zone { flex: 0 0 auto; background: linear-gradient(#5aa9d6 0 50%, #1d8fa8 50% 100%); }
+.phb-scene { position: relative; width: min(100%, calc(var(--phb-sh) * 2)); aspect-ratio: 2 / 1; margin: 0 auto; overflow: hidden; contain: layout paint; }
+.phb-decor, .phb-crottes { position: absolute; inset: 0; }
+.phb-l { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.phb-decor svg.phb-l { overflow: hidden; }
+.phb-nuit { background: #061230; pointer-events: none; transition: opacity 1s; }
+/* nuages, mouettes, vagues, crabes, pluie : couches HTML qui bougent par transform (aucun redessin) */
+.phb-nuages, .phb-mouettes, .phb-vagues, .phb-crabes, .phb-pluie { overflow: hidden; pointer-events: none; }
+.phb-nuage { position: absolute; left: 0; animation: phb-nuage var(--d) linear infinite; animation-delay: var(--r); will-change: transform; }
+.phb-nuage svg { display: block; width: 100%; height: auto; }
+@keyframes phb-nuage { from { transform: translateX(-110%); } to { transform: translateX(640%); } }
+.phb-mouette { position: absolute; left: 0; width: 4%; animation: phb-mouette var(--d) linear infinite; animation-delay: var(--r); will-change: transform; }
+.phb-mouette svg { display: block; width: 100%; height: auto; animation: phb-battre .6s steps(1) infinite; }
+@keyframes phb-mouette { from { transform: translate(-150%, 0); } 50% { transform: translate(1300%, -60%); } to { transform: translate(2700%, 10%); } }
+@keyframes phb-battre { 50% { transform: scaleY(.55); } }
+.phb-vague { position: absolute; left: 0; width: 200%; height: 3.4%; animation: phb-vague var(--d) linear infinite; will-change: transform; }
+.phb-vague svg { display: block; width: 100%; height: 100%; }
+@keyframes phb-vague { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.phb-crabe { position: absolute; width: 3.6%; animation: phb-crabe var(--d) ease-in-out infinite alternate; animation-delay: var(--r); will-change: transform; }
+.phb-crabe svg { display: block; width: 100%; height: auto; }
+@keyframes phb-crabe { from { transform: translateX(0); } to { transform: translateX(380%); } }
+.phb-pluie svg { position: absolute; left: 0; top: -100%; width: 100%; height: 200%; animation: phb-pluie .8s linear infinite; will-change: transform; }
+@keyframes phb-pluie { from { transform: translateY(0); } to { transform: translateY(50%); } }
+
+.phb-pancarte { display: grid; place-items: center; pointer-events: none; }
+.phb-pancarte > div { pointer-events: auto; max-width: min(460px, 86%); padding: 14px 18px; border-radius: 12px; text-align: center;
+  background: #c98f52; color: #2b1a08; border: 3px solid #7d5229; box-shadow: 0 8px 0 #6b4a29, 0 10px 30px rgba(0, 0, 0, .35); display: grid; gap: 6px; }
+.phb-pancarte b { font-size: 18px; }
+.phb-pancarte .phb-b { justify-self: center; }
+
+/* Philibert sur l'île : un bouton (le caresser), placé en % de la scène */
+.phb-perso { position: absolute; width: 17%; aspect-ratio: 2 / 1; margin: 0; padding: 0; border: 0; background: none; cursor: pointer;
+  transform: translate(0, -100%) rotate(var(--rot, 0deg)); transform-origin: 50% 100%;
+  transition: left 1.2s ease-in-out, top 1.2s ease-in-out; z-index: 3; }
+.phb-perso[hidden] { display: none; }
+.phb-perso:focus-visible { outline: 3px solid #ff8c00; outline-offset: 2px; border-radius: 12px; }
+.phb-perso .phb-paupiere { animation: phb-cligne 6s infinite; }
+@keyframes phb-cligne { 0%, 95%, 100% { transform: scaleY(0); } 97% { transform: scaleY(1); } }
+.phb-perso.nage .phb-flip { animation: phb-nage 1.4s ease-in-out infinite alternate; }
+@keyframes phb-nage { to { transform: translate(4%, 3%); } }
+.phb-perso.malade .phb-tete { animation: phb-tousse 4.5s ease-in-out infinite; }
+@keyframes phb-tousse { 0%, 86%, 100% { transform: none; } 89% { transform: translateY(1.4px) rotate(6deg); } 92% { transform: none; } 95% { transform: translateY(1.4px) rotate(6deg); } }
+.phb-perso.froid .phb-flip { animation: phb-frisson .18s steps(2) infinite; }
+@keyframes phb-frisson { 50% { transform: translateX(.6%); } }
+.phb-perso.gauche.froid .phb-flip { animation: none; }
+.phb-crotte { position: absolute; width: 2.6%; aspect-ratio: 5 / 4; padding: 0; border: 0; background: none; cursor: pointer; transform: translate(-50%, -100%); z-index: 2; }
+.phb-crotte svg { width: 100%; height: 100%; display: block; }
+.phb-crotte:focus-visible { outline: 3px solid #ff8c00; border-radius: 4px; }
+.phb-bandeaux { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(560px, 92%); display: grid; gap: 6px; z-index: 4; pointer-events: none; }
+.phb-bandeau { padding: 8px 14px; border-radius: 12px; background: rgba(255, 253, 244, .96); color: #1f3036; box-shadow: 0 6px 18px rgba(0, 0, 0, .25);
+  font-size: 14px; animation: phb-bandeau .4s ease-out; }
+@keyframes phb-bandeau { from { transform: translateY(-10px); opacity: 0; } }
+
+/* ---------- Panneau du bas : jauges, état, soins ---------- */
+.phb-bas { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 12px 16px 14px; display: grid; grid-template-columns: minmax(250px, 320px) minmax(0, 1fr);
+  grid-template-areas: "jauges etat" "actions actions" "actions2 actions2"; gap: 10px 18px; align-content: start; }
+.phb-jauges { grid-area: jauges; display: grid; gap: 5px; align-content: start; }
+.phb-jauge { display: grid; grid-template-columns: 20px 74px minmax(0, 1fr) 30px; gap: 6px; align-items: center; font-size: 14px; }
+.phb-j-ic { text-align: center; color: #5a6b70; }
+.phb-j-nom { font-weight: 600; }
+.phb-j-barre { height: 12px; border-radius: 7px; background: #e9dfc8; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0, 0, 0, .12); }
+.phb-j-barre i { display: block; height: 100%; border-radius: 7px; background: #2f9e55; transition: width .6s ease; }
+.phb-jauge[data-niveau="moyen"] .phb-j-barre i { background: #d99a12; }
+.phb-jauge[data-niveau="bas"] .phb-j-barre i { background: #d9473a; }
+.phb-jauge b { text-align: right; font-variant-numeric: tabular-nums; }
+.phb-etat { grid-area: etat; min-width: 0; }
+.phb-dit { margin: 0 0 8px; padding: 8px 12px; border-radius: 12px; background: #e6f6f4; border: 1px solid #a9d9d3; color: #12363a; }
+.phb-besoins { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+.phb-besoins ul { flex-basis: 100%; margin: 4px 0 0; padding-left: 20px; }
+.phb-besoins li { margin: 2px 0; }
+.phb-ok { color: #23683a; font-weight: 600; }
+.phb-pastille { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; border: 1px solid; }
+.phb-pastille.forme { background: #dff3e3; color: #1d5c31; border-color: #96cfa5; }
+.phb-pastille.fatigue { background: #fdf0d2; color: #6b4600; border-color: #e3c27a; }
+.phb-pastille.malade { background: #fde2de; color: #8a1f14; border-color: #e8a49b; }
+.phb-pastille.appel { background: #ffd166; color: #3a2400; border-color: #c9952b; }
+.phb-pastille.dort { background: #e1e8fa; color: #233e78; border-color: #a9b9e4; }
+.phb-evt { margin-top: 8px; padding: 8px 12px; border-radius: 12px; background: #fff1cc; border: 1px dashed #c9a24a; display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+.phb-actions { grid-area: actions; display: flex; flex-wrap: wrap; gap: 6px; }
+.phb-actions-2 { grid-area: actions2; padding-top: 6px; border-top: 1px dashed #d8c7a2; }
+
+.phb-dlg .phb-b { font: 600 14px/1.2 "Trebuchet MS", "Segoe UI", system-ui, sans-serif; text-transform: none; letter-spacing: normal;
+  padding: 7px 12px; border-radius: 10px; border: 1.5px solid #b9a37a; background: #fff; color: #1f3036; cursor: pointer; box-shadow: 0 1px 0 #d8c7a2; }
+.phb-dlg .phb-b:hover:not(:disabled) { background: #fff1cc; }
+.phb-dlg .phb-b:focus-visible, .phb-dlg .phb-carte:focus-visible, .phb-dlg .phb-lien:focus-visible, .phb-dlg input:focus-visible, .phb-dlg select:focus-visible,
+.phb-dlg canvas:focus-visible { outline: 3px solid #ff8c00; outline-offset: 2px; }
+.phb-dlg .phb-b:disabled { opacity: .5; cursor: not-allowed; }
+.phb-dlg .phb-b small { font-weight: 400; color: #4f5f63; }
+.phb-dlg .phb-prim, .phb-dlg .phb-b.phb-on { background: #0d6470; color: #fff; border-color: #094a53; }
+.phb-dlg .phb-prim:hover:not(:disabled), .phb-dlg .phb-b.phb-on:hover { background: #0a525c; }
+.phb-dlg .phb-danger { color: #8f1f15; border-color: #d9a29b; }
+.phb-lien { padding: 0; border: 0; background: none; color: #0d6470; text-decoration: underline; font: inherit; cursor: pointer; }
+
+/* ---------- Panneaux (nourrir, boutique, carnet…) ---------- */
+.phb-feuille { position: absolute; inset: 64px 12px 12px; z-index: 6; width: auto; max-width: 900px; margin: 0 auto; overflow: auto;
+  padding: 14px 18px 18px; border-radius: 14px; background: #fffdf6; color: #1f3036; border: 1px solid #e0cfa8; box-shadow: 0 14px 40px rgba(0, 0, 0, .35); }
+.phb-feuille[hidden] { display: none; }
+.phb-feuille h3 { margin: 0 40px 10px 0; font-size: 19px; color: #0d4f58; }
+.phb-feuille h3 small { font-size: 14px; font-weight: 400; color: #4f5f63; }
+.phb-fermer-f { position: sticky; float: right; top: 0; z-index: 2; margin: -4px -6px 0 8px; }
+.phb-groupe { margin: 12px 0 6px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #6a5a38; }
+.phb-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.phb-grille-2 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.phb-grille-3 { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.phb-carte { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 8px; border-radius: 12px; text-align: center;
+  border: 1.5px solid #e0cfa8; background: #fff; color: #1f3036; font: 600 14px/1.25 "Trebuchet MS", system-ui, sans-serif; text-transform: none; letter-spacing: normal; }
+button.phb-carte { cursor: pointer; }
+button.phb-carte:hover:not(:disabled) { background: #fff6dc; border-color: #c9a24a; }
+.phb-carte:disabled { opacity: .5; cursor: not-allowed; }
+.phb-carte small { font-weight: 400; font-size: 12.5px; color: #4f5f63; }
+.phb-carte .phb-info { color: #0d5a63; font-weight: 600; }
+.phb-ic { width: 40px; height: 40px; display: grid; place-items: center; font-size: 26px; }
+.phb-ic svg { width: 100%; height: 100%; }
+.phb-ic-mini { display: inline-block; width: 20px; height: 20px; vertical-align: -5px; margin-right: 6px; }
+.phb-ic-mini svg { width: 100%; height: 100%; }
+.phb-article .phb-b { margin-top: auto; }
+.phb-onglets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.phb-astuce { margin: 12px 0 0; padding: 8px 12px; border-radius: 10px; background: #eef7e6; border: 1px solid #c4e0ae; font-size: 14px; }
+.phb-gris { color: #4f5f63; font-size: 14px; }
+.phb-ligne { display: flex; flex-wrap: wrap; gap: 6px; }
+.phb-centre { justify-content: center; }
+.phb-chk { display: flex; gap: 10px; align-items: center; margin: 8px 0; }
+.phb-chk input { width: 18px; height: 18px; accent-color: #0d6470; flex: none; }
+.phb-chk select { font: inherit; padding: 4px 8px; border-radius: 8px; border: 1.5px solid #b9a37a; background: #fff; color: #1f3036; }
+.phb-garde { display: grid; grid-template-columns: minmax(180px, 260px) 1fr; gap: 16px; align-items: start; }
+.phb-apercu { background: linear-gradient(#bfe9f2 0 62%, #f1d79a 62%); border-radius: 14px; padding: 8px; }
+.phb-apercu svg { width: 100%; height: auto; display: block; }
+.phb-histo { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.phb-histo li { padding: 5px 8px; border-radius: 8px; background: #fff; border: 1px solid #efe3c8; font-size: 14px; }
+.phb-histo time { color: #6a5a38; font-variant-numeric: tabular-nums; margin-right: 6px; }
+.phb-tbl { border-collapse: collapse; width: 100%; max-width: 560px; font-size: 14px; }
+.phb-tbl th, .phb-tbl td { padding: 5px 8px; border-bottom: 1px dashed #e0cfa8; text-align: left; }
+.phb-tbl td { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.phb-succes { opacity: .62; }
+.phb-succes.ok { opacity: 1; border-color: #c9a24a; background: #fffaf0; }
+.phb-faits { padding-left: 4px; list-style: none; display: grid; gap: 6px; }
+.phb-faits li { padding: 8px 10px; border-radius: 10px; background: #eef7e6; border: 1px solid #c4e0ae; }
+.phb-postale { display: grid; grid-template-columns: minmax(120px, 200px) 1fr; gap: 14px; padding: 12px; margin-bottom: 12px; border-radius: 12px;
+  background: #fffaf0; border: 2px dashed #d6b45a; }
+.phb-postale-img svg { width: 100%; height: auto; border-radius: 8px; display: block; }
+.phb-postale p { margin: 6px 0; }
+.phb-conseil { padding: 6px 10px; border-radius: 8px; background: #eef7e6; }
+
+/* ---------- Mini-jeux ---------- */
+.phb-jeu-infos { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 8px; font-size: 15px; }
+.phb-jeu-infos b { font-variant-numeric: tabular-nums; }
+.phb-canevas { display: block; width: 100%; height: min(320px, 46vh); border-radius: 12px; border: 2px solid #e0cfa8; touch-action: none; cursor: none; }
+.phb-devin { display: grid; place-items: center; padding: 6px 0; background: linear-gradient(#bfe9f2 0 66%, #f1d79a 66%); border-radius: 14px; margin-bottom: 8px; }
+.phb-devin-perso { width: min(280px, 70%); aspect-ratio: 2 / 1; }
+.phb-devin-perso svg { width: 100%; height: 100%; display: block; }
+.phb-devin-perso.gauche svg { transform: scaleX(-1); transition: transform .25s; }
+.phb-suite { display: flex; justify-content: center; gap: 8px; min-height: 22px; margin: 8px 0; }
+.phb-chip { display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: #e9dfc8; border: 2px solid #b9a37a; }
+.phb-chip.grand { width: 22px; height: 22px; }
+.phb-chip.vu { background: #0d6470; border-color: #094a53; }
+
+/* ---------- Téléphone ---------- */
+@media (max-width: 760px) {
+  :root body.phb-on > header { margin-bottom: 54px; }
+  .phb-lane { height: 40px; top: calc(100% + 6px); }
+  .phb-mini { width: 72px; height: 36px; }
+  .phb-bulle { left: 56px; bottom: 26px; }
+  .phb-mini.gauche .phb-bulle { right: 56px; }
+  .phb-panneau { left: 66px; }
+  .phb-dlg { width: 100vw; height: 100dvh; max-height: none; border-radius: 0; font-size: 14px; }
+  .phb-scene { width: 100%; }
+  .phb-bas { grid-template-columns: 1fr; grid-template-areas: "etat" "jauges" "actions" "actions2"; padding: 10px 12px 14px; }
+  .phb-actions { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); }
+  .phb-dlg .phb-b { padding: 9px 10px; }
+  .phb-feuille { position: fixed; inset: 8px; }
+  .phb-garde, .phb-postale { grid-template-columns: 1fr; }
+  .phb-perso { width: 20%; }
+  .phb-tete-ile h2 { font-size: 19px; }
+}
+
+/* ---------- Réduire les animations : Philibert immobile, île figée, tout reste utilisable ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .phb-mini, .phb-mini *, .phb-dlg *, .phb-dlg *::before, .phb-dlg *::after { animation: none !important; transition: none !important; }
+  .phb-nuage:nth-child(1) { transform: translateX(40%); } .phb-nuage:nth-child(2) { transform: translateX(260%); }
+  .phb-nuage:nth-child(3) { transform: translateX(120%); } .phb-nuage:nth-child(n+4) { transform: translateX(380%); }
+  .phb-mouette { transform: translateX(800%); }
+}

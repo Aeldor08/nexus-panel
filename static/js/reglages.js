@@ -56,6 +56,10 @@
             .map(([v, t]) => `<option value="${v}"${cur === v ? " selected" : ""}>${esc(t)}</option>`).join("")}
         </select></label>
         <small class="muted rg-note">Retenu pour ce profil seulement : chaque profil garde son propre passage.</small>`; })()}
+      <div class="rg-group">Philibert, l'iguane</div>
+      <label class="rg-row rg-chk"><input type="checkbox" data-act="philibert-visible" ${window.nxPhilibert && window.nxPhilibert.visible() ? "checked" : ""}>
+        <span>Le voir se promener sous la barre du haut</span></label>
+      <button class="btn" data-act="philibert">🦎 Ouvrir son île</button>
       <div class="rg-group">Version et mises à jour</div>
       <div id="rg-maj"><small class="muted rg-note">Chargement…</small></div>
       <div class="rg-group">Rappels de l'agenda</div>
@@ -121,6 +125,7 @@
   });
   menu.addEventListener("change", e => {
     if (e.target.dataset.act === "sound" && window.reminderSound) window.reminderSound.on = e.target.checked;
+    if (e.target.dataset.act === "philibert-visible" && window.nxPhilibert) window.nxPhilibert.afficher(e.target.checked);
     if (e.target.dataset.act === "intro") { try { localStorage.setItem(INTRO_KEY, e.target.checked ? "1" : "0"); } catch (x) {} }
     if (e.target.dataset.act === "ouverture") {
       const m = ouvMap();
@@ -134,6 +139,7 @@
     if (!a) return;
     if (a.dataset.act === "reset-sizes") { cur = {}; write(cur); apply(); render(); }
     if (a.dataset.act === "test-sound" && window.reminderSound) window.reminderSound.play();
+    if (a.dataset.act === "philibert" && window.nxPhilibert) { menu.hidden = true; btn.setAttribute("aria-expanded", "false"); window.nxPhilibert.ouvrir(); }
   });
   btn.addEventListener("click", e => {
     e.stopPropagation();
