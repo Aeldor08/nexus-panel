@@ -521,6 +521,9 @@ de la nourriture, une lampe chauffante, des accessoires et de la déco, et lis s
 cartes postales, fiches « Le savais-tu ? »).
 
 - **Le temps passe même NEXUS fermé** (heure réelle ; plus lentement la nuit et pendant tes absences).
+- Une **tuile Philibert** sur le sommaire montre son humeur et ce dont il a besoin, avec des accès directs.
+- L'île vit au rythme des **saisons** (selon le mois réel) et propose quatre mini-jeux, dont la **course au rocher
+  chaud**. Le carnet garde un **album** : les étapes de sa vie et les Philibert d'avant.
 - **Philibert ne meurt jamais** : malade trop longtemps, la tortue vétérinaire l'emmène se reposer (12 à 24 h) et
   il revient en forme avec une carte postale qui explique ce qui lui a manqué. Si tu t'absentes plusieurs jours,
   la voisine de l'île le prend en pension. **Mode vacances** dans ses réglages : tout est en pause.

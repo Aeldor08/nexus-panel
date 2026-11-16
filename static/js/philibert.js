@@ -113,10 +113,11 @@
     setPose("debout");
     if (r < (lent ? .3 : .55)) {                                       // il marche vers un autre endroit
       const W = largeur();
-      let cible = Math.random() * W;
-      if (Math.abs(cible - x) < 60) cible = x > W / 2 ? x - 120 - Math.random() * 200 : x + 120 + Math.random() * 200;
-      cible = Math.max(0, Math.min(W, cible));
-      const vitesse = lent ? 12 : 26 + Math.random() * 10;            // px/s
+      // petits trajets (80 à 280 px), vers le côté où il y a de la place
+      const pas = 80 + Math.random() * 200, versGauche = x - pas < 0 ? false : x + pas > W ? true : Math.random() < .5;
+      const cible = Math.max(0, Math.min(W, x + (versGauche ? -pas : pas)));
+      // vitesse accordée au rythme des pattes (sinon il « glisse ») : un pas de patte ≈ 7 px par cycle de 0,72 s
+      const vitesse = lent ? 10 : 17 + Math.random() * 4;            // px/s
       const d = Math.abs(cible - x) / vitesse;
       gauche = cible < x;
       classe("gauche", gauche);
@@ -141,6 +142,7 @@
   function appliquer(nv) {
     const avant = e;
     e = nv;
+    dispatchEvent(new CustomEvent("philibert:maj", { detail: e }));     // (lu par la tuile du sommaire, même s'il est masqué en haut)
     const montre = visible();
     lane.hidden = !montre;
     document.body.classList.toggle("phb-on", montre);
@@ -192,7 +194,9 @@
   }
 
   mini.addEventListener("click", () => {
-    if (window.PhilibertIle) window.PhilibertIle.ouvrir();
+    classe("saut", false); void mini.offsetWidth; classe("saut", true);        // petit saut de joie, puis son île s'ouvre
+    setTimeout(() => classe("saut", false), 600);
+    if (window.PhilibertIle) setTimeout(() => window.PhilibertIle.ouvrir(), reduit.matches ? 0 : 220);
   });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) { arreter(); return; }

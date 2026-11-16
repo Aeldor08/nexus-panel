@@ -1,32 +1,39 @@
 /* =====================================================================
    Philibert, l'iguane de NEXUS (js/philibert*.js, règles dans docs/PHILIBERT.md)
    - en haut : un petit couloir sous la barre du haut, où il se promène (il ne recouvre aucun bouton) ;
-   - son île : une fenêtre qui garde son propre univers (couleurs fixes, lisibles avec tous les profils).
-   Animations : transform/opacity seulement pour ce qui bouge en continu ; coupées en mode jeu (theme.css),
-   en pause onglet caché (html.nx-pause) et avec « réduire les animations » (fin de ce fichier).
+   - son île : une fenêtre qui garde son propre univers (couleurs fixes, lisibles avec tous les profils),
+     avec une palette de jour (sable clair) et une palette de nuit (bleu nuit).
+   Ce qui bouge en continu ne change que transform/opacity (composé par la carte graphique) ; tout est coupé en
+   mode jeu (theme.css), en pause onglet caché (html.nx-pause) et figé avec « réduire les animations ».
+   Courbes : douce (.45, .05, .55, .95) pour les déplacements, avec rebond (.34, 1.56, .64, 1) pour ce qui apparaît.
    ===================================================================== */
 
 /* ---------- Le couloir et Philibert du haut ---------- */
 :root body.phb-on > header { margin-bottom: 66px; }
 .phb-lane { position: absolute; left: 0; right: 0; top: calc(100% + 8px); height: 50px; pointer-events: none; z-index: 6; }
 .phb-lane[hidden] { display: none; }
-.phb-mini { position: absolute; left: 0; bottom: 0; width: 96px; height: 48px; margin: 0; padding: 0; border: 0; background: none;
+.phb-mini { --phb-tf: steps(3, end); --phb-cycle: .72s;
+  position: absolute; left: 0; bottom: 0; width: 96px; height: 48px; margin: 0; padding: 0; border: 0; background: none;
   color: inherit; font: inherit; text-transform: none; letter-spacing: normal; cursor: pointer;
   pointer-events: none;                                    /* seul son corps dessiné est cliquable (ci-dessous) */
-  transform: translateX(0); transition-property: transform; transition-timing-function: linear; will-change: transform; }
+  transform: translateX(0); transition-property: transform; transition-timing-function: cubic-bezier(.3, .1, .7, .9); will-change: transform; }
 .phb-mini svg path, .phb-mini svg circle, .phb-mini svg rect, .phb-mini svg ellipse:not(.phb-ombre) { pointer-events: visiblePainted; cursor: pointer; }
 .phb-mini:focus { outline: none; }
 .phb-mini:focus-visible { outline: 2px solid var(--yellow, #f6c400); outline-offset: 3px; border-radius: 10px; }
-.phb-flip { display: block; width: 100%; height: 100%; transition: transform .25s ease; }
+.phb-flip { display: block; width: 100%; height: 100%; transition: transform .28s cubic-bezier(.45, .05, .55, .95); }
 .phb-flip > svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .phb-anim.gauche .phb-flip { transform: scaleX(-1); }
+.phb-mini.saut .phb-flip > svg { animation: phb-saut .55s cubic-bezier(.34, 1.56, .64, 1); }
+@keyframes phb-saut { 35% { transform: translateY(-9px) scale(1.02, .97); } 70% { transform: translateY(0) scale(1.04, .94); } }
 
 .phb-bulle { position: absolute; bottom: 34px; left: 74px; min-width: 24px; height: 22px; padding: 0 5px; display: grid; place-items: center;
   border-radius: 12px; background: #fffef8; border: 1.5px solid #34495e; color: #2c3e50; font: 700 13px/1 "Trebuchet MS", system-ui, sans-serif;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, .25); pointer-events: none; }
+  box-shadow: 0 3px 8px rgba(0, 0, 0, .22); pointer-events: none; transform-origin: 6px 100%;
+  animation: phb-pop .42s cubic-bezier(.34, 1.56, .64, 1); }
+@keyframes phb-pop { from { transform: scale(.3); opacity: 0; } }
 .phb-bulle[hidden] { display: none; }
 .phb-bulle::after { content: ""; position: absolute; left: 4px; bottom: -6px; border: 5px solid transparent; border-top-color: #34495e; border-bottom: 0; }
-.phb-mini.gauche .phb-bulle { left: auto; right: 74px; }
+.phb-mini.gauche .phb-bulle { left: auto; right: 74px; transform-origin: calc(100% - 6px) 100%; }
 .phb-mini.gauche .phb-bulle::after { left: auto; right: 4px; }
 .phb-bulle svg { width: 15px; height: 15px; display: block; }
 .phb-bulle.phb-b-appel { background: #ffd166; border-color: #8a5a00; color: #3a2400; }
@@ -37,18 +44,30 @@
   color: #3d2a14; background: rgba(255, 248, 232, .95); border: 1px solid #c98f52; pointer-events: none; }
 .phb-panneau[hidden] { display: none; }
 
-/* ---------- Animations du dessin (partagées : haut, île, mini-jeux) ---------- */
-.phb-p-av { transform-origin: 80px 43px; } .phb-p-ar { transform-origin: 51px 43px; }
-.phb-p-av-loin { transform-origin: 75px 42px; } .phb-p-ar-loin { transform-origin: 46.5px 42px; }
-.phb-queue { transform-origin: 44px 41px; } .phb-tete { transform-origin: 86px 37px; } .phb-fanon { transform-origin: 92px 40px; }
-.phb-paupiere { transform-origin: 101.2px 27.5px; transform: scaleY(0); }
+/* ---------- Animations du dessin (haut, île, mini-jeux) ----------
+   Marche de lézard : pattes en diagonale (avant proche + arrière lointain, puis l'inverse), chaque patte en
+   4 temps (pose, appui, lever, passage), genou plié pendant le passage ; corps qui ondule (2 petits rebonds par
+   cycle) ; queue en S (base et bout décalés). Le Philibert du haut se contente de quelques images par pas. */
+.phb-p-av { transform-origin: 80px 43px; } .phb-p-ar { transform-origin: 51px 43.4px; }
+.phb-p-av-loin { transform-origin: 75px 41.6px; } .phb-p-ar-loin { transform-origin: 46.5px 42px; }
+.phb-p-av .phb-genou { transform-origin: 84.4px 48.6px; } .phb-p-ar .phb-genou { transform-origin: 46.6px 49.4px; }
+.phb-p-av-loin .phb-genou { transform-origin: 78.6px 46.8px; } .phb-p-ar-loin .phb-genou { transform-origin: 42.8px 47.6px; }
+.phb-queue { transform-origin: 44.5px 41px; } .phb-queue-bout { transform-origin: 24.4px 46.8px; }
+.phb-tete { transform-origin: 86px 37px; } .phb-fanon { transform-origin: 92px 40px; } .phb-corps { transform-origin: 62px 48px; }
+.phb-paupiere { transform-origin: 101.4px 27.4px; transform: scaleY(0); }
 .phb-corps-tout { transition: transform .4s ease; }
-/* marche : 2 images par pas (steps) → très peu de dessin */
-@keyframes phb-pas { 0%, 100% { transform: rotate(-15deg); } 50% { transform: rotate(15deg); } }
-@keyframes phb-queue { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
-.phb-anim.marche .phb-p-av, .phb-anim.marche .phb-p-ar-loin { animation: phb-pas .5s steps(1) infinite; }
-.phb-anim.marche .phb-p-ar, .phb-anim.marche .phb-p-av-loin { animation: phb-pas .5s steps(1) infinite -.25s; }
-.phb-anim.marche .phb-queue { animation: phb-queue 1s steps(1) infinite; }
+@keyframes phb-hanche { 0%, 100% { transform: rotate(-19deg); } 60% { transform: rotate(17deg); } }
+@keyframes phb-genou { 0%, 60%, 100% { transform: rotate(0); } 80% { transform: rotate(-32deg); } }
+@keyframes phb-bob { 0%, 50%, 100% { transform: translateY(0); } 25%, 75% { transform: translateY(-.8px); } }
+@keyframes phb-queue { 0%, 100% { transform: rotate(-2.6deg); } 50% { transform: rotate(2.6deg); } }
+@keyframes phb-queue-bout { 0%, 100% { transform: rotate(4deg); } 50% { transform: rotate(-5deg); } }
+.phb-anim.marche .phb-patte { animation: phb-hanche var(--phb-cycle, .8s) var(--phb-tf, ease-in-out) infinite; }
+.phb-anim.marche .phb-genou { animation: phb-genou var(--phb-cycle, .8s) var(--phb-tf, ease-in-out) infinite; }
+.phb-anim.marche .phb-p-ar, .phb-anim.marche .phb-p-av-loin,
+.phb-anim.marche .phb-p-ar .phb-genou, .phb-anim.marche .phb-p-av-loin .phb-genou { animation-delay: calc(var(--phb-cycle, .8s) / -2); }
+.phb-anim.marche .phb-corps { animation: phb-bob var(--phb-cycle, .8s) var(--phb-tf, ease-in-out) infinite; }
+.phb-anim.marche .phb-queue { animation: phb-queue var(--phb-cycle, .8s) var(--phb-tf, ease-in-out) infinite; }
+.phb-anim.marche .phb-queue-bout { animation: phb-queue-bout var(--phb-cycle, .8s) var(--phb-tf, ease-in-out) infinite calc(var(--phb-cycle, .8s) / -4); }
 .phb-anim.cligne .phb-paupiere { transform: scaleY(1); }
 @keyframes phb-hoche { 50% { transform: translateY(2.6px) rotate(5deg); } }
 @keyframes phb-hoche-g { 40% { transform: translateY(6px) rotate(11deg); } }
@@ -59,10 +78,10 @@
 .phb-anim.hoche-petit .phb-tete { animation: phb-hoche .26s ease-in-out 2; }
 .phb-anim.hoche-grand .phb-tete { animation: phb-hoche-g .8s ease-in-out 1; }
 .phb-anim.fanon .phb-fanon { animation: phb-fanon .22s ease-in-out 6 alternate; }
-.phb-anim.mange .phb-tete { animation: phb-mange .3s ease-in-out 4; }
+.phb-anim.mange .phb-tete { animation: phb-mange .3s ease-in-out .35s 4; }
 .phb-anim.refus .phb-tete { animation: phb-non .3s ease-in-out 4; }
 .phb-anim.triste .phb-tete { transform: translateY(2.4px) rotate(7deg); transition: transform .3s; }
-.phb-anim.regarde .phb-tete { transform: rotate(-9deg) translateY(-1px); transition: transform .5s; }
+.phb-anim.regarde .phb-tete { transform: rotate(-9deg) translateY(-1px); transition: transform .5s cubic-bezier(.45, .05, .55, .95); }
 /* à plat ventre (soleil) et endormi : corps posé, pattes écartées */
 .phb-anim.plat .phb-corps-tout, .phb-pose-plat .phb-corps-tout, .phb-pose-dort .phb-corps-tout { transform: translateY(5.5px); }
 .phb-anim.plat .phb-patte, .phb-pose-plat .phb-patte, .phb-pose-dort .phb-patte { transform: scaleY(.38) rotate(-30deg); }
@@ -71,179 +90,297 @@
 /* =====================================================================
    L'île (fenêtre)
    ===================================================================== */
-.phb-dlg { --phb-sh: clamp(200px, calc(100vh - 400px), 470px);
-  width: min(1120px, calc(100vw - 24px)); max-width: none; height: min(900px, calc(100vh - 24px)); max-height: none;
-  margin: auto; padding: 0; border: 0; border-radius: 18px; overflow: hidden;
-  background: #fff8e8; color: #1f3036; font: 15px/1.45 "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
-  text-transform: none; letter-spacing: normal; text-shadow: none; box-shadow: 0 24px 80px rgba(0, 0, 0, .55); }
+.phb-dlg { --phb-sh: clamp(200px, calc(100vh - 470px), 460px);
+  --fond: #fdf6e6; --carte: #fffdf7; --t: #1f3036; --t2: #4b5b60; --bord: #e6d6b1; --bouton: #ffffff; --prim: #0d6470; --prim-t: #ffffff;
+  --tete1: #0d6470; --tete2: #158390; --tete-t: #ffffff; --tete-t2: #e0f6f3; --parole: #e9f7f5; --parole-b: #a9d9d3; --ombre: rgba(70, 50, 10, .12);
+  width: min(1140px, calc(100vw - 24px)); max-width: none; height: min(920px, calc(100vh - 24px)); max-height: none;
+  margin: auto; padding: 0; border: 0; border-radius: 22px; overflow: hidden;
+  background: var(--fond); color: var(--t); font: 15px/1.45 "Segoe UI Variable Text", "Segoe UI", "Trebuchet MS", system-ui, sans-serif;
+  text-transform: none; letter-spacing: normal; text-shadow: none; box-shadow: 0 30px 90px rgba(0, 0, 0, .55); }
+.phb-dlg[data-nuit] { --fond: #121d36; --carte: #1a2a4b; --t: #eef3ff; --t2: #b9c5e1; --bord: #33507e; --bouton: #1f3461; --prim: #86dfe6; --prim-t: #0b2230;
+  --tete1: #0a1730; --tete2: #16295a; --tete-t2: #c9d8f5; --parole: #1c3260; --parole-b: #3e5f97; --ombre: rgba(0, 0, 0, .3); }
 .phb-dlg::backdrop { background: rgba(3, 18, 28, .74); }
 .phb-dlg * { box-sizing: border-box; }
+.phb-dlg .phb-ico { width: 1.2em; height: 1.2em; flex: none; display: inline-block; vertical-align: -.22em; }
 .phb-ile { position: relative; display: flex; flex-direction: column; height: 100%; }
-.phb-tete-ile { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; padding: 10px 14px 10px 18px; background: #0d6470; color: #fff; }
-.phb-titres { display: flex; align-items: baseline; gap: 4px 12px; flex-wrap: wrap; margin-right: auto; min-width: 0; }
-.phb-tete-ile h2 { margin: 0; font: 700 22px/1.2 "Trebuchet MS", system-ui, sans-serif; letter-spacing: .3px; color: #fff; text-transform: none; }
-.phb-tete-ile h2::before, .phb-tete-ile h2::after { content: none; }
-.phb-sous { font-size: 14px; color: #dff6f4; }
-.phb-meteo { font-size: 13px; color: #dff6f4; }
-.phb-coq { padding: 3px 12px; border-radius: 20px; background: #fff3d1; color: #5a3b00; font-weight: 700; font-variant-numeric: tabular-nums; }
-.phb-dlg .phb-fermer { background: #0a4f58; color: #fff; border-color: #6fb6bd; }
 
+/* en-tête : médaillon, nom, âge, météo, saison, coquillages */
+.phb-tete-ile { display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; padding: 9px 12px;
+  background: linear-gradient(100deg, var(--tete1), var(--tete2)); color: var(--tete-t); }
+.phb-medaillon { position: relative; width: 46px; height: 46px; flex: none; border-radius: 50%; overflow: hidden;
+  background: radial-gradient(circle at 40% 35%, #d8f6f7, #8fd6ea); border: 2px solid rgba(255, 255, 255, .75); box-shadow: 0 2px 8px rgba(0, 0, 0, .25); }
+.phb-medaillon svg { position: absolute; width: 150px; height: 75px; left: -94px; top: -19px; }
+.phb-medaillon svg.phb-oeuf { width: 92px; height: 46px; left: -23px; top: -6px; }
+.phb-titres { display: flex; flex-direction: column; gap: 2px; margin-right: auto; min-width: 0; }
+.phb-tete-ile h2 { margin: 0; font: 700 21px/1.15 "Trebuchet MS", "Segoe UI", system-ui, sans-serif; letter-spacing: .2px; color: var(--tete-t); text-transform: none; }
+.phb-tete-ile h2::before, .phb-tete-ile h2::after { content: none; }
+.phb-puces { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 13px; color: var(--tete-t2); }
+.phb-puces span + span::before { content: "·"; margin-right: 10px; opacity: .7; }
+.phb-ciel-info { display: flex; flex-wrap: wrap; gap: 6px; }
+.phb-puce { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 13px;
+  background: rgba(255, 255, 255, .14); color: var(--tete-t2); border: 1px solid rgba(255, 255, 255, .18); }
+.phb-coq { display: inline-flex; align-items: center; gap: 6px; padding: 3px 12px 3px 6px; border-radius: 20px; background: #fff3d1; color: #5a3b00;
+  font-weight: 800; font-variant-numeric: tabular-nums; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .08); }
+.phb-coq svg { width: 22px; height: 22px; }
+.phb-dlg .phb-fermer { width: 38px; height: 38px; padding: 0; display: grid; place-items: center; border-radius: 50%;
+  background: rgba(255, 255, 255, .14); color: #fff; border: 1px solid rgba(255, 255, 255, .35); box-shadow: none; }
+.phb-dlg .phb-fermer:hover:not(:disabled) { background: rgba(255, 255, 255, .26); }
+
+/* ---------- la scène ---------- */
 .phb-scene-zone { flex: 0 0 auto; background: linear-gradient(#5aa9d6 0 50%, #1d8fa8 50% 100%); }
-.phb-scene { position: relative; width: min(100%, calc(var(--phb-sh) * 2)); aspect-ratio: 2 / 1; margin: 0 auto; overflow: hidden; contain: layout paint; }
-.phb-decor, .phb-crottes { position: absolute; inset: 0; }
+.phb-scene { position: relative; width: min(100%, calc(var(--phb-sh) * 2)); aspect-ratio: 2 / 1; margin: 0 auto; overflow: hidden;
+  container-type: inline-size; contain: layout paint; }
+.phb-decor, .phb-crottes, .phb-effets { position: absolute; inset: 0; }
+.phb-effets { pointer-events: none; z-index: 4; overflow: hidden; }
 .phb-l { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .phb-decor svg.phb-l { overflow: hidden; }
 .phb-nuit { background: #061230; pointer-events: none; transition: opacity 1s; }
-/* nuages, mouettes, vagues, crabes, pluie : couches HTML qui bougent par transform (aucun redessin) */
-.phb-nuages, .phb-mouettes, .phb-vagues, .phb-crabes, .phb-pluie { overflow: hidden; pointer-events: none; }
+.phb-etoiles, .phb-nuages, .phb-mouettes, .phb-reflets, .phb-vagues, .phb-crabes, .phb-pluie, .phb-papillons, .phb-lucioles, .phb-guirlande, .phb-ecume, .phb-palmes { pointer-events: none; }
+.phb-nuages, .phb-mouettes, .phb-vagues, .phb-crabes, .phb-pluie, .phb-papillons { overflow: hidden; }
+/* étoiles qui scintillent, soleil et ses rayons, lune */
+.phb-etoiles i { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: #fff; animation: phb-scintille 4s ease-in-out infinite; }
+.phb-etoiles i.g { width: 3px; height: 3px; box-shadow: 0 0 6px rgba(255, 255, 255, .8); }
+@keyframes phb-scintille { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+.phb-astre { position: absolute; width: 11%; aspect-ratio: 1; transform: translate(-50%, -50%); pointer-events: none; }
+.phb-astre svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.phb-soleil .phb-rayons { animation: phb-tourne 90s linear infinite; }
+.phb-soleil::after { content: ""; position: absolute; inset: -40%; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 236, 140, .35), transparent);
+  animation: phb-halo 6s ease-in-out infinite; }
+@keyframes phb-tourne { to { transform: rotate(360deg); } }
+@keyframes phb-halo { 50% { opacity: .55; transform: scale(1.08); } }
+.phb-lune { width: 9%; }
+/* nuages, mouettes, vagues, reflets, écume, palmes, crabes, papillons, lucioles, guirlande, pluie */
 .phb-nuage { position: absolute; left: 0; animation: phb-nuage var(--d) linear infinite; animation-delay: var(--r); will-change: transform; }
 .phb-nuage svg { display: block; width: 100%; height: auto; }
 @keyframes phb-nuage { from { transform: translateX(-110%); } to { transform: translateX(640%); } }
 .phb-mouette { position: absolute; left: 0; width: 4%; animation: phb-mouette var(--d) linear infinite; animation-delay: var(--r); will-change: transform; }
-.phb-mouette svg { display: block; width: 100%; height: auto; animation: phb-battre .6s steps(1) infinite; }
+.phb-mouette svg { display: block; width: 100%; height: auto; animation: phb-battre .6s ease-in-out infinite alternate; }
 @keyframes phb-mouette { from { transform: translate(-150%, 0); } 50% { transform: translate(1300%, -60%); } to { transform: translate(2700%, 10%); } }
-@keyframes phb-battre { 50% { transform: scaleY(.55); } }
+@keyframes phb-battre { to { transform: scaleY(.5); } }
+.phb-reflets i { position: absolute; width: .6%; height: .5%; border-radius: 2px; background: #fff; opacity: 0; animation: phb-reflet 3.4s ease-in-out infinite; }
+@keyframes phb-reflet { 0%, 100% { opacity: 0; transform: scaleX(.5); } 45% { opacity: .85; transform: scaleX(1.6); } }
 .phb-vague { position: absolute; left: 0; width: 200%; height: 3.4%; animation: phb-vague var(--d) linear infinite; will-change: transform; }
 .phb-vague svg { display: block; width: 100%; height: 100%; }
 @keyframes phb-vague { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-.phb-crabe { position: absolute; width: 3.6%; animation: phb-crabe var(--d) ease-in-out infinite alternate; animation-delay: var(--r); will-change: transform; }
-.phb-crabe svg { display: block; width: 100%; height: auto; }
+.phb-ecume { transform-origin: 50% 100%; animation: phb-ecume 5s ease-in-out infinite; }
+@keyframes phb-ecume { 50% { transform: scale(1.014, 1.035); opacity: .7; } }
+.phb-palmes { transform-origin: 22.2% 39.2%; }
+.phb-palmes.vent { animation: phb-palme 5.5s cubic-bezier(.45, .05, .55, .95) infinite alternate; }
+@keyframes phb-palme { from { transform: rotate(-1.2deg); } to { transform: rotate(1.6deg); } }
+.phb-crabe { position: absolute; width: 3.6%; animation: phb-crabe var(--d) cubic-bezier(.45, .05, .55, .95) infinite alternate; animation-delay: var(--r); will-change: transform; }
+.phb-crabe svg { display: block; width: 100%; height: auto; animation: phb-trottine .3s steps(2) infinite; }
 @keyframes phb-crabe { from { transform: translateX(0); } to { transform: translateX(380%); } }
+@keyframes phb-trottine { 50% { transform: translateY(-6%); } }
+.phb-papillon { position: absolute; width: 2.6%; animation: phb-papillon var(--d) ease-in-out infinite alternate; animation-delay: var(--r); }
+.phb-papillon svg { display: block; width: 100%; height: auto; animation: phb-ailes .22s ease-in-out infinite alternate; }
+@keyframes phb-papillon { 0% { transform: translate(0, 0); } 25% { transform: translate(140%, -90%); } 50% { transform: translate(300%, 20%); } 75% { transform: translate(430%, -70%); } 100% { transform: translate(560%, 10%); } }
+@keyframes phb-ailes { to { transform: scaleX(.35); } }
+.phb-lucioles i { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #fff6a0; box-shadow: 0 0 8px 3px rgba(255, 238, 120, .7);
+  animation: phb-luciole var(--d) ease-in-out infinite alternate, phb-scintille 2.4s ease-in-out infinite; }
+@keyframes phb-luciole { to { transform: translate(22px, -16px); } }
+.phb-guirlande i { position: absolute; width: 6px; height: 6px; margin: -3px; border-radius: 50%; background: var(--k); opacity: .7; animation: phb-scintille 2.2s ease-in-out infinite; }
+.phb-guirlande.nuit i { box-shadow: 0 0 9px 2px var(--k); opacity: 1; }
 .phb-pluie svg { position: absolute; left: 0; top: -100%; width: 100%; height: 200%; animation: phb-pluie .8s linear infinite; will-change: transform; }
 @keyframes phb-pluie { from { transform: translateY(0); } to { transform: translateY(50%); } }
 
 .phb-pancarte { display: grid; place-items: center; pointer-events: none; }
 .phb-pancarte > div { pointer-events: auto; max-width: min(460px, 86%); padding: 14px 18px; border-radius: 12px; text-align: center;
-  background: #c98f52; color: #2b1a08; border: 3px solid #7d5229; box-shadow: 0 8px 0 #6b4a29, 0 10px 30px rgba(0, 0, 0, .35); display: grid; gap: 6px; }
+  background: #c98f52; color: #2b1a08; border: 3px solid #7d5229; box-shadow: 0 8px 0 #6b4a29, 0 10px 30px rgba(0, 0, 0, .35); display: grid; gap: 6px;
+  animation: phb-pop .5s cubic-bezier(.34, 1.56, .64, 1); }
 .phb-pancarte b { font-size: 18px; }
 .phb-pancarte .phb-b { justify-self: center; }
 
-/* Philibert sur l'île : un bouton (le caresser), placé en % de la scène */
-.phb-perso { position: absolute; width: 17%; aspect-ratio: 2 / 1; margin: 0; padding: 0; border: 0; background: none; cursor: pointer;
-  transform: translate(0, -100%) rotate(var(--rot, 0deg)); transform-origin: 50% 100%;
-  transition: left 1.2s ease-in-out, top 1.2s ease-in-out; z-index: 3; }
+/* Philibert sur l'île : un bouton (le caresser), placé en % de la scène et déplacé par transform */
+.phb-perso { --phb-cycle: .8s; position: absolute; left: 0; top: 0; width: 17%; aspect-ratio: 2 / 1; margin: 0; padding: 0; border: 0; background: none; cursor: pointer;
+  transform: translate(calc(var(--x, 50) * 1cqw), calc(var(--y, 87) * .5cqw)) translateY(-100%) rotate(var(--rot, 0deg)); transform-origin: 50% 100%;
+  transition: transform 1.2s cubic-bezier(.45, .05, .55, .95); z-index: 3; will-change: transform; }
 .phb-perso[hidden] { display: none; }
 .phb-perso:focus-visible { outline: 3px solid #ff8c00; outline-offset: 2px; border-radius: 12px; }
 .phb-perso .phb-paupiere { animation: phb-cligne 6s infinite; }
 @keyframes phb-cligne { 0%, 95%, 100% { transform: scaleY(0); } 97% { transform: scaleY(1); } }
+.phb-perso:not(.marche):not(.nage) .phb-corps { animation: phb-respire 3.4s ease-in-out infinite; }
+.phb-perso.dort .phb-corps { animation-duration: 5s; }
+@keyframes phb-respire { 50% { transform: scale(1, 1.02); } }
 .phb-perso.nage .phb-flip { animation: phb-nage 1.4s ease-in-out infinite alternate; }
 @keyframes phb-nage { to { transform: translate(4%, 3%); } }
+.phb-perso.gauche.nage .phb-flip { animation-name: phb-nage-g; }
+@keyframes phb-nage-g { from { transform: scaleX(-1); } to { transform: scaleX(-1) translate(4%, 3%); } }
 .phb-perso.malade .phb-tete { animation: phb-tousse 4.5s ease-in-out infinite; }
 @keyframes phb-tousse { 0%, 86%, 100% { transform: none; } 89% { transform: translateY(1.4px) rotate(6deg); } 92% { transform: none; } 95% { transform: translateY(1.4px) rotate(6deg); } }
-.phb-perso.froid .phb-flip { animation: phb-frisson .18s steps(2) infinite; }
+.phb-perso.froid .phb-flip > svg { animation: phb-frisson .18s steps(2) infinite; }
 @keyframes phb-frisson { 50% { transform: translateX(.6%); } }
-.phb-perso.gauche.froid .phb-flip { animation: none; }
+.phb-perso.saute .phb-flip > svg { animation: phb-saut .55s cubic-bezier(.34, 1.56, .64, 1) 2; }
 .phb-crotte { position: absolute; width: 2.6%; aspect-ratio: 5 / 4; padding: 0; border: 0; background: none; cursor: pointer; transform: translate(-50%, -100%); z-index: 2; }
 .phb-crotte svg { width: 100%; height: 100%; display: block; }
 .phb-crotte:focus-visible { outline: 3px solid #ff8c00; border-radius: 4px; }
-.phb-bandeaux { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(560px, 92%); display: grid; gap: 6px; z-index: 4; pointer-events: none; }
-.phb-bandeau { padding: 8px 14px; border-radius: 12px; background: rgba(255, 253, 244, .96); color: #1f3036; box-shadow: 0 6px 18px rgba(0, 0, 0, .25);
-  font-size: 14px; animation: phb-bandeau .4s ease-out; }
-@keyframes phb-bandeau { from { transform: translateY(-10px); opacity: 0; } }
 
-/* ---------- Panneau du bas : jauges, état, soins ---------- */
-.phb-bas { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 12px 16px 14px; display: grid; grid-template-columns: minmax(250px, 320px) minmax(0, 1fr);
-  grid-template-areas: "jauges etat" "actions actions" "actions2 actions2"; gap: 10px 18px; align-content: start; }
-.phb-jauges { grid-area: jauges; display: grid; gap: 5px; align-content: start; }
-.phb-jauge { display: grid; grid-template-columns: 20px 74px minmax(0, 1fr) 30px; gap: 6px; align-items: center; font-size: 14px; }
-.phb-j-ic { text-align: center; color: #5a6b70; }
-.phb-j-nom { font-weight: 600; }
-.phb-j-barre { height: 12px; border-radius: 7px; background: #e9dfc8; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0, 0, 0, .12); }
-.phb-j-barre i { display: block; height: 100%; border-radius: 7px; background: #2f9e55; transition: width .6s ease; }
-.phb-jauge[data-niveau="moyen"] .phb-j-barre i { background: #d99a12; }
+/* petits effets : cœurs, étoiles, gouttes, miettes, coquillages, aliment qui part vers sa bouche */
+.phb-fx { position: absolute; width: 2.6cqw; height: 2.6cqw; margin: -1.3cqw 0 0 -1.3cqw; opacity: 0; animation: phb-fx 1.5s cubic-bezier(.2, .7, .3, 1) forwards; }
+.phb-fx svg { width: 100%; height: 100%; display: block; }
+@keyframes phb-fx { 0% { opacity: 0; transform: translate(0, 0) scale(.3); } 18% { opacity: 1; transform: translate(calc(var(--dx) * .25), calc(var(--dy) * .25)) scale(1.05); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(.75); } }
+.phb-fx-coeur svg { fill: #ff7096; stroke: #d33d68; stroke-width: 1.4; }
+.phb-fx-etoile svg { fill: #ffd34d; stroke: #c48b00; stroke-width: 1.2; }
+.phb-fx-goutte svg { fill: #c4e8ff; stroke: #2a86cc; stroke-width: 1.4; }
+.phb-fx-miette { width: .9cqw; height: .9cqw; margin: -.45cqw 0 0 -.45cqw; border-radius: 50%; background: #6cc24a; animation-duration: .9s; }
+.phb-fx-aliment { width: 4cqw; height: 4cqw; margin: -2cqw 0 0 -2cqw; animation: phb-bouchee .9s cubic-bezier(.5, 0, .7, 1) forwards; }
+@keyframes phb-bouchee { 0% { opacity: 0; transform: translateY(-2cqw) scale(.8); } 25% { opacity: 1; transform: translateY(0) scale(1); }
+  70% { opacity: 1; transform: translateY(3cqw) scale(.6); } 100% { opacity: 0; transform: translateY(3.6cqw) scale(.2); } }
+
+.phb-bandeaux { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(560px, 92%); display: grid; gap: 6px; z-index: 5; pointer-events: none; }
+.phb-bandeau { display: flex; gap: 10px; align-items: flex-start; padding: 9px 14px; border-radius: 14px; background: rgba(255, 253, 244, .97); color: #1f3036;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .25); font-size: 14px; animation: phb-bandeau .5s cubic-bezier(.34, 1.56, .64, 1); }
+.phb-bandeau .phb-ico { color: #c48b00; width: 20px; height: 20px; }
+@keyframes phb-bandeau { from { transform: translateY(-14px) scale(.96); opacity: 0; } }
+
+/* ---------- Panneau du bas : jauges, paroles, soins ---------- */
+.phb-bas { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 12px 16px 16px; display: grid; grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  grid-template-areas: "jauges etat" "actions actions" "actions2 actions2"; gap: 12px 18px; align-content: start; }
+.phb-jauges { grid-area: jauges; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; align-content: start; }
+.phb-jauge { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; grid-template-rows: auto 8px; gap: 2px 8px; align-items: center;
+  padding: 6px 10px 7px 6px; border-radius: 14px; background: var(--carte); border: 1px solid var(--bord); box-shadow: 0 1px 0 var(--ombre); }
+.phb-j-ic { grid-row: 1 / 3; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--c); color: #fff; }
+.phb-j-ic .phb-ico { width: 16px; height: 16px; }
+.phb-jauge[data-niveau="bas"] .phb-j-ic { animation: phb-alerte 1.6s ease-in-out infinite; }
+@keyframes phb-alerte { 50% { opacity: .55; } }
+.phb-j-nom { font-size: 13px; font-weight: 700; }
+.phb-jauge b { font-size: 13px; font-variant-numeric: tabular-nums; }
+.phb-j-barre { grid-column: 2 / 4; height: 8px; border-radius: 5px; background: color-mix(in srgb, var(--c) 16%, var(--carte)); overflow: hidden; }
+.phb-j-barre i { display: block; height: 100%; border-radius: 5px; background: linear-gradient(90deg, color-mix(in srgb, var(--c) 70%, #fff), var(--c)); transition: width .8s cubic-bezier(.45, .05, .55, .95); }
 .phb-jauge[data-niveau="bas"] .phb-j-barre i { background: #d9473a; }
-.phb-jauge b { text-align: right; font-variant-numeric: tabular-nums; }
-.phb-etat { grid-area: etat; min-width: 0; }
-.phb-dit { margin: 0 0 8px; padding: 8px 12px; border-radius: 12px; background: #e6f6f4; border: 1px solid #a9d9d3; color: #12363a; }
-.phb-besoins { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
-.phb-besoins ul { flex-basis: 100%; margin: 4px 0 0; padding-left: 20px; }
-.phb-besoins li { margin: 2px 0; }
-.phb-ok { color: #23683a; font-weight: 600; }
-.phb-pastille { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 13px; font-weight: 700; border: 1px solid; }
+.phb-etat { grid-area: etat; min-width: 0; display: grid; gap: 8px; align-content: start; }
+.phb-parole { position: relative; padding: 10px 14px; border-radius: 16px; background: var(--parole); border: 1.5px solid var(--parole-b); }
+.phb-parole::before { content: ""; position: absolute; left: 22px; top: -9px; width: 16px; height: 16px; background: var(--parole);
+  border-left: 1.5px solid var(--parole-b); border-top: 1.5px solid var(--parole-b); transform: rotate(45deg); border-radius: 3px 0 0 0; }
+.phb-parole p { margin: 0; position: relative; font-size: 15px; }
+.phb-dit { margin: 0 0 8px; padding: 8px 12px; border-radius: 12px; background: var(--parole); border: 1px solid var(--parole-b); }
+.phb-besoins { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.phb-pastille, .phb-besoin { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 14px; font-size: 13px; font-weight: 700; border: 1px solid; }
+.phb-pastille .phb-ico, .phb-besoin .phb-ico { width: 15px; height: 15px; }
 .phb-pastille.forme { background: #dff3e3; color: #1d5c31; border-color: #96cfa5; }
 .phb-pastille.fatigue { background: #fdf0d2; color: #6b4600; border-color: #e3c27a; }
 .phb-pastille.malade { background: #fde2de; color: #8a1f14; border-color: #e8a49b; }
-.phb-pastille.appel { background: #ffd166; color: #3a2400; border-color: #c9952b; }
+.phb-pastille.appel { background: #ffd166; color: #3a2400; border-color: #c9952b; animation: phb-pop .5s cubic-bezier(.34, 1.56, .64, 1); }
 .phb-pastille.dort { background: #e1e8fa; color: #233e78; border-color: #a9b9e4; }
-.phb-evt { margin-top: 8px; padding: 8px 12px; border-radius: 12px; background: #fff1cc; border: 1px dashed #c9a24a; display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
-.phb-actions { grid-area: actions; display: flex; flex-wrap: wrap; gap: 6px; }
-.phb-actions-2 { grid-area: actions2; padding-top: 6px; border-top: 1px dashed #d8c7a2; }
+.phb-besoin { font-weight: 600; background: #fff4e0; color: #5a3a00; border-color: #ecc98a; }
+.phb-evt { padding: 8px 12px; border-radius: 14px; background: #fff1cc; color: #3b2a00; border: 1.5px dashed #c9a24a; display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+.phb-evt-txt { flex: 1 1 220px; }
+.phb-actions { grid-area: actions; display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
+.phb-actions-2 { grid-area: actions2; padding-top: 10px; border-top: 1px dashed var(--bord); }
 
-.phb-dlg .phb-b { font: 600 14px/1.2 "Trebuchet MS", "Segoe UI", system-ui, sans-serif; text-transform: none; letter-spacing: normal;
-  padding: 7px 12px; border-radius: 10px; border: 1.5px solid #b9a37a; background: #fff; color: #1f3036; cursor: pointer; box-shadow: 0 1px 0 #d8c7a2; }
-.phb-dlg .phb-b:hover:not(:disabled) { background: #fff1cc; }
-.phb-dlg .phb-b:focus-visible, .phb-dlg .phb-carte:focus-visible, .phb-dlg .phb-lien:focus-visible, .phb-dlg input:focus-visible, .phb-dlg select:focus-visible,
+/* tuiles d'actions : icône dans une pastille de couleur + libellé */
+.phb-dlg .phb-tuile { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 9px 6px 8px; border-radius: 16px; cursor: pointer;
+  border: 1.5px solid var(--bord); background: var(--bouton); color: var(--t); font: 700 13px/1.15 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  text-transform: none; letter-spacing: normal; box-shadow: 0 2px 0 var(--ombre); transition: transform .16s cubic-bezier(.34, 1.56, .64, 1), box-shadow .16s; }
+.phb-dlg .phb-tuile:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 14px var(--ombre); }
+.phb-dlg .phb-tuile:active:not(:disabled) { transform: scale(.96); }
+.phb-dlg .phb-tuile:disabled { opacity: .45; cursor: not-allowed; }
+.phb-dlg .phb-tuile[aria-pressed="true"] { border-color: var(--c); box-shadow: inset 0 0 0 1.5px var(--c); }
+.phb-tuile-ic { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 15%, var(--bouton)); }
+.phb-tuile-ic .phb-ico { width: 21px; height: 21px; }
+.phb-dlg[data-nuit] .phb-tuile-ic { color: #fff; background: var(--c); }
+.phb-tuile-txt { text-align: center; }
+.phb-tuile-txt small { display: block; font-weight: 500; font-size: 11.5px; color: var(--t2); }
+
+.phb-dlg .phb-b { display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  font: 700 14px/1.2 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; text-transform: none; letter-spacing: normal;
+  padding: 7px 14px; border-radius: 12px; border: 1.5px solid var(--bord); background: var(--bouton); color: var(--t); cursor: pointer; box-shadow: 0 2px 0 var(--ombre);
+  transition: transform .14s cubic-bezier(.34, 1.56, .64, 1); }
+.phb-dlg .phb-b:hover:not(:disabled) { transform: translateY(-1px); }
+.phb-dlg .phb-b:active:not(:disabled) { transform: scale(.97); }
+.phb-dlg .phb-b:focus-visible, .phb-dlg .phb-tuile:focus-visible, .phb-dlg .phb-carte:focus-visible, .phb-dlg .phb-lien:focus-visible, .phb-dlg input:focus-visible, .phb-dlg select:focus-visible,
 .phb-dlg canvas:focus-visible { outline: 3px solid #ff8c00; outline-offset: 2px; }
 .phb-dlg .phb-b:disabled { opacity: .5; cursor: not-allowed; }
-.phb-dlg .phb-b small { font-weight: 400; color: #4f5f63; }
-.phb-dlg .phb-prim, .phb-dlg .phb-b.phb-on { background: #0d6470; color: #fff; border-color: #094a53; }
-.phb-dlg .phb-prim:hover:not(:disabled), .phb-dlg .phb-b.phb-on:hover { background: #0a525c; }
-.phb-dlg .phb-danger { color: #8f1f15; border-color: #d9a29b; }
-.phb-lien { padding: 0; border: 0; background: none; color: #0d6470; text-decoration: underline; font: inherit; cursor: pointer; }
+.phb-dlg .phb-b small { font-weight: 400; color: var(--t2); }
+.phb-dlg .phb-prim, .phb-dlg .phb-b.phb-on { background: var(--prim); color: var(--prim-t); border-color: color-mix(in srgb, var(--prim) 70%, #000); }
+.phb-dlg .phb-danger { color: #a3241b; border-color: #d9a29b; }
+.phb-dlg[data-nuit] .phb-danger { color: #ffb4aa; border-color: #a35a52; }
+.phb-lien { padding: 0; border: 0; background: none; color: inherit; text-decoration: underline; font: inherit; font-weight: 700; cursor: pointer; }
 
 /* ---------- Panneaux (nourrir, boutique, carnet…) ---------- */
-.phb-feuille { position: absolute; inset: 64px 12px 12px; z-index: 6; width: auto; max-width: 900px; margin: 0 auto; overflow: auto;
-  padding: 14px 18px 18px; border-radius: 14px; background: #fffdf6; color: #1f3036; border: 1px solid #e0cfa8; box-shadow: 0 14px 40px rgba(0, 0, 0, .35); }
+.phb-feuille { position: absolute; inset: 66px 12px 12px; z-index: 6; width: auto; max-width: 920px; margin: 0 auto; overflow: auto;
+  padding: 14px 18px 18px; border-radius: 20px; background: var(--carte); color: var(--t); border: 1px solid var(--bord); box-shadow: 0 18px 50px rgba(0, 0, 0, .35);
+  animation: phb-feuille .32s cubic-bezier(.34, 1.36, .64, 1); }
+@keyframes phb-feuille { from { transform: translateY(12px) scale(.98); opacity: 0; } }
 .phb-feuille[hidden] { display: none; }
-.phb-feuille.phb-f-carte, .phb-feuille.phb-f-bain, .phb-feuille.phb-f-jouer { bottom: auto; max-height: calc(100% - 76px); }
-.phb-feuille h3 { margin: 0 40px 10px 0; font-size: 19px; color: #0d4f58; }
-.phb-feuille h3 small { font-size: 14px; font-weight: 400; color: #4f5f63; }
-.phb-fermer-f { position: sticky; float: right; top: 0; z-index: 2; margin: -4px -6px 0 8px; }
-.phb-groupe { margin: 12px 0 6px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #6a5a38; }
-.phb-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
-.phb-grille-2 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
-.phb-grille-3 { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
-.phb-carte { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 8px; border-radius: 12px; text-align: center;
-  border: 1.5px solid #e0cfa8; background: #fff; color: #1f3036; font: 600 14px/1.25 "Trebuchet MS", system-ui, sans-serif; text-transform: none; letter-spacing: normal; }
-button.phb-carte { cursor: pointer; }
-button.phb-carte:hover:not(:disabled) { background: #fff6dc; border-color: #c9a24a; }
-.phb-carte:disabled { opacity: .5; cursor: not-allowed; }
-.phb-carte small { font-weight: 400; font-size: 12.5px; color: #4f5f63; }
-.phb-carte .phb-info { color: #0d5a63; font-weight: 600; }
-.phb-ic { width: 40px; height: 40px; display: grid; place-items: center; font-size: 26px; }
+.phb-feuille.phb-f-carte, .phb-feuille.phb-f-bain, .phb-feuille.phb-f-jouer { bottom: auto; max-height: calc(100% - 78px); }
+.phb-feuille h3 { display: flex; align-items: center; gap: 10px; margin: 0 48px 12px 0; font: 700 19px/1.2 "Trebuchet MS", "Segoe UI", system-ui, sans-serif; color: var(--t); }
+.phb-feuille h3 > .phb-ico { width: 30px; height: 30px; padding: 6px; border-radius: 50%; background: var(--prim); color: var(--prim-t); }
+.phb-feuille h3 small { font: 400 14px "Segoe UI", system-ui, sans-serif; color: var(--t2); }
+.phb-dlg .phb-fermer-f { position: sticky; float: right; top: 0; z-index: 2; margin: -4px -6px 0 8px; width: 36px; height: 36px; padding: 0; border-radius: 50%; }
+.phb-groupe { margin: 14px 0 6px; font-size: 12.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--t2); }
+.phb-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.phb-grille-2 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.phb-grille-album { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+.phb-carte { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 10px; border-radius: 16px; text-align: center;
+  border: 1.5px solid var(--bord); background: var(--bouton); color: var(--t); font: 700 14px/1.25 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  text-transform: none; letter-spacing: normal; box-shadow: 0 2px 0 var(--ombre); }
+button.phb-carte { cursor: pointer; transition: transform .16s cubic-bezier(.34, 1.56, .64, 1), box-shadow .16s; }
+button.phb-carte:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 18px var(--ombre); }
+.phb-carte:disabled { opacity: .45; cursor: not-allowed; }
+.phb-carte small { font-weight: 400; font-size: 12.5px; color: var(--t2); }
+.phb-carte .phb-info { color: var(--t); font-weight: 700; }
+.phb-carte-jeu { align-items: flex-start; text-align: left; display: grid; grid-template-columns: 48px 1fr; grid-template-rows: auto auto; column-gap: 12px; }
+.phb-carte-jeu .phb-ic { grid-row: 1 / 3; }
+.phb-ic { width: 44px; height: 44px; display: grid; place-items: center; }
 .phb-ic svg { width: 100%; height: 100%; }
-.phb-ic-mini { display: inline-block; width: 20px; height: 20px; vertical-align: -5px; margin-right: 6px; }
+.phb-ic-ico { border-radius: 50%; background: var(--c); color: #fff; }
+.phb-ic-ico svg { width: 24px; height: 24px; }
+.phb-ic-mini { display: inline-block; width: 20px; height: 20px; vertical-align: -5px; }
 .phb-ic-mini svg { width: 100%; height: 100%; }
 .phb-article .phb-b { margin-top: auto; }
+.phb-article.promo { border-color: #e8a73a; }
+.phb-ruban { position: absolute; top: 8px; right: -4px; padding: 2px 8px; border-radius: 6px 0 0 6px; background: #c25a12; color: #fff; font-size: 11px; font-weight: 800; }
 .phb-onglets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-.phb-astuce { margin: 12px 0 0; padding: 8px 12px; border-radius: 10px; background: #eef7e6; border: 1px solid #c4e0ae; font-size: 14px; }
-.phb-gris { color: #4f5f63; font-size: 14px; }
+.phb-astuce { display: flex; gap: 10px; align-items: flex-start; margin: 14px 0 0; padding: 10px 12px; border-radius: 14px; background: #eef7e6; color: #24431a; border: 1px solid #c4e0ae; font-size: 14px; }
+.phb-astuce .phb-ico { color: #3a9e4a; width: 20px; height: 20px; }
+.phb-gris { color: var(--t2); font-size: 14px; }
 .phb-ligne { display: flex; flex-wrap: wrap; gap: 6px; }
 .phb-centre { justify-content: center; }
 .phb-chk { display: flex; gap: 10px; align-items: center; margin: 8px 0; }
 .phb-chk input { width: 18px; height: 18px; accent-color: #0d6470; flex: none; }
-.phb-chk select { font: inherit; padding: 4px 8px; border-radius: 8px; border: 1.5px solid #b9a37a; background: #fff; color: #1f3036; }
+.phb-chk select { font: inherit; padding: 5px 10px; border-radius: 10px; border: 1.5px solid var(--bord); background: var(--bouton); color: var(--t); }
 .phb-garde { display: grid; grid-template-columns: minmax(180px, 260px) 1fr; gap: 16px; align-items: start; }
-.phb-apercu { background: linear-gradient(#bfe9f2 0 62%, #f1d79a 62%); border-radius: 14px; padding: 8px; }
-.phb-apercu svg { width: 100%; height: auto; display: block; }
+.phb-apercu, .phb-portrait { background: linear-gradient(#c7eef6 0 62%, #f1d79a 62%); border-radius: 14px; padding: 8px; }
+.phb-apercu svg, .phb-portrait svg { width: 100%; height: auto; display: block; }
+.phb-frise { display: flex; gap: 12px; overflow-x: auto; padding: 4px 4px 10px; }
+.phb-photo { flex: 0 0 170px; margin: 0; padding: 8px 8px 10px; background: #fff; border-radius: 6px; box-shadow: 0 6px 16px rgba(0, 0, 0, .18); color: #1f3036;
+  transform: rotate(-1.5deg); }
+.phb-photo:nth-child(even) { transform: rotate(1.5deg); }
+.phb-photo figcaption { display: grid; gap: 2px; margin-top: 6px; text-align: center; font-size: 13px; }
+.phb-photo small { color: #4b5b60; }
+.phb-ancien .phb-portrait { width: 100%; }
 .phb-histo { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.phb-histo li { padding: 5px 8px; border-radius: 8px; background: #fff; border: 1px solid #efe3c8; font-size: 14px; }
-.phb-histo time { color: #6a5a38; font-variant-numeric: tabular-nums; margin-right: 6px; }
-.phb-tbl { border-collapse: collapse; width: 100%; max-width: 560px; font-size: 14px; }
-.phb-tbl th, .phb-tbl td { padding: 5px 8px; border-bottom: 1px dashed #e0cfa8; text-align: left; }
+.phb-histo li { padding: 6px 10px; border-radius: 10px; background: var(--bouton); border: 1px solid var(--bord); font-size: 14px; }
+.phb-histo time { color: var(--t2); font-variant-numeric: tabular-nums; margin-right: 6px; }
+.phb-tbl { border-collapse: collapse; width: 100%; max-width: 600px; font-size: 14px; }
+.phb-tbl th, .phb-tbl td { padding: 6px 8px; border-bottom: 1px dashed var(--bord); text-align: left; font-weight: 400; }
 .phb-tbl td { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
-.phb-succes { opacity: .62; }
-.phb-succes.ok { opacity: 1; border-color: #c9a24a; background: #fffaf0; }
-.phb-faits { padding-left: 4px; list-style: none; display: grid; gap: 6px; }
-.phb-faits li { padding: 8px 10px; border-radius: 10px; background: #eef7e6; border: 1px solid #c4e0ae; }
-.phb-postale { display: grid; grid-template-columns: minmax(120px, 200px) 1fr; gap: 14px; padding: 12px; margin-bottom: 12px; border-radius: 12px;
-  background: #fffaf0; border: 2px dashed #d6b45a; }
+.phb-succes { opacity: .6; }
+.phb-succes.ok { opacity: 1; border-color: #d6a73a; }
+.phb-faits { padding-left: 0; list-style: none; display: grid; gap: 6px; }
+.phb-faits li { display: flex; gap: 10px; align-items: flex-start; padding: 9px 12px; border-radius: 12px; background: #eef7e6; color: #24431a; border: 1px solid #c4e0ae; }
+.phb-faits .phb-ico { color: #3a9e4a; width: 18px; height: 18px; margin-top: 1px; }
+.phb-postale { display: grid; grid-template-columns: minmax(120px, 200px) 1fr; gap: 14px; padding: 12px; margin-bottom: 12px; border-radius: 14px;
+  background: #fffaf0; color: #1f3036; border: 2px dashed #d6b45a; }
 .phb-postale-img svg { width: 100%; height: auto; border-radius: 8px; display: block; }
 .phb-postale p { margin: 6px 0; }
+.phb-postale small { color: #4b5b60; }
 .phb-conseil { padding: 6px 10px; border-radius: 8px; background: #eef7e6; }
 
 /* ---------- Mini-jeux ---------- */
 .phb-jeu-infos { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 8px; font-size: 15px; }
 .phb-jeu-infos b { font-variant-numeric: tabular-nums; }
-.phb-canevas { display: block; width: 100%; height: min(320px, 46vh); border-radius: 12px; border: 2px solid #e0cfa8; touch-action: none; cursor: none; }
-.phb-devin { display: grid; place-items: center; padding: 6px 0; background: linear-gradient(#bfe9f2 0 66%, #f1d79a 66%); border-radius: 14px; margin-bottom: 8px; }
+.phb-canevas { display: block; width: 100%; height: min(320px, 46vh); border-radius: 14px; border: 2px solid var(--bord); touch-action: none; cursor: none; }
+.phb-canevas.course { cursor: pointer; }
+.phb-devin { display: grid; place-items: center; padding: 6px 0; background: linear-gradient(#c7eef6 0 66%, #f1d79a 66%); border-radius: 14px; margin-bottom: 8px; }
 .phb-devin-perso { width: min(280px, 70%); aspect-ratio: 2 / 1; }
-.phb-devin-perso svg { width: 100%; height: 100%; display: block; }
-.phb-devin-perso.gauche svg { transform: scaleX(-1); transition: transform .25s; }
+.phb-devin-perso svg { width: 100%; height: 100%; display: block; transition: transform .25s; }
+.phb-devin-perso.gauche svg { transform: scaleX(-1); }
 .phb-suite { display: flex; justify-content: center; gap: 8px; min-height: 22px; margin: 8px 0; }
-.phb-chip { display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: #e9dfc8; border: 2px solid #b9a37a; }
+.phb-chip { display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: color-mix(in srgb, var(--bord) 60%, var(--carte)); border: 2px solid var(--bord); }
 .phb-chip.grand { width: 22px; height: 22px; }
-.phb-chip.vu { background: #0d6470; border-color: #094a53; }
+.phb-chip.vu { background: var(--prim); border-color: var(--prim); animation: phb-pop .3s cubic-bezier(.34, 1.56, .64, 1); }
 
 /* ---------- Téléphone ---------- */
 @media (max-width: 760px) {
@@ -256,18 +393,25 @@ button.phb-carte:hover:not(:disabled) { background: #fff6dc; border-color: #c9a2
   .phb-dlg { width: 100vw; height: 100dvh; max-height: none; border-radius: 0; font-size: 14px; }
   .phb-scene { width: 100%; }
   .phb-bas { grid-template-columns: 1fr; grid-template-areas: "etat" "jauges" "actions" "actions2"; padding: 10px 12px 14px; }
-  .phb-actions { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); }
-  .phb-dlg .phb-b { padding: 9px 10px; }
+  .phb-actions { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
+  .phb-dlg .phb-tuile { padding: 8px 4px 7px; font-size: 12px; }
+  .phb-tuile-ic { width: 34px; height: 34px; }
   .phb-feuille { position: fixed; inset: 8px; }
   .phb-garde, .phb-postale { grid-template-columns: 1fr; }
   .phb-perso { width: 20%; }
-  .phb-tete-ile h2 { font-size: 19px; }
+  .phb-tete-ile h2 { font-size: 18px; }
+  .phb-tete-ile { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; }
+  .phb-ciel-info { grid-row: 2; grid-column: 1 / -1; }
+  .phb-coq { grid-row: 1; grid-column: 3; }
+  .phb-dlg .phb-fermer { grid-row: 1; grid-column: 4; }
 }
 
 /* ---------- Réduire les animations : Philibert immobile, île figée, tout reste utilisable ---------- */
 @media (prefers-reduced-motion: reduce) {
-  .phb-mini, .phb-mini *, .phb-dlg *, .phb-dlg *::before, .phb-dlg *::after { animation: none !important; transition: none !important; }
+  .phb-mini, .phb-mini *, .phb-bulle, .phb-dlg *, .phb-dlg *::before, .phb-dlg *::after { animation: none !important; transition: none !important; }
   .phb-nuage:nth-child(1) { transform: translateX(40%); } .phb-nuage:nth-child(2) { transform: translateX(260%); }
   .phb-nuage:nth-child(3) { transform: translateX(120%); } .phb-nuage:nth-child(n+4) { transform: translateX(380%); }
   .phb-mouette { transform: translateX(800%); }
+  .phb-reflets i { opacity: .5; }
+  .phb-fx { display: none; }
 }

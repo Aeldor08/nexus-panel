@@ -500,7 +500,7 @@ a_heure(12)
 p.etat()
 p.s["j"]["chaleur"] = 50
 g = p.jeu_debut("course")
-ok(g["duree"] == 25, "Course au rocher chaud : partie ouverte par le serveur (25 s)")
+ok(g["duree"] == 30, "Course au rocher chaud : partie ouverte par le serveur (30 s au plus)")
 ok(erreur(p.jeu_fin, g["jeton"], 10, 0, True) is not None, "arrivée annoncée trop tôt : refusée")
 horloge[0] += 26
 c0 = p.s["coquillages"]

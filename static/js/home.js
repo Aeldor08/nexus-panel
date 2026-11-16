@@ -43,6 +43,20 @@
             ${t.parts.map(([id, label]) => `<a href="#${t.tab}/${id}">${label}</a>`).join("")}
           </nav>
         </article>`).join("")}
+      <article class="card home-tile home-philibert" style="--accent: var(--green)" data-panel="philibert">
+        <a class="home-main" href="#accueil" data-philibert="" aria-label="Ouvrir l'île de Philibert">
+          <span class="home-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2.5 17.5c2.8.4 4.6-1.4 6.6-3.2 1-1 2.4-1.5 3.9-1.5h3.4c1.3 0 2.2-.9 3.2-1.6.9-.5 2 0 2.2.9.3 1-.3 1.9-1.3 2.2l-2.1.6"/>
+            <path d="M10.5 13.6l-1.2 4.2M15.6 12.8l.9 4.4M13 12.8l-.3-2.2M15 12.8l.4-2.4M11 13l-.6-2"/><circle cx="19.4" cy="11.6" r=".7" fill="currentColor" stroke="none"/></svg></span>
+          <span class="home-title">Philibert<small>Ton iguane et son île</small></span>
+          <span class="home-go" aria-hidden="true">→</span>
+        </a>
+        <div class="home-live" id="h-live-philibert"><span class="muted">…</span></div>
+        <nav class="home-parts" aria-label="Accès direct à l'île de Philibert">
+          <a href="#accueil" data-philibert="nourrir">Nourrir</a><a href="#accueil" data-philibert="jouer">Jouer</a>
+          <a href="#accueil" data-philibert="boutique">Boutique</a><a href="#accueil" data-philibert="carnet">Carnet</a>
+        </nav>
+      </article>
     </section>
     <p class="hint" style="text-align:center">Clique sur une catégorie ou directement sur une sous-partie.
       Pour revenir ici : bouton <b>◀ Retour</b>, onglet <b>⌂ Sommaire</b> ou touche <b>Échap</b>. Le logo <b>NEXUS</b> ramène à la page de garde.
@@ -52,6 +66,13 @@
   $("h-intro").addEventListener("click", ev => { ev.preventDefault(); if (window.replayIntro) window.replayIntro(); });
   $("h-version").addEventListener("click", ev => { ev.preventDefault(); if (window.nxVersion) window.nxVersion.ouvrir(); });
   $("h-sante").addEventListener("click", ev => { ev.preventDefault(); if (window.nxSante) window.nxSante.ouvrir(); });
+  // Tuile Philibert : ouvre son île (directement sur un panneau pour les accès rapides)
+  root.addEventListener("click", ev => {
+    const a = ev.target.closest("[data-philibert]");
+    if (!a) return;
+    ev.preventDefault();
+    if (window.PhilibertIle) window.PhilibertIle.ouvrir(a.dataset.philibert || undefined);
+  });
 
   // Réécrit une tuile seulement si son contenu a changé (moins de travail de mise en page chaque seconde)
   const dernier = {};
@@ -141,6 +162,21 @@
     } catch (e) { ["souvenirs", "statistiques", "journal"].forEach(t => live(t, `<span class="muted">indisponible</span>`)); }
   }
 
+  // Philibert : humeur, besoin principal, âge et coquillages (mis à jour à chaque nouvel état reçu)
+  const HUMEURS = { joyeux: "Joyeux", calme: "Tranquille", dort: "Il dort", malade: "Malade", grognon: "Grognon", appel: "Il t'appelle", froid: "Il a froid",
+    oeuf: "Encore un œuf", veto: "Chez la tortue vétérinaire", pension: "En pension chez la voisine" };
+  function fromPhilibert(e) {
+    e = e || (window.nxPhilibert && window.nxPhilibert.etat());
+    if (!e) return;
+    const b = (e.besoins || []).filter(x => x.id !== "ventre")[0];
+    const ton = e.niveau === "malade" ? "t-hot" : b || e.appel ? "t-warn" : "t-ok";
+    live("philibert", kv("Humeur", esc(HUMEURS[e.dort ? "dort" : e.humeur] || "—"), ton) +
+      (["veto", "pension", "oeuf"].includes(e.niveau) ? "" : kv("Besoin", b ? esc(b.texte.split(" : ")[0]) : "rien", b ? "t-warn" : "")) +
+      kv(e.stade === "oeuf" ? "Stade" : "Âge", e.stade === "oeuf" ? "œuf" : e.age_jours < 1 ? Math.round(e.age_jours * 24) + " h" : e.age_jours.toFixed(1).replace(".", ",") + " j") +
+      kv("Coquillages", e.coquillages));
+  }
+  addEventListener("philibert:maj", ev => fromPhilibert(ev.detail));
+
   let fast = null, slow = null;
   function fromDeck() {
     live("deck", `<span class="hk wide"><small>Stream deck</small><b>Gros boutons tactiles</b></span>`);
@@ -153,6 +189,7 @@
       fromLauncher();
       fromNet();
       fromPerso();
+      fromPhilibert();
       clearInterval(fast); clearInterval(slow); clearInterval(perso);
       fast = setInterval(tickFast, 1000);
       slow = setInterval(() => { if (!document.hidden) fromNet(); }, 3000);

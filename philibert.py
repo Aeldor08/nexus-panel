@@ -1284,7 +1284,7 @@ class Philibert:
             if jeu == "feuilles":
                 out["duree"] = 30
             elif jeu == "course":
-                out["duree"] = 25
+                out["duree"] = 30
             elif jeu == "devin":
                 out["manches"] = 5
             else:

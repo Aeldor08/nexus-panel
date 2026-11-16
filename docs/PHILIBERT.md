@@ -23,7 +23,9 @@ Deux principes guident toutes les règles :
 | `static/js/philibert.js` | Philibert qui se promène en haut de la page + sa bulle |
 | `static/js/philibert-dessin.js` | Le dessin SVG de Philibert (stade, variante, humeur, accessoires, pose) |
 | `static/js/philibert-ile.js` | L'île (fenêtre), les soins, la boutique, la garde-robe, le carnet, les réglages |
-| `static/js/philibert-jeux.js` | Les trois mini-jeux |
+| `static/js/philibert-jeux.js` | Les quatre mini-jeux |
+| `static/js/philibert-icones.js` | Les icônes dessinées de l'île (actions, jauges, météo, saisons) |
+| `static/js/home.js` | La tuile « Philibert » du sommaire (humeur, besoin, âge, coquillages, accès directs) |
 | `static/philibert.css` | Styles (l'île garde son propre univers de couleurs, lisible avec tous les profils) |
 | `outils/tests/test_philibert.py` | Tests sans navigateur (horloge simulée), inscrits dans `run_all.py` |
 
@@ -38,8 +40,20 @@ Deux principes guident toutes les règles :
 - **Rythme ralenti la nuit** : pendant son sommeil, faim et bonheur baissent trois fois moins vite.
 - **Absence** : si personne ne s'est occupé de lui depuis plus de 8 h, tout baisse deux fois moins vite et les
   jauges ont des **planchers** (faim 20, bonheur 25, propreté 20, chaleur 20, énergie 20 ; santé jamais sous 5).
-- **Météo** de l'île : déterministe (même météo sur le PC et le téléphone), par tranches de 2 h : soleil (≈55 %),
-  nuages (≈30 %), pluie (≈15 %, jamais deux tranches de pluie de suite), arc-en-ciel la tranche qui suit une pluie.
+- **Météo** de l'île : déterministe (même météo sur le PC et le téléphone), par tranches de 2 h : soleil, nuages,
+  pluie (jamais deux tranches de pluie de suite), arc-en-ciel la tranche qui suit une pluie. Les proportions
+  dépendent de la saison (ci-dessous).
+- **Saisons de l'île** (mois réels) :
+
+  | Saison | Mois | Pluie / nuages | Chaleur | De saison (−1 coquillage) | Décor |
+  |---|---|---|---|---|---|
+  | Printemps | mars–mai | 15 % / 30 % | ±0 | fleur de pissenlit | buisson d'hibiscus, fleurs sur le sable, papillons |
+  | Été | juin–août | 8 % / 22 % | +5 | mangue | étoiles de mer, mer plus vive, papillons |
+  | Saison des pluies | sept.–nov. | 26 % / 32 % | −2 | figue | noix de coco et palme tombées, flaque plus grande |
+  | Saison fraîche | déc.–févr. | 14 % / 41 % | −6 | chou vert | bois flotté, vagues plus rapides, ciel plus pâle, guirlande en décembre |
+
+  Deux fiches « Le savais-tu ? » de saison (ponte en saison sèche, moins actif quand il fait frais) et le succès
+  « Les quatre saisons ».
 
 ## 3. Les jauges (0 à 100)
 
@@ -176,6 +190,11 @@ Il faut qu'il soit éveillé, pas malade, avec au moins 15 d'énergie. Chaque pa
 3. **Le hochement** (jeu de mémoire et de rythme) : Philibert hoche la tête en une suite de petits et grands
    hochements (sa façon de parler) ; il faut la répéter. Une étape de plus à chaque réussite (8 au plus).
    Les suites sont tirées et vérifiées par le serveur.
+4. **Course au rocher chaud** (30 s au plus) : il court vers le rocher ; on saute (Espace, ↑, clic, doigt)
+   par-dessus les crabes et les noix de coco ; les rayons de soleil le réchauffent (+1 point, il court plus vite),
+   l'ombre des nuages le refroidit. Il part avec **sa vraie chaleur du moment**. Arrivé : il finit étalé sur le
+   vrai rocher de l'île (chaleur +10). Récompense : rayons ÷ 3 (+3 s'il arrive), 10 au plus ; arrivée annoncée
+   avant 22 s refusée par le serveur ; succès « Coureur du soleil » (arriver avec 15 rayons).
 
 **Anti-triche** : partie ouverte par le serveur (jeton à usage unique), durée minimale vérifiée, score borné,
 récompense calculée par le serveur, **60 coquillages par jour au plus** gagnés aux jeux.
@@ -192,8 +211,17 @@ récompense calculée par le serveur, **60 coquillages par jour au plus** gagné
 ## 12. Carnet
 
 Historique (naissance, éclosion, maladies, séjours chez le vétérinaire, mues, évolutions… 300 lignes au plus),
-statistiques (repas, friandises, bains, jeux, refus, séjours…), **succès** (21), **cartes postales** reçues,
-fiches **« Le savais-tu ? »** débloquées (18), âge en jours.
+statistiques (repas, friandises, bains, jeux, refus, séjours, saisons…), **succès** (23), **cartes postales** reçues,
+fiches **« Le savais-tu ? »** débloquées (20), âge en jours.
+
+**Album** : une photo de chaque étape de sa vie (éclosion, juvénile, adulte avec sa variante, vieux sage) et
+les **Philibert d'avant** : quand on recommence avec un nouvel œuf, l'ancien part vivre sur une île voisine et
+garde sa place dans l'album (portrait, dates, âge, repas, parties, mues, succès, séjours chez la tortue ; 30 au
+plus). Un œuf qui n'a pas éclos n'y entre pas.
+
+**Tuile du sommaire** : humeur, besoin principal, âge et coquillages, avec des accès directs (Nourrir, Jouer,
+Boutique, Carnet). Elle reste là même si Philibert est masqué en haut de la page : c'est toujours une entrée vers
+son île.
 
 ## 13. Notifications et réglages
 
@@ -227,7 +255,28 @@ Toutes les valeurs (jauges, coquillages, durées) sont calculées par le serveur
 intentions. Journal d'activité (catégorie « Philibert ») : éclosion, évolutions, départ et retour du
 vétérinaire, vacances, nouvel œuf — pas les repas (pas de spam).
 
-## 16. Performance et accessibilité
+## 16. Animations et design (version 2)
+
+Inspirations (principes seulement, rien n'est repris) : cycle de marche des quadrupèdes en 4 temps (pose, appui,
+lever, passage) avec des pattes décalées ; posture étalée des lézards (pattes de côté, en deux segments) ; interfaces
+« cosy » (icônes plutôt que texte, coins arrondis, couleurs douces, cohérence) ; animations web en transform/opacity,
+courbes douces pour les déplacements et à rebond pour ce qui apparaît.
+
+- **Dessin** : ombrage en dégradé, reflets, rangées d'écailles, épines du fanon, yeux plus expressifs (deux
+  reflets), pattes en deux segments à cinq doigts, queue en deux parties.
+- **Marche** : paires diagonales, genou plié pendant le passage, corps qui ondule, queue en S ; vitesse accordée au
+  rythme des pattes (il ne « glisse » plus). En haut de la page : quelques images par pas seulement (léger).
+- **Île** : palmes qui ondulent au vent le jour, écume qui respire autour de l'île, reflets sur la mer, soleil et
+  ses rayons qui tournent lentement, étoiles qui scintillent, lucioles la nuit, papillons au printemps et en été,
+  crabes qui trottinent ; Philibert respire au repos et se déplace par `transform` (unités de conteneur `cqw`).
+- **Effets** : cœurs (caresse), miettes et aliment qui part vers sa bouche (repas), gouttes (bain), étoiles
+  (félicitations, guérison, succès), coquillages (gains).
+- **Interface** : en-tête avec médaillon, puces météo et saison ; jauges en cartes avec icône colorée (qui pulse
+  doucement quand elle est basse) ; bulle de paroles de Philibert ; tuiles d'actions à icônes dessinées
+  (`philibert-icones.js`, une seule famille d'icônes au lieu d'émojis) ; **palette de nuit** (bleu nuit) quand il
+  fait nuit sur l'île.
+
+## 17. Performance et accessibilité
 
 - Philibert du haut : un seul élément SVG, déplacé par `transform` (transition CSS), pattes et queue animées en
   CSS ; minuterie d'humeur toutes les quelques secondes, rien quand l'onglet est caché, rien en mode jeu
@@ -238,7 +287,7 @@ vétérinaire, vacances, nouvel œuf — pas les repas (pas de spam).
   `prefers-reduced-motion` ; le mini-jeu « Pluie de feuilles » dessine avec `nxImage()` (60 i/s au plus) et
   s'arrête quand l'onglet est caché. Fenêtre `<dialog>` : Échap ferme, boutons nommés, focus visible.
 
-## 17. Où j'en suis / reste à faire
+## 18. Où j'en suis / reste à faire
 
 État au 16/11/2026 (une seule longue session a couvert les deux sessions prévues).
 
@@ -271,8 +320,12 @@ vétérinaire, vacances, nouvel œuf — pas les repas (pas de spam).
 - Les notifications Windows et Discord (code en place, non déclenchées pour de vrai).
 - Les profils Ardoise et Pluie d'étoiles en capture (même mécanisme d'en-tête que les autres).
 
+**Version 2 (16/11/2026)** — faites et vérifiées dans la copie isolée : tuile du sommaire (accès direct aux
+panneaux), course au rocher chaud jouée jusqu'au bout (arrivée sur le vrai rocher, gain calculé par le serveur),
+saisons (jour, nuit, pluie), album après un nouvel œuf, nouvelles animations et nouveau design (jour, nuit,
+téléphone). 151 tests serveur.
+
 **Idées pour la suite**
-- Un raccourci « Philibert » sur le sommaire, avec son humeur du moment.
-- Plus de mini-jeux (course au rocher chaud), plus d'évènements, des saisons sur l'île.
-- Une fiche « Le savais-tu ? » illustrée, et un album des évolutions passées après « nouvel œuf ».
+- Plus d'évènements de saison (ponte de tortues marines au printemps, grande marée en saison des pluies).
+- Une fiche « Le savais-tu ? » illustrée.
 - Sons plus riches (toujours synthétisés, pas de fichiers).
