@@ -302,19 +302,36 @@ son île.
   heureux, « Zzz » la nuit, nuage gris quand il est malade.
 - **Notification Windows** (facultative, via le navigateur, comme les alertes de NEXUS) quand il tombe malade ou
   part chez le vétérinaire — jamais en mode jeu. **Discord** (facultatif) via le bot de NEXUS s'il est configuré.
-- **Bruits de l'île** (réglage *ambiance*, et bouton dans l'en-tête de l'île) : tout est synthétisé (Web Audio, aucun
-  fichier) et très discret — houle et écume toujours, pluie (et tonnerre lointain en saison des pluies), vent par
-  ciel couvert ou en saison fraîche, goélands le jour au soleil, grillons et petites grenouilles la nuit. Seulement
-  quand l'île est ouverte, l'onglet visible, hors mode jeu et avec les petits sons activés ; coupés avec « réduire
-  les animations ».
+- **Bruits de l'île** (réglage *ambiance*, et bouton dans l'en-tête de l'île) : houle et écume toujours, vent par
+  ciel couvert ou en saison fraîche, goélands le jour au soleil, grillons et petites grenouilles la nuit (synthétisés,
+  Web Audio) ; **pluie et orage : de vrais enregistrements libres de droit** (`static/sons/`, voir « Crédits des
+  sons ») : une averse en boucle sans couture qui monte doucement, et en saison des pluies ou des tempêtes un vrai
+  coup de tonnerre qui roule et s'éteint, de hauteur et de force un peu différentes à chaque fois (plus fréquent
+  pendant la saison des tempêtes). Les fichiers ne sont chargés qu'à la première averse. Seulement quand l'île est
+  ouverte, l'onglet visible, hors mode jeu et avec les petits sons activés ; coupés avec « réduire les animations ».
+- **Volumes** (réglages `volume_ambiance` et `volume_jeux`, de 0 à 100, 60 par défaut = le volume d'origine) : un
+  curseur pour les bruits de l'île et un pour les petits sons et les mini-jeux, dans les Réglages ; le volume des
+  mini-jeux a aussi son petit curseur dans l'en-tête de chaque jeu. Le changement s'entend tout de suite (sans
+  relancer les bruits de l'île), puis il est enregistré.
 - **Couleurs de l'interface** (bouton lune/soleil dans l'en-tête de l'île, qui bascule entre clair et sombre, ou
   réglage *theme*) : *automatique* (sombre si le fond du profil du panel est sombre ou
   s'il fait nuit sur l'île), *clair* ou *sombre*. Contrastes vérifiés : texte ≥ 12 : 1, texte secondaire ≥ 7 : 1,
   pastilles et encadrés ≥ 7 : 1, rubans de rareté ≥ 5,8 : 1. La scène, elle, suit toujours l'heure de l'île.
   Le rafraîchissement automatique (toutes les 30 s) attend qu'on ait fini de choisir dans une liste ou une case d'un
   panneau ouvert (sinon la liste se refermait).
-- **Réglages** : afficher/masquer Philibert en haut, vitesse (normale / lente), sons, notifications Windows,
-  Discord, mode vacances, recommencer avec un nouvel œuf (double confirmation).
+- **Réglages** : afficher/masquer Philibert en haut, vitesse (normale / lente), sons, volumes (bruits de l'île ;
+  petits sons et mini-jeux), notifications Windows, Discord, mode vacances, recommencer avec un nouvel œuf (double
+  confirmation).
+
+### Crédits des sons
+
+Les deux enregistrements de `static/sons/` sont sous licence **CC0** (domaine public : libres de droit, aucune
+attribution obligatoire) ; on les cite par politesse.
+
+| Fichier | Origine | Licence |
+|---|---|---|
+| `pluie.ogg` | « Rain (loopable) » par Ylmir, OpenGameArt (boucle n° 3) | CC0 |
+| `orage.ogg` | « Rain + Long Thunder », OpenGameArt (`rain-thunder.ogg`) ; on en joue le passage du tonnerre (à partir de 20 s) | CC0 |
 
 ## 14. Données (`data/philibert.json`)
 
@@ -356,6 +373,15 @@ courbes douces pour les déplacements et à rebond pour ce qui apparaît.
   crabes qui trottinent ; Philibert respire au repos et se déplace par `transform` (unités de conteneur `cqw`).
 - **Effets** : cœurs (caresse), miettes et aliment qui part vers sa bouche (repas), gouttes (bain), étoiles
   (félicitations, guérison, succès), coquillages (gains).
+- **Bain** : il marche jusqu'au bord de l'eau (mer ou flaque), y entre avec un « plouf » et des éclaboussures, plonge
+  un peu puis nage comme un vrai iguane vert : pattes repliées, seuls la tête et le haut du dos dépassent, la queue
+  ondule, des ronds s'élargissent à la surface ; puis il ressort, revient sur le sable en marchant et s'ébroue.
+- **Palmier** : le soir, il marche jusqu'au pied du palmier, se dresse contre le tronc, grimpe le long du tronc courbe
+  (pattes en mouvement) jusqu'à la couronne et s'installe sur sa palme pour dormir ; le matin, il redescend la tête la
+  première. (Seulement si l'île est ouverte à ce moment-là ; rien avec « réduire les animations ».)
+- **Lanterne et lampe chauffante** : allumer ou éteindre ne redessine plus le décor (les deux états y sont déjà, on
+  montre le bon) : les vagues, crabes, oiseaux et nuages continuent sans repartir de zéro, et la pénombre change en
+  douceur.
 - **Interface** : en-tête avec médaillon, puces météo et saison ; jauges en cartes avec icône colorée (qui pulse
   doucement quand elle est basse) ; bulle de paroles de Philibert ; tuiles d'actions à icônes dessinées
   (`philibert-icones.js`, une seule famille d'icônes au lieu d'émojis) ; **palette de nuit** (bleu nuit) quand il

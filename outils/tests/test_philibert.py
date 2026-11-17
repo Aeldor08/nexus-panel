@@ -613,6 +613,13 @@ ok(p.s["discipline"] > d0 + 10 and r["reaction"] == "fier", "féliciter juste ap
 p = nouveau()
 p.action("reglages", {"visible": False, "sons": False, "notif_windows": True, "vitesse": "turbo"})
 ok(p.s["reglages"]["visible"] is False and p.s["reglages"]["notif_windows"] and p.s["reglages"]["vitesse"] == "normale", "réglages (valeur inconnue ignorée)")
+ok(p.s["reglages"]["volume_ambiance"] == P.VOLUME_DEFAUT == 60 and p.s["reglages"]["volume_jeux"] == 60, "volumes par défaut : bruits de l'île et mini-jeux à 60")
+p.action("reglages", {"volume_ambiance": 35, "volume_jeux": "80"})
+ok(p.s["reglages"]["volume_ambiance"] == 35 and p.s["reglages"]["volume_jeux"] == 80, "volumes réglables (bruits de l'île, petits sons et mini-jeux)")
+p.action("reglages", {"volume_ambiance": 250, "volume_jeux": -4})
+ok(p.s["reglages"]["volume_ambiance"] == 100 and p.s["reglages"]["volume_jeux"] == 0, "volumes bornés de 0 à 100")
+p.action("reglages", {"volume_ambiance": "fort", "volume_jeux": None})
+ok(p.s["reglages"]["volume_ambiance"] == 100 and p.s["reglages"]["volume_jeux"] == 0 and p.etat()["reglages"]["volume_jeux"] == 0, "volume illisible : ignoré ; les volumes sont envoyés à la page")
 ok(erreur(p.action, "recommencer", {}) is not None and p.s["stade"] == "bebe", "recommencer sans confirmation : refusé")
 r = p.action("recommencer", {"confirmer": "NOUVEL OEUF"})
 ok(r["etat"]["stade"] == "oeuf" and p.s["reglages"]["visible"] is False, "nouvel œuf (réglages gardés)")
@@ -900,6 +907,10 @@ ok(len(c["album"]) == 2 and c["album"][0]["stade"] == "bebe" and c["etapes"] == 
 
 # ---- le document pour l'administrateur suit le code -------------------------------------------
 doc = (BASE / "docs" / "PHILIBERT-REGLES.md").read_text(encoding="utf-8")
+sons = Path(__file__).resolve().parents[2] / "static" / "sons"
+doc_ph = (Path(__file__).resolve().parents[2] / "docs" / "PHILIBERT.md").read_text(encoding="utf-8")
+ok(all((sons / f).is_file() and (sons / f).stat().st_size < 1_500_000 and f"`{f}`" in doc_ph for f in ("pluie.ogg", "orage.ogg")) and "CC0" in doc_ph,
+   "sons de pluie et d'orage présents, légers, et crédités (licence CC0) dans la doc")
 ok(f"**−{P.ENERGIE_JEU} énergie au lancement**" in doc and f"**{P.GAINS_JEUX_JOUR} coquillages par jour**" in doc, "doc admin : coût et plafond des jeux")
 ok(all(f"**{v}**" in doc for v in (P.PLANCHERS["faim"], P.PLANCHERS["bonheur"])) and f"bonheur est à {P.SEUIL_ATTENTION} ou moins**" in doc, "doc admin : planchers et seuil d'attention")
 ok(all(f"{P.ALIMENTS[k]['nom']}" in doc for k in ("trefle", "feuilles_murier", "courge", "hibiscus", "banane")), "doc admin : tableau des aliments")

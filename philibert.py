@@ -31,6 +31,7 @@ PLANCHERS = {"faim": 20, "bonheur": 25, "proprete": 20, "chaleur": 20, "energie"
 SANTE_MIN = 5
 JAUGES = ("faim", "bonheur", "energie", "proprete", "sante", "chaleur")
 GAINS_JEUX_JOUR = 120
+VOLUME_DEFAUT = 60                 # volumes de l'île (bruits d'ambiance, petits sons et mini-jeux), de 0 à 100
 ENERGIE_JEU = 8                    # énergie prise au lancement d'une partie (perdue si on l'abandonne)
 
 # ---- Mini-jeux : paliers de difficulté. Le serveur fixe les règles (envoyées à la page au lancement) et s'en sert
@@ -530,7 +531,7 @@ class Philibert:
             "gouts": [], "moy": {"sante": 0.0, "bonheur": 0.0, "n": 0.0}, "regime": [], "friandises_t": [],
             "carnet": [], "cartes": [], "succes": {}, "succes_vus": [], "faits": [],
             "reglages": {"visible": True, "vitesse": "normale", "sons": True, "ambiance": True, "theme": "auto", "notif_windows": False, "discord": False,
-                         **(reglages or {})},
+                         "volume_ambiance": VOLUME_DEFAUT, "volume_jeux": VOLUME_DEFAUT, **(reglages or {})},
             "jeu": None, "jeux_jour": {"jour": "", "gagnes": 0}, "ramasse": 0.0, "bonne": None,
             "album": list(album or []), "etapes": [], "saisons_vues": [], "saisons_ile_vues": [],
             "cd": {}, "bain_sante_jour": "", "dernier_froid": False, "nouveau": [],
@@ -1640,6 +1641,12 @@ class Philibert:
             r["vitesse"] = p["vitesse"]
         if p.get("theme") in ("auto", "clair", "sombre"):            # couleurs de l'interface de l'île
             r["theme"] = p["theme"]
+        for k in ("volume_ambiance", "volume_jeux"):                  # volumes : bruits de l'île, petits sons et mini-jeux
+            if k in p:
+                try:
+                    r[k] = max(0, min(100, round(float(p[k]))))
+                except (TypeError, ValueError):
+                    pass
         return {"message": "Réglages enregistrés."}
 
     def _a_recommencer(self, now: float, p: dict) -> dict:

@@ -57,13 +57,26 @@
     g.fillStyle = "rgba(13, 100, 112, .88)"; g.beginPath(); g.roundRect ? g.roundRect(W / 2 - l / 2, 44, l, 40, 20) : g.rect(W / 2 - l / 2, 44, l, 40); g.fill();
     g.fillStyle = "#fff"; g.fillText(texte, W / 2, 73); g.restore();
   }
+  // petit curseur de volume dans l'en-tête de chaque jeu (même réglage que « petits sons et mini-jeux »)
+  function volumeJeu() {
+    const e = window.PhilibertIle && window.PhilibertIle.etat && window.PhilibertIle.etat(), r = e ? e.reglages : {};
+    const v = r.volume_jeux == null ? 60 : r.volume_jeux;
+    return `<label class="phb-vol-jeu" title="Volume des sons du jeu">${ico(r.sons === false ? "muet" : "son")}<input type="range" min="0" max="100" step="5" value="${v}"
+      aria-label="Volume des sons du jeu" aria-valuetext="${v} %"></label>`;
+  }
   function entete(box, titre, aide) {
     box.hidden = false;
     box.className = "phb-feuille phb-f-jeu";
     box.innerHTML = `<button class="phb-b phb-fermer-f" data-phb="fermer-feuille" aria-label="Quitter le jeu (la partie est abandonnée)">${ico("fermer") || "✕"}</button>
-      <h3>${ico(ICONES[titre] || "de")}<span>${esc(titre)}</span><button class="phb-b phb-abandon" data-abandon hidden>Abandonner</button></h3>
+      <h3>${ico(ICONES[titre] || "de")}<span>${esc(titre)}</span>${volumeJeu()}<button class="phb-b phb-abandon" data-abandon hidden>Abandonner</button></h3>
       <p class="phb-gris">${aide}</p><div class="phb-jeu"></div>`;
     box.querySelector("[data-abandon]").addEventListener("click", () => abandonner(box));
+    const v = box.querySelector(".phb-vol-jeu input");
+    // volume des sons du jeu : effet immédiat (un petit son d'essai), enregistré dans les réglages quand on le lâche ;
+    // les flèches du clavier ne doivent pas déplacer le curseur pendant la partie
+    v.addEventListener("input", () => { const e = window.PhilibertIle && window.PhilibertIle.etat && window.PhilibertIle.etat(); if (e) e.reglages.volume_jeux = +v.value; v.setAttribute("aria-valuetext", v.value + " %"); });
+    v.addEventListener("change", () => { son("pop"); if (window.PhilibertIle) window.PhilibertIle.reglerSilencieux({ volume_jeux: +v.value }); v.blur(); });
+    v.addEventListener("keydown", ev => { if (ev.key.startsWith("Arrow")) { ev.stopPropagation(); } });
     return box.querySelector(".phb-jeu");
   }
   function finir(r, ctx, zone) {

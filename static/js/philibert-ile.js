@@ -55,8 +55,9 @@
 
   // ---- sons (synthèse très courte, seulement après un geste, si les sons sont activés) ----
   let ctxAudio = null;
+  const volume = k => { const v = e && e.reglages ? e.reglages[k] : null; return (v == null ? 60 : v) / 60; };   // 60 = volume d'origine
   function son(type) {
-    if (!e || !e.reglages.sons) return;
+    if (!e || !e.reglages.sons || volume("volume_jeux") <= 0) return;
     try {
       ctxAudio = ctxAudio || new (window.AudioContext || window.webkitAudioContext)();
       const t = ctxAudio.currentTime, o = ctxAudio.createOscillator(), g = ctxAudio.createGain();
@@ -66,7 +67,7 @@
       o.frequency.setValueAtTime(n[0], t);
       o.frequency.exponentialRampToValueAtTime(n[1], t + n[3]);
       g.gain.setValueAtTime(.0001, t);
-      g.gain.exponentialRampToValueAtTime(.08, t + .01);
+      g.gain.exponentialRampToValueAtTime(Math.max(.0002, .08 * volume("volume_jeux")), t + .01);
       g.gain.exponentialRampToValueAtTime(.0001, t + n[3] + .05);
       o.connect(g).connect(ctxAudio.destination);
       o.start(t); o.stop(t + n[3] + .08);
@@ -74,14 +75,19 @@
   }
   window.PhilibertSon = son;
 
-  // ---- bruits de l'île selon la météo (tout est synthétisé : aucun fichier son) ----
-  // Vagues toujours (houle lente), pluie (et tonnerre lointain en saison des pluies), vent (ciel couvert, saison fraîche),
+  // ---- bruits de l'île selon la météo ----
+  // Vagues toujours (houle lente), pluie et orage (vrais enregistrements libres de droit, CC0, dans static/sons : voir
+  // docs/PHILIBERT.md), vent (ciel couvert, saison fraîche),
   // goélands le jour au soleil, grillons et petites grenouilles (« co-kî ») la nuit. Très discret ; seulement fenêtre de
   // l'île ouverte, onglet visible, hors mode jeu, avec les petits sons ET les bruits de l'île activés.
   const Ambiance = (() => {
     let maitre = null, noeuds = [], minut = [], cle = "", bruitBuf = null;
     const C = () => (ctxAudio = ctxAudio || new (window.AudioContext || window.webkitAudioContext)());
-    const voulu = () => !!(e && e.reglages.sons && e.reglages.ambiance !== false && dlg.open && !document.hidden
+    const SONS = {};                                                    // enregistrements décodés (une fois)
+    const charge = nom => (SONS[nom] = SONS[nom] || fetch(`/static/sons/${nom}.ogg`).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+      .then(b => C().decodeAudioData(b)).catch(() => { delete SONS[nom]; return null; }));
+    const niveau = () => .9 * volume("volume_ambiance");
+    const voulu = () => !!(e && e.reglages.sons && e.reglages.ambiance !== false && volume("volume_ambiance") > 0 && dlg.open && !document.hidden
       && !document.body.classList.contains("gamemode") && !absent() && !reduit());
     function bruit() {
       if (bruitBuf) return bruitBuf;
@@ -109,18 +115,33 @@
       if (c.state === "suspended") c.resume().catch(() => {});
       const ph = e.ciel.phase, met = e.ciel.meteo, sa = e.ciel.saison, nuit = ph === "nuit", sp = e.ciel.saison_ile ? e.ciel.saison_ile.id : null;
       maitre = c.createGain(); maitre.gain.value = .0001; maitre.connect(c.destination);
-      maitre.gain.exponentialRampToValueAtTime(.9, c.currentTime + 2);
+      maitre.gain.exponentialRampToValueAtTime(niveau(), c.currentTime + 2);
+      const m0 = maitre;
       // houle : bruit grave dont le volume monte et descend lentement (une vague toutes les ~10 s), et l'écume plus aiguë
       const houle = gain(.025); chaine(source(), filtre("lowpass", 420), houle, maitre); lfo(.1, .018, houle.gain);
       const ecume = gain(.008); chaine(source(), filtre("bandpass", 1500, .5), ecume, maitre); lfo(.1, .007, ecume.gain);
       if (met === "pluie") {
-        const p = gain(nuit ? .03 : .036); chaine(source(), filtre("highpass", 1300), filtre("lowpass", 7500), p, maitre); lfo(2.6, .006, p.gain);
-        if (sa === "automne" || sp === "tempetes") plus_tard(() => {                         // tonnerre lointain : grondement grave qui roule
-          const t = c.currentTime, s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
-          s.buffer = bruit(); f.type = "lowpass"; f.frequency.value = 150; g.gain.setValueAtTime(.0001, t);
-          g.gain.exponentialRampToValueAtTime(.09, t + .5); g.gain.exponentialRampToValueAtTime(.0001, t + 4.5);
-          s.connect(f).connect(g).connect(maitre); s.start(t); s.stop(t + 4.6);
-        }, 22, 55);
+        // pluie : une vraie averse enregistrée, en boucle (raccord sans couture), qui monte doucement
+        charge("pluie").then(buf => {
+          if (!buf || maitre !== m0) return;
+          const s = c.createBufferSource(), g = gain(.0001);
+          s.buffer = buf; s.loop = true; s.start(0, Math.random() * buf.duration); noeuds.push(s);
+          s.connect(g).connect(maitre);
+          g.gain.exponentialRampToValueAtTime(nuit ? .26 : .3, c.currentTime + 3);
+        });
+        // orage (saison des pluies, saison des tempêtes) : un vrai coup de tonnerre enregistré, qui roule et s'éteint ;
+        // hauteur et force un peu différentes à chaque fois
+        if (sa === "automne" || sp === "tempetes") plus_tard(() => {
+          charge("orage").then(buf => {
+            if (!buf || maitre !== m0) return;
+            const t = c.currentTime, s = c.createBufferSource(), g = c.createGain(), dur = Math.min(22, buf.duration - 20);
+            s.buffer = buf; s.playbackRate.value = .86 + Math.random() * .2;
+            const v = (.18 + Math.random() * .16) * (sp === "tempetes" ? 1.25 : 1);
+            g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(v, t + .08);
+            g.gain.setValueAtTime(v, t + dur * .55); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+            s.connect(g).connect(maitre); s.start(t, 20.2, dur); s.stop(t + dur + .1); noeuds.push(s, g);
+          });
+        }, sp === "tempetes" ? 16 : 26, sp === "tempetes" ? 38 : 60);
       }
       if (met === "nuages" || met === "pluie" || sa === "hiver") {         // vent : souffle filtré qui va et vient
         const f = filtre("bandpass", 480, 1.1), g = gain(met === "pluie" ? .012 : .018);
@@ -151,9 +172,15 @@
       arreter();
       if (k) try { demarrer(); } catch (x) { arreter(); }                 // pas de son possible : tant pis
     }
+    // volume changé dans les réglages : appliqué tout de suite, sans tout relancer
+    function volumeChange() {
+      if (!maitre) { maj(); return; }
+      if (!voulu()) { maj(); return; }
+      try { maitre.gain.cancelScheduledValues(C().currentTime); maitre.gain.setTargetAtTime(niveau(), C().currentTime, .08); } catch (x) { /* rien */ }
+    }
     document.addEventListener("visibilitychange", maj);
     dlg.addEventListener("pointerdown", () => { if (ctxAudio && ctxAudio.state === "suspended") ctxAudio.resume().catch(() => {}); });
-    return { maj, actif: () => !!maitre };
+    return { maj, volumeChange, actif: () => !!maitre };
   })();
 
   // ---- aliments et objets, dessinés d'après nature (volume par dégradés, une lumière en haut à gauche) ----
@@ -583,7 +610,7 @@
     const P = palette(e), { ph, met, nuit } = P;
     const S = astrePos(e);
     const deco = new Set(e.deco || []);
-    const lumiere = e.lumiere, lampe = e.lampe.possede, lampeOn = e.lampe.possede && e.lampe.allumee;
+    const lampe = e.lampe.possede;                  // lanterne et lampe allumées ou non : affichées par le CSS (data-lumiere, data-lampe)
     const jourSec = !nuit && met !== "pluie";
     const decembre = new Date().getMonth() === 11;
     const ombres = jourSec && met !== "nuages";                  // ombres portées nettes seulement au soleil
@@ -633,7 +660,6 @@
     const ombre = (cx, cy, rx, ry, op = .2) => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="#3b2a12" opacity="${op}" filter="url(#phbd-flou)"/>`;
     const portee = (x, y, l, w, op = .2) => ombres ? `<path d="M${x - w} ${y} L${x + sens * l - w} ${y + 16} L${x + sens * l + w} ${y + 19} L${x + w} ${y + 2} Z" fill="#3b2a12" opacity="${op}" filter="url(#phbd-flou)"/>` : "";
     const bois = `<linearGradient id="phbd-bois" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${nuit ? "#2e241c" : "#6b4a2a"}"/><stop offset=".45" stop-color="${nuit ? "#4a3a2c" : "#a87a4a"}"/><stop offset="1" stop-color="${nuit ? "#2a2018" : "#5a3d22"}"/></linearGradient>`;
-    const lanterneOn = lumiere;
     return `
       <div class="phb-l phb-l-ciel" style="background:linear-gradient(${P.c[0]}, ${P.c[1]} 29%, ${P.c[2]} 48.5%, ${P.c[2]} 51%)"></div>
       ${nuit && met !== "pluie" ? etoiles() : ""}${met === "pluie" ? "" : astre(e, P, S)}
@@ -719,17 +745,19 @@
         <rect x="326.5" y="362" width="7" height="72" rx="2" fill="url(#phbd-bois)"/>
         <path d="M327.5 374 v52 M331.5 368 v58" stroke="#000" stroke-opacity=".15" stroke-width=".8"/>
         <path d="M330 362 v-6" stroke="#2e2a26" stroke-width="1.6"/>
-        <g>${lanterneOn && nuit ? `<ellipse cx="330" cy="436" rx="90" ry="16" fill="url(#phbd-halo)"/><circle cx="330" cy="364" r="70" fill="url(#phbd-halo)"/>` : lanterneOn ? `<circle cx="330" cy="364" r="20" fill="url(#phbd-halo)"/>` : ""}
-          <path d="M321 352 L339 352 L336 346 L324 346 Z" fill="#2e2a26"/><rect x="322" y="352" width="16" height="20" rx="1.5" fill="${lanterneOn ? "#ffd98a" : nuit ? "#2a2a30" : "#5a5f63"}"/>
-          ${lanterneOn ? `<ellipse cx="330" cy="363" rx="3" ry="5" fill="#fff8de"/><ellipse cx="330" cy="364" rx="6" ry="7" fill="#ffb347" opacity=".45"/>` : `<path d="M324.5 354 l3 0 l-1.4 15 l-2 0 Z" fill="#fff" opacity=".2"/>`}
+        <g><g class="phb-si-lumiere">${nuit ? `<ellipse cx="330" cy="436" rx="90" ry="16" fill="url(#phbd-halo)"/><circle cx="330" cy="364" r="70" fill="url(#phbd-halo)"/>` : `<circle cx="330" cy="364" r="20" fill="url(#phbd-halo)"/>`}</g>
+          <path d="M321 352 L339 352 L336 346 L324 346 Z" fill="#2e2a26"/>
+          <g class="phb-si-lumiere"><rect x="322" y="352" width="16" height="20" rx="1.5" fill="#ffd98a"/><ellipse cx="330" cy="363" rx="3" ry="5" fill="#fff8de"/><ellipse cx="330" cy="364" rx="6" ry="7" fill="#ffb347" opacity=".45"/></g>
+          <g class="phb-sinon-lumiere"><rect x="322" y="352" width="16" height="20" rx="1.5" fill="${nuit ? "#2a2a30" : "#5a5f63"}"/><path d="M324.5 354 l3 0 l-1.4 15 l-2 0 Z" fill="#fff" opacity=".2"/></g>
           <path d="M322 352 h16 M322 372 h16 M326 352 v20 M334 352 v20" stroke="#2e2a26" stroke-width="1.3"/><path d="M321 372 L339 372 L337 376 L323 376 Z" fill="#2e2a26"/></g>
         ${lampe ? `<g>${portee(178, 432, long * .9, 3, .18)}
           <path d="M178 432 V262 Q178 248 194 244" stroke="${nuit ? "#3d4248" : "#8d959c"}" stroke-width="4.5" fill="none" stroke-linecap="round"/>
           <path d="M178 432 V262" stroke="#fff" stroke-opacity=".25" stroke-width="1.2"/><ellipse cx="178" cy="433" rx="14" ry="3.6" fill="${nuit ? "#2b2f33" : "#5f666c"}"/>
           <path d="M186 236 C192 226 208 222 214 230 L206 256 C198 254 188 246 186 236 Z" fill="${nuit ? "#4a4f55" : "#b9c0c6"}" stroke="${nuit ? "#2a2e32" : "#6d757c"}" stroke-width="1.5"/>
           <path d="M190 236 C196 229 206 227 210 232" stroke="#fff" stroke-opacity=".5" stroke-width="1.6" fill="none"/>
-          ${lampeOn ? `<ellipse cx="206" cy="246" rx="5.6" ry="7" fill="#ff7a2a" transform="rotate(-20 206 246)"/><ellipse cx="206" cy="246" rx="3" ry="4" fill="#ffd2a0" transform="rotate(-20 206 246)"/>
-            <path d="M206 236 L254 196 L240 238 Z" fill="url(#phbd-feu)"/><circle cx="214" cy="232" r="40" fill="url(#phbd-feu)"/>` : `<ellipse cx="206" cy="246" rx="5" ry="6.4" fill="#3a3330" transform="rotate(-20 206 246)"/>`}</g>` : ""}
+          <g class="phb-si-lampe"><ellipse cx="206" cy="246" rx="5.6" ry="7" fill="#ff7a2a" transform="rotate(-20 206 246)"/><ellipse cx="206" cy="246" rx="3" ry="4" fill="#ffd2a0" transform="rotate(-20 206 246)"/>
+            <path d="M206 236 L254 196 L240 238 Z" fill="url(#phbd-feu)"/><circle cx="214" cy="232" r="40" fill="url(#phbd-feu)"/></g>
+          <g class="phb-sinon-lampe"><ellipse cx="206" cy="246" rx="5" ry="6.4" fill="#3a3330" transform="rotate(-20 206 246)"/></g></g>` : ""}
         ${deco.has("hamac") ? `<g>${ombre(296, 438, 46, 6, .16)}<rect x="339" y="298" width="6" height="134" rx="2" fill="url(#phbd-bois)"/>
           <defs><linearGradient id="phbd-hamac" x1="0" y1="0" x2="1" y2="0">${["#d9653a", "#f1c27a", "#3f8aa8", "#f6ead2", "#d9653a", "#f1c27a", "#3f8aa8", "#f6ead2"].map((k, i) => `<stop offset="${i / 8}" stop-color="${k}"/><stop offset="${(i + 1) / 8}" stop-color="${k}"/>`).join("")}</linearGradient></defs>
           <path d="M252 300 l12 6 M252 300 l11 10 M342 302 l-12 5 M342 302 l-11 9" stroke="#e8dcc0" stroke-width="1.2"/>
@@ -819,7 +847,7 @@
         `<i style="left:${18 + (i * 37) % 60}%;top:${55 + (i * 13) % 28}%;--d:${5 + i % 3 * 2}s;animation-delay:-${i * 1.1}s"></i>`).join("")}</div>` : ""}
       ${met === "pluie" ? `<div class="phb-l phb-brume" aria-hidden="true"></div><div class="phb-l phb-pluie" aria-hidden="true"><svg viewBox="0 0 1000 1000" preserveAspectRatio="none">${gouttes()}</svg></div>` : ""}
       ${P.sp === "brumes" && met !== "pluie" ? `<div class="phb-l phb-brume phb-brume-saison" aria-hidden="true"></div>` : ""}
-      <div class="phb-l phb-nuit" style="opacity:${nuit ? (lumiere ? .2 : .34) : ph === "coucher" ? .1 : ph === "aube" ? .08 : 0}" aria-hidden="true"></div>
+      <div class="phb-l phb-nuit" style="--o-on:${nuit ? .2 : ph === "coucher" ? .1 : ph === "aube" ? .08 : 0};--o-off:${nuit ? .34 : ph === "coucher" ? .1 : ph === "aube" ? .08 : 0}" aria-hidden="true"></div>
       ${absent() ? `<div class="phb-l phb-pancarte" role="status"><div>${e.veto
         ? `<b>Philibert se repose chez le vétérinaire</b><span>retour dans ${fmtH(e.veto.reste_s)} · la tortue s'occupe bien de lui</span>`
         : `<b>Philibert est en pension chez la voisine</b><span>sur l'île d'à côté, tout est en pause</span><button class="phb-b phb-prim" data-phb="revenir">Le faire revenir</button>`}</div></div>` : ""}`;
@@ -837,7 +865,9 @@
   function rendreScene() {
     const sc = dlg.querySelector(".phb-scene");
     if (!sc || !e) return;
-    const cle = [e.ciel.phase, e.ciel.meteo, e.ciel.saison, e.ciel.saison_ile ? e.ciel.saison_ile.id : "", e.lumiere, e.lampe.possede, e.lampe.allumee, (e.deco || []).join(), e.niveau, Math.round(e.ciel.heure * 2),
+    dlg.toggleAttribute("data-lumiere", !!e.lumiere);
+    dlg.toggleAttribute("data-lampe", !!(e.lampe.possede && e.lampe.allumee));
+    const cle = [e.ciel.phase, e.ciel.meteo, e.ciel.saison, e.ciel.saison_ile ? e.ciel.saison_ile.id : "", e.lampe.possede, (e.deco || []).join(), e.niveau, Math.round(e.ciel.heure * 2),
       e.veto ? Math.round(e.veto.reste_s / 600) : ""].join("|");
     if (cle !== cleScene) {
       sc.querySelector(".phb-decor").innerHTML = decor(e);
@@ -854,7 +884,15 @@
        <path d="M4 11.6 C6 10.4 9 10.2 11.4 11" stroke="#7a5634" stroke-width=".8" fill="none"/>
        <path d="M12.6 10.6 C14.2 9 17.6 9.4 18.2 11.6 C18.6 13.4 16.8 14.6 14.6 14.4 C13 14.2 12.2 12.4 12.6 10.6 Z" fill="#f3efe2" stroke="#cfc8b2" stroke-width=".5"/>
        <ellipse cx="15.4" cy="11.4" rx="1.4" ry=".6" fill="#fff"/></svg></button>`).join("");
-    if (absent()) return;
+    if (absent()) { posPrec = null; return; }
+    if (trajet) return;                                  // un trajet animé le déplace lui-même (bain, palmier)
+    if (posPrec && posPrec !== e.position && (e.position === "palmier" || posPrec === "palmier") && peutAnimer()) {
+      const monte = e.position === "palmier";
+      posPrec = e.position;
+      finTrajet = grimper(perso, monte);
+      return;
+    }
+    posPrec = e.position;
     const p = place(e, reaction);
     perso.style.setProperty("--x", p.x);
     perso.style.setProperty("--y", p.y);
@@ -866,6 +904,7 @@
     if (box.dataset.html !== html) { box.innerHTML = html; box.dataset.html = html; }
     perso.classList.toggle("plat", p.pose === "plat");
     perso.classList.toggle("nage", p.pose === "nage");
+    perso.dataset.eau = reaction === "bain_flaque" ? "flaque" : "mer";
     perso.classList.toggle("dort", p.pose === "dort");
     perso.classList.toggle("malade", !!e.malade);
     perso.classList.toggle("froid", e.jauges.chaleur < 35 && !e.malade);
@@ -910,7 +949,7 @@
     if (!dlg.open) return;
     flanerT = setTimeout(flaner, 4000 + Math.random() * 5000);
     if (!e || document.hidden || document.body.classList.contains("gamemode") || reduit()) return;
-    if (e.position !== "plage" || e.dort || e.stade === "oeuf" || reaction || feuille === "jeu" || absent()) return;
+    if (e.position !== "plage" || e.dort || e.stade === "oeuf" || reaction || trajet || feuille === "jeu" || absent()) return;
     const perso = dlg.querySelector(".phb-perso");
     const r = Math.random();
     if (r < .5) {
@@ -924,7 +963,7 @@
         perso.style.transitionDuration = duree.toFixed(1) + "s";
         flaneX = cible;
         rendreScene();
-        setTimeout(() => { perso.classList.remove("marche"); perso.style.transitionDuration = ""; }, duree * 1000 + 100);
+        setTimeout(() => { if (trajet) return; perso.classList.remove("marche"); perso.style.transitionDuration = ""; }, duree * 1000 + 100);
       };
       if (tourne) setTimeout(partir, 340); else partir();
     } else if (r < .7) anim("hoche", 1500);
@@ -1179,10 +1218,14 @@
   function feuilleReglages() {
     const r = e.reglages;
     const chk = (k, t) => `<label class="phb-chk"><input type="checkbox" data-phb-r="${k}" ${r[k] ? "checked" : ""}> <span>${t}</span></label>`;
+    const curseur = (k, t) => { const v = r[k] == null ? 60 : r[k]; return `<label class="phb-chk phb-volume"><span>${t}</span>
+      <input type="range" min="0" max="100" step="5" value="${v}" data-phb-r="${k}" aria-valuetext="${v} %"><output>${v} %</output></label>`; };
     return `${titre("reglages", "Réglages de Philibert")}
       ${chk("visible", "Le voir se promener en haut de la page")}
       ${chk("sons", "Petits sons (seulement dans son île)")}
-      ${chk("ambiance", "Bruits de l'île selon la météo : vagues, pluie, vent, oiseaux, grenouilles la nuit (discrets, avec les petits sons)")}
+      ${chk("ambiance", "Bruits de l'île selon la météo : vagues, pluie, orage, vent, oiseaux, grenouilles la nuit (avec les petits sons)")}
+      ${curseur("volume_ambiance", "Volume des bruits de l'île")}
+      ${curseur("volume_jeux", "Volume des petits sons et des mini-jeux")}
       <label class="phb-chk"><span>Couleurs de l'interface</span> <select data-phb-r="theme"><option value="auto"${r.theme === "auto" || !r.theme ? " selected" : ""}>Automatique (selon le thème du panel et la nuit sur l'île)</option>
         <option value="clair"${r.theme === "clair" ? " selected" : ""}>Clair</option><option value="sombre"${r.theme === "sombre" ? " selected" : ""}>Sombre</option></select></label>
       ${chk("notif_windows", "Notification Windows s'il tombe malade ou part chez le vétérinaire (jamais en mode jeu)")}
@@ -1270,6 +1313,7 @@
     clearTimeout(reactionT);
     const s = { mange_verdure: "croc", mange_legume: "croc", mange_fleur: "croc", mange_friandise: "croc", bain_mer: "plouf", bain_flaque: "plouf", coquillage: "ding", achat: "ding",
       refus: "non", gueri: "joie", fier: "pop", caresse: "pop", repu: "non", non: "non", joue: "joie", bonjour: "joie" }[r];
+    if (r.startsWith("bain") && peutAnimer()) { finTrajet = finTrajet.then(() => baigner(r)); return; }   // après un trajet en cours ; « plouf » en entrant dans l'eau
     if (s) son(s);
     const avant = reaction;
     reaction = ["bain_mer", "bain_flaque", "refus"].includes(r) ? r : "";
@@ -1286,6 +1330,105 @@
     reactionT = setTimeout(() => { reaction = ""; rendreScene(); }, r.startsWith("bain") ? 3500 : 1600);
   }
 
+  // ---- trajets animés : aller se baigner, grimper dans le palmier ou en redescendre ----
+  // Pendant un trajet, rendreScene ne replace pas Philibert ; tout s'arrête proprement si la fenêtre se ferme.
+  let trajet = null, posPrec = null, finTrajet = Promise.resolve();
+  const peutAnimer = () => dlg.open && !document.hidden && !reduit() && !document.body.classList.contains("gamemode");
+  const attendre = ms => new Promise(ok => setTimeout(ok, ms));
+  const posActuelle = perso => [parseFloat(perso.style.getPropertyValue("--x")) || flaneX, parseFloat(perso.style.getPropertyValue("--y")) || 87];
+  function aller(perso, x, y, rot, s) {
+    perso.style.transitionDuration = s.toFixed(2) + "s";
+    perso.style.setProperty("--x", x.toFixed(2));
+    perso.style.setProperty("--y", y.toFixed(2));
+    perso.style.setProperty("--rot", rot + "deg");
+    return attendre(s * 1000);
+  }
+  async function marcherVers(perso, x, y, vitesse = .42) {
+    const [x0] = posActuelle(perso);
+    if (Math.abs(x - x0) > .5) {
+      const tourne = perso.classList.contains("gauche") !== (x < x0);
+      perso.classList.toggle("gauche", x < x0);
+      if (tourne) await attendre(340);
+    }
+    perso.classList.add("marche");
+    await aller(perso, x, y, 0, Math.min(4.5, Math.max(.6, Math.abs(x - x0) * vitesse)));
+    perso.classList.remove("marche");
+  }
+  async function baigner(r) {
+    const perso = dlg.querySelector(".phb-perso");
+    if (!perso || absent() || !peutAnimer() || trajet) return;
+    trajet = r;
+    try {
+      const dest = place(e, r);
+      perso.classList.remove("plat", "dort");
+      await marcherVers(perso, dest.x + (dest.x > 50 ? -3 : 3), 87, .09);            // jusqu'au bord de l'eau, d'un pas pressé
+      if (!dlg.open) return;
+      perso.classList.add("marche");
+      await aller(perso, dest.x, dest.y, 0, .7);                                        // il entre dans l'eau…
+      perso.classList.remove("marche");
+      son("plouf");
+      reaction = r;
+      trajet = null;
+      rendreScene();                                                                     // … et nage (pose « nage »)
+      trajet = r;
+      effet("goutte", 12);
+      perso.classList.add("plonge");
+      setTimeout(() => perso.classList.remove("plonge"), 900);
+      await attendre(5200);
+      if (!dlg.open) return;
+      perso.classList.add("marche");
+      reaction = "";
+      trajet = null;
+      perso.style.transitionDuration = "1.6s";
+      rendreScene();                                                                     // il ressort et revient sur le sable
+      trajet = r;
+      effet("goutte", 7);
+      await attendre(1600);
+      perso.classList.remove("marche");
+      anim("ebroue", 900);                                                              // il s'ébroue
+      effet("goutte", 6);
+    } finally {
+      trajet = null;
+      reaction = reaction === r ? "" : reaction;
+      perso.style.transitionDuration = "";
+      if (dlg.open) rendreScene();
+    }
+  }
+  // Grimper dans le palmier pour la nuit (ou en redescendre le matin) : il marche jusqu'au pied du tronc, se dresse,
+  // monte le long du tronc courbe (pattes en mouvement) jusqu'à la couronne, puis s'installe sur sa palme.
+  // Le tronc va de (26 %, 85 %) à (22 %, 40 %) de la scène ; Philibert pivote autour du milieu de ses pattes.
+  const TRONC = [[25.4, 80], [24.8, 70], [23.8, 60], [22.6, 51]];
+  async function grimper(perso, monte) {
+    trajet = monte ? "monte" : "descend";
+    const L = 8.5;                                                                       // demi-largeur du dessin (17 % de la scène)
+    try {
+      perso.classList.remove("plat", "dort", "nage");
+      if (monte) {
+        await marcherVers(perso, TRONC[0][0] - L + 6, 87, .12);                         // jusqu'au pied du palmier
+        const g = perso.classList.contains("gauche"), rot = g ? 70 : -70;               // la tête vers le haut
+        await aller(perso, TRONC[0][0] - L, TRONC[0][1], rot, .6);
+        perso.classList.add("marche", "grimpe");
+        for (const [x, y] of TRONC.slice(1)) await aller(perso, x - L, y, rot, 1.3);
+        perso.classList.remove("marche", "grimpe");
+      } else {
+        const g = perso.classList.contains("gauche"), rot = g ? -70 : 70;               // la tête vers le bas
+        await aller(perso, TRONC[3][0] - L, TRONC[3][1], rot, .7);
+        perso.classList.add("marche", "grimpe");
+        for (const [x, y] of TRONC.slice(0, 3).reverse()) await aller(perso, x - L, y, rot, 1.2);
+        perso.classList.remove("grimpe");
+        await aller(perso, TRONC[0][0] - L + 2, 87, 0, .6);                             // pattes sur le sable
+        perso.classList.remove("marche");
+        flaneX = TRONC[0][0] - L + 2;
+      }
+    } finally {
+      trajet = null;
+      perso.classList.remove("marche", "grimpe");
+      perso.style.transitionDuration = monte ? ".9s" : "";
+      if (dlg.open) rendreScene();
+      setTimeout(() => { perso.style.transitionDuration = ""; }, 950);
+    }
+  }
+
   async function charger() {
     try { appliquer(await api("/api/philibert")); } catch (x) { dire("NEXUS ne répond pas : " + x.message); }
   }
@@ -1296,7 +1439,7 @@
       dlg.innerHTML = `<div class="phb-ile">
         <div class="phb-tete-ile"></div>
         <div class="phb-scene-zone"><div class="phb-scene"><div class="phb-decor"></div><div class="phb-crottes"></div>
-          <button class="phb-perso phb-anim" data-phb="caresser" aria-label="Caresser Philibert"><span class="phb-flip"></span><span class="phb-zz" aria-hidden="true"><i>z</i><i>z</i><i>Z</i></span></button>
+          <button class="phb-perso phb-anim" data-phb="caresser" aria-label="Caresser Philibert"><span class="phb-flip"></span><span class="phb-zz" aria-hidden="true"><i>z</i><i>z</i><i>Z</i></span><span class="phb-eau" aria-hidden="true"><i></i><i></i><i></i></span></button>
           <div class="phb-effets" aria-hidden="true"></div></div>
           <div class="phb-bandeaux" aria-live="polite"></div></div>
         <div class="phb-feuille" hidden></div>
@@ -1379,10 +1522,21 @@
     if (a === "caresser" && (["veto", "pension", "oeuf"].includes(e && e.niveau))) return;
     action(a);
   });
+  // curseurs de volume : effet immédiat pendant qu'on le déplace (essai sonore), enregistré quand on le lâche
+  dlg.addEventListener("input", ev => {
+    const i = ev.target.closest("input[type=range][data-phb-r]");
+    if (!i || !e) return;
+    e.reglages[i.dataset.phbR] = +i.value;
+    i.setAttribute("aria-valuetext", i.value + " %");
+    const o = i.parentElement.querySelector("output");
+    if (o) o.textContent = i.value + " %";
+    if (i.dataset.phbR === "volume_ambiance") Ambiance.volumeChange();
+  });
   dlg.addEventListener("change", ev => {
     const i = ev.target.closest("[data-phb-r]");
     if (!i) return;
-    action("reglages", { [i.dataset.phbR]: i.type === "checkbox" ? i.checked : i.value });
+    if (i.type === "range" && i.dataset.phbR === "volume_jeux") son("ding");
+    action("reglages", { [i.dataset.phbR]: i.type === "checkbox" ? i.checked : i.type === "range" ? +i.value : i.value });
     if (i.dataset.phbR === "notif_windows" && i.checked && "Notification" in window && Notification.permission === "default") Notification.requestPermission();
   });
   function finJeu(r) {
@@ -1392,5 +1546,9 @@
     if (r && r.etat) { dire(r.message); son("ding"); appliquer(r.etat); effet("coquillage", 4); }
     rendreFeuille();
   }
-  window.PhilibertIle = { ambiance: Ambiance, ouvrir, appliquer, action, icone, fermer: () => dlg.close() };
+  // enregistrer un réglage sans redessiner (curseur de volume pendant un mini-jeu)
+  async function reglerSilencieux(p) {
+    try { const r = await api("/api/philibert/action", { action: "reglages", ...p }); if (r && r.etat) diffuser(r.etat); } catch (x) { /* réessayé au prochain réglage */ }
+  }
+  window.PhilibertIle = { ambiance: Ambiance, ouvrir, appliquer, action, icone, reglerSilencieux, etat: () => e, fermer: () => dlg.close() };
 })();

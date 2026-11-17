@@ -418,7 +418,15 @@
 .phb-dlg[data-sombre] .phb-bandeau { background: #1f3156; color: #eef3ff; }
 .phb-dlg[data-sombre] .phb-postale { background: #1d2a46; color: #eef3ff; border-color: #7a6630; }
 .phb-dlg[data-sombre] .phb-postale small { color: #b9c5e1; }
-.phb-dlg[data-sombre] .phb-histo li, .phb-dlg[data-sombre] .phb-chk select { color: var(--t); }
+.phb-dlg[data-sombre] .phb-histo li, .phb-dlg[data-sombre] .phb-volume { flex-wrap: wrap; }
+.phb-volume span { flex: 1 1 220px; }
+.phb-volume input[type=range], .phb-vol-jeu input[type=range] { width: auto; height: auto; flex: 1 1 140px; max-width: 240px; accent-color: #0d6470; }
+.phb-dlg[data-sombre] .phb-volume input[type=range], .phb-dlg[data-sombre] .phb-vol-jeu input[type=range] { accent-color: #86dfe6; }
+.phb-volume output { min-width: 3.4em; text-align: right; font-variant-numeric: tabular-nums; }
+.phb-vol-jeu { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; font-size: 13px; font-weight: 500; }
+.phb-vol-jeu .phb-ico { width: 18px; height: 18px; }
+.phb-vol-jeu input[type=range] { flex: 0 1 110px; }
+.phb-chk select { color: var(--t); }
 
 /* rareté des objets de la boutique : bleu (rare), violet (très rare), or (légendaire, avec un reflet qui passe) */
 .phb-article.r-rare { border-color: #4f86d9; }
@@ -592,3 +600,35 @@ button.phb-carte:hover:not(:disabled) { transform: translateY(-2px); box-shadow:
   .phb-reflets i { opacity: .5; }
   .phb-fx { display: none; }
 }
+/* en-tête d'un mini-jeu : titre, curseur de volume, « Abandonner » (la croix de fermeture reste à droite) */
+.phb-feuille.phb-f-jeu h3 { flex-wrap: wrap; row-gap: 6px; }
+.phb-feuille.phb-f-jeu h3 .phb-abandon { margin: 0 0 0 10px; }
+@media (max-width: 760px) { .phb-vol-jeu input[type=range] { flex-basis: 80px; } }
+/* lanterne et lampe chauffante : les deux états sont dans le décor, on montre le bon ; allumer ou éteindre ne redessine
+   rien (les animations de l'île continuent) et la pénombre change en douceur */
+.phb-dlg:not([data-lumiere]) .phb-si-lumiere, .phb-dlg[data-lumiere] .phb-sinon-lumiere,
+.phb-dlg:not([data-lampe]) .phb-si-lampe, .phb-dlg[data-lampe] .phb-sinon-lampe { display: none; }
+.phb-nuit { opacity: var(--o-off, 0); transition: opacity .6s ease; }
+.phb-dlg[data-lumiere] .phb-nuit { opacity: var(--o-on, 0); }
+/* bain : le corps est à moitié dans l'eau (seuls la tête et le haut du dos dépassent, comme un vrai iguane qui nage),
+   la queue ondule, des ronds s'élargissent à la surface ; il plonge un peu en entrant, s'ébroue en sortant */
+.phb-eau { position: absolute; left: 4%; right: 4%; bottom: 4%; height: 38%; display: none; pointer-events: none; border-radius: 50%;
+  background: radial-gradient(ellipse 50% 46% at 50% 42%, rgba(38, 138, 168, .7), rgba(34, 128, 162, .55) 60%, rgba(34, 128, 162, 0) 100%); }
+.phb-eau::before { content: ""; position: absolute; left: 10%; right: 10%; top: 8%; height: 16%; border-radius: 50%;
+  border-top: 1.5px solid rgba(255, 255, 255, .75); }
+.phb-perso[data-eau="flaque"] .phb-eau { background: radial-gradient(ellipse 50% 46% at 50% 42%, rgba(90, 170, 180, .66), rgba(80, 160, 170, .5) 60%, rgba(80, 160, 170, 0) 100%); }
+.phb-perso.nage .phb-eau { display: block; }
+.phb-eau i { position: absolute; left: 50%; top: 4%; width: 56%; height: 20%; margin-left: -28%; border: 2px solid rgba(255, 255, 255, .7); border-radius: 50%;
+  opacity: 0; animation: phb-rond 2.4s ease-out infinite; }
+.phb-eau i:nth-child(2) { animation-delay: .8s; } .phb-eau i:nth-child(3) { animation-delay: 1.6s; }
+@keyframes phb-rond { 0% { opacity: .9; transform: scale(.45); } 100% { opacity: 0; transform: scale(1.5, 1.25); } }
+.phb-perso.nage .phb-queue { animation: phb-queue .9s ease-in-out infinite; }
+.phb-perso.nage .phb-queue-bout { animation: phb-queue-bout .9s ease-in-out infinite -.22s; }
+.phb-perso.nage.plonge .phb-flip > svg { animation: phb-plonge .9s ease-out; }
+@keyframes phb-plonge { 0% { transform: translateY(-6%); } 40% { transform: translateY(9%); } 100% { transform: translateY(0); } }
+.phb-perso.ebroue .phb-flip > svg { animation: phb-ebroue .45s ease-in-out 2; }
+@keyframes phb-ebroue { 25% { transform: rotate(-3deg); } 75% { transform: rotate(3deg); } }
+/* grimper : pattes plus rapides, le corps colle au tronc */
+.phb-perso.grimpe { --phb-cycle: .5s; }
+.phb-perso.grimpe .phb-ombre { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .phb-eau i { animation: none; opacity: .5; } }

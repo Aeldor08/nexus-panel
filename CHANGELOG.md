@@ -8,6 +8,16 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Ajouté
+- Philibert : **volumes réglables** : un curseur pour les bruits de l'île et un pour les petits sons et les mini-jeux (Réglages), plus un petit curseur dans l'en-tête de chaque mini-jeu ; le changement s'entend tout de suite
+- Philibert : **bain animé** (il marche jusqu'à l'eau, y entre en éclaboussant, nage à moitié immergé en ondulant de la queue avec des ronds à la surface, puis ressort et s'ébroue) et **montée dans le palmier** le soir (il grimpe le long du tronc jusqu'à sa palme ; il redescend la tête la première le matin)
+
+### Modifié
+- Philibert : **pluie et orage réalistes** : de vrais enregistrements libres de droit (CC0, OpenGameArt) remplacent les sons synthétisés ; averse en boucle, vrais coups de tonnerre qui roulent, plus fréquents pendant la saison des tempêtes
+
+### Corrigé
+- Philibert : allumer ou éteindre la lanterne ou la lampe chauffante ne fait plus repartir de zéro les animations de l'île (vagues, crabes, oiseaux, nuages)
+
 ## [1.3.0] - 2026-11-17
 
 ### Ajouté
