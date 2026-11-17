@@ -8,6 +8,12 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Modifié
+- Philibert : **pluie plus naturelle** : une vraie averse enregistrée en plein air au bord de l'océan (CC0, « Outdoor Rain with Distant Ocean » de Jeff Final Boss), bouclée sans couture ; le tonnerre ne change pas
+
+### Corrigé
+- Philibert : si le serveur NEXUS date d'avant les réglages de volume, le curseur ne revient plus à 60 % en silence : le volume s'applique et un message demande de redémarrer NEXUS pour l'enregistrer
+
 ## [1.4.0] - 2026-11-17
 
 ### Ajouté

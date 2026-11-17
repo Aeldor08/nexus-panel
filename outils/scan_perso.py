@@ -33,7 +33,8 @@ ALLOW = [re.compile(p) for p in (
     r"git@github\.com", r"192\.168\.1\.(?:1|10|42|50|100|254)\b", r"10\.0\.0\.\d+", r"COLLE_ICI", r"TON_ID",
     r"00:11:22:33:44:55", r"AA:BB:CC:DD:EE:FF", r"(?i)ff[:-]ff[:-]ff[:-]ff[:-]ff[:-]ff",   # diffusion réseau (code)
 )]
-BINARY = {".png", ".jpg", ".jpeg", ".webp", ".ico", ".woff2", ".woff", ".ttf", ".zip", ".gif", ".exe", ".dll", ".db"}
+BINARY = {".png", ".jpg", ".jpeg", ".webp", ".ico", ".woff2", ".woff", ".ttf", ".zip", ".gif", ".exe", ".dll", ".db",
+          ".mp3", ".ogg", ".oga", ".opus", ".wav", ".flac", ".m4a", ".webm"}   # sons : des octets peuvent ressembler à une adresse
 
 
 def tracked_files() -> list[tuple[str, bytes]]:

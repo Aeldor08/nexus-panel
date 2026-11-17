@@ -909,7 +909,7 @@ ok(len(c["album"]) == 2 and c["album"][0]["stade"] == "bebe" and c["etapes"] == 
 doc = (BASE / "docs" / "PHILIBERT-REGLES.md").read_text(encoding="utf-8")
 sons = Path(__file__).resolve().parents[2] / "static" / "sons"
 doc_ph = (Path(__file__).resolve().parents[2] / "docs" / "PHILIBERT.md").read_text(encoding="utf-8")
-ok(all((sons / f).is_file() and (sons / f).stat().st_size < 1_500_000 and f"`{f}`" in doc_ph for f in ("pluie.ogg", "orage.ogg")) and "CC0" in doc_ph,
+ok(all((sons / f).is_file() and (sons / f).stat().st_size < 1_500_000 and f"`{f}`" in doc_ph for f in ("pluie.mp3", "orage.ogg")) and "CC0" in doc_ph,
    "sons de pluie et d'orage présents, légers, et crédités (licence CC0) dans la doc")
 ok(f"**−{P.ENERGIE_JEU} énergie au lancement**" in doc and f"**{P.GAINS_JEUX_JOUR} coquillages par jour**" in doc, "doc admin : coût et plafond des jeux")
 ok(all(f"**{v}**" in doc for v in (P.PLANCHERS["faim"], P.PLANCHERS["bonheur"])) and f"bonheur est à {P.SEUIL_ATTENTION} ou moins**" in doc, "doc admin : planchers et seuil d'attention")

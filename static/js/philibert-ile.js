@@ -84,8 +84,20 @@
     let maitre = null, noeuds = [], minut = [], cle = "", bruitBuf = null;
     const C = () => (ctxAudio = ctxAudio || new (window.AudioContext || window.webkitAudioContext)());
     const SONS = {};                                                    // enregistrements décodés (une fois)
-    const charge = nom => (SONS[nom] = SONS[nom] || fetch(`/static/sons/${nom}.ogg`).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
-      .then(b => C().decodeAudioData(b)).catch(() => { delete SONS[nom]; return null; }));
+    const FICHIERS = { pluie: "pluie.mp3", orage: "orage.ogg" };
+    const charge = nom => (SONS[nom] = SONS[nom] || fetch(`/static/sons/${FICHIERS[nom]}`).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+      .then(b => C().decodeAudioData(b)).then(buf => (nom === "pluie" ? boucle(buf, 2.5) : buf)).catch(() => { delete SONS[nom]; return null; }));
+    // boucle sans couture : la fin de l'enregistrement se fond dans son début (fondu à puissance constante de x secondes)
+    function boucle(buf, x) {
+      const sr = buf.sampleRate, X = Math.floor(x * sr), L = buf.length - X;
+      const out = C().createBuffer(buf.numberOfChannels, L, sr);
+      for (let c = 0; c < buf.numberOfChannels; c++) {
+        const a = buf.getChannelData(c), o = out.getChannelData(c);
+        o.set(a.subarray(0, L));
+        for (let i = 0; i < X; i++) { const k = i / X; o[i] = a[i] * Math.sqrt(k) + a[L + i] * Math.sqrt(1 - k); }
+      }
+      return out;
+    }
     const niveau = () => .9 * volume("volume_ambiance");
     const voulu = () => !!(e && e.reglages.sons && e.reglages.ambiance !== false && volume("volume_ambiance") > 0 && dlg.open && !document.hidden
       && !document.body.classList.contains("gamemode") && !absent() && !reduit());
@@ -121,13 +133,13 @@
       const houle = gain(.025); chaine(source(), filtre("lowpass", 420), houle, maitre); lfo(.1, .018, houle.gain);
       const ecume = gain(.008); chaine(source(), filtre("bandpass", 1500, .5), ecume, maitre); lfo(.1, .007, ecume.gain);
       if (met === "pluie") {
-        // pluie : une vraie averse enregistrée, en boucle (raccord sans couture), qui monte doucement
+        // pluie : une vraie averse enregistrée en plein air au bord de l'océan, en boucle sans couture, qui monte doucement
         charge("pluie").then(buf => {
           if (!buf || maitre !== m0) return;
           const s = c.createBufferSource(), g = gain(.0001);
           s.buffer = buf; s.loop = true; s.start(0, Math.random() * buf.duration); noeuds.push(s);
           s.connect(g).connect(maitre);
-          g.gain.exponentialRampToValueAtTime(nuit ? .26 : .3, c.currentTime + 3);
+          g.gain.exponentialRampToValueAtTime(nuit ? 1.4 : 1.6, c.currentTime + 3);   // enregistrement doux : on le remonte
         });
         // orage (saison des pluies, saison des tempêtes) : un vrai coup de tonnerre enregistré, qui roule et s'éteint ;
         // hauteur et force un peu différentes à chaque fois
@@ -1536,7 +1548,15 @@
     const i = ev.target.closest("[data-phb-r]");
     if (!i) return;
     if (i.type === "range" && i.dataset.phbR === "volume_jeux") son("ding");
-    action("reglages", { [i.dataset.phbR]: i.type === "checkbox" ? i.checked : i.type === "range" ? +i.value : i.value });
+    const k = i.dataset.phbR, v = i.type === "checkbox" ? i.checked : i.type === "range" ? +i.value : i.value;
+    action("reglages", { [k]: v }).then(r => {
+      // un serveur NEXUS lancé avant cette version ne connaît pas encore ce réglage : on le dit au lieu de revenir en arrière en silence
+      if (r && r.etat && i.type === "range" && r.etat.reglages[k] !== v) {
+        e.reglages[k] = v;
+        dire("Le volume s'applique, mais NEXUS doit être redémarré pour l'enregistrer (le serveur date d'avant cette mise à jour).");
+        rendre();
+      }
+    });
     if (i.dataset.phbR === "notif_windows" && i.checked && "Notification" in window && Notification.permission === "default") Notification.requestPermission();
   });
   function finJeu(r) {

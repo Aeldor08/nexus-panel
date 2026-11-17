@@ -305,7 +305,7 @@ son île.
 - **Bruits de l'île** (réglage *ambiance*, et bouton dans l'en-tête de l'île) : houle et écume toujours, vent par
   ciel couvert ou en saison fraîche, goélands le jour au soleil, grillons et petites grenouilles la nuit (synthétisés,
   Web Audio) ; **pluie et orage : de vrais enregistrements libres de droit** (`static/sons/`, voir « Crédits des
-  sons ») : une averse en boucle sans couture qui monte doucement, et en saison des pluies ou des tempêtes un vrai
+  sons ») : une averse enregistrée dehors au bord de l'océan, en boucle sans couture, qui monte doucement, et en saison des pluies ou des tempêtes un vrai
   coup de tonnerre qui roule et s'éteint, de hauteur et de force un peu différentes à chaque fois (plus fréquent
   pendant la saison des tempêtes). Les fichiers ne sont chargés qu'à la première averse. Seulement quand l'île est
   ouverte, l'onglet visible, hors mode jeu et avec les petits sons activés ; coupés avec « réduire les animations ».
@@ -330,7 +330,7 @@ attribution obligatoire) ; on les cite par politesse.
 
 | Fichier | Origine | Licence |
 |---|---|---|
-| `pluie.ogg` | « Rain (loopable) » par Ylmir, OpenGameArt (boucle n° 3) | CC0 |
+| `pluie.mp3` | « Outdoor Rain with Distant Ocean » par Jeff Final Boss, RouteNote Licensing : une averse enregistrée dehors, l'océan qui gronde au loin ; extrait de 50 s (de 19,8 s à 70,4 s, découpé sans réencodage), bouclé à la lecture par un fondu de 2,5 s | CC0 |
 | `orage.ogg` | « Rain + Long Thunder », OpenGameArt (`rain-thunder.ogg`) ; on en joue le passage du tonnerre (à partir de 20 s) | CC0 |
 
 ## 14. Données (`data/philibert.json`)
