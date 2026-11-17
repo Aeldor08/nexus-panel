@@ -45,12 +45,16 @@ Deux principes guident toutes les règles :
 - **Météo** de l'île : déterministe (même météo sur le PC et le téléphone), par tranches de 2 h : soleil, nuages,
   pluie (jamais deux tranches de pluie de suite), arc-en-ciel la tranche qui suit une pluie. Les proportions
   dépendent de la saison (ci-dessous).
-- **Saisons de l'île** : elles ne suivent **pas** le calendrier réel. Chaque île a son roulement : une saison dure
-  de 2 à 7 jours (au hasard, reproductible), puis une autre lui succède (jamais la même deux fois de suite) ; huit
-  saisons (chiffres complets dans `docs/PHILIBERT-REGLES.md`) : printemps, été, saison des pluies, saison fraîche,
-  grande floraison, saison des tempêtes, saison des brumes, ponte des tortues. Chacune change la météo, la chaleur,
-  le produit de saison et le décor. Fiches « Le savais-tu ? » de saison ; succès « Quatre saisons » et « Tour des
-  saisons » (les huit). La guirlande de décembre reste liée au vrai mois de décembre.
+- **Saisons** : deux systèmes qui cohabitent (chiffres complets dans `docs/PHILIBERT-REGLES.md`).
+  - **Saisons du calendrier** (mois réels, comme à l'origine) : printemps (mars–mai), été (juin–août), saison des
+    pluies (sept.–nov.), saison fraîche (déc.–févr.). Elles fixent la météo de base (pluie, nuages, soleil,
+    arc-en-ciel), la chaleur, le produit de saison et le décor ; fiches « Le savais-tu ? » de saison, succès « Les
+    quatre saisons ».
+  - **Saisons de l'île**, sans lien avec le calendrier : chaque île a son roulement, une période de 2 à 7 jours (au
+    hasard, reproductible), jamais la même deux fois de suite, parfois du temps ordinaire. Grande floraison, saison
+    des tempêtes, saison des brumes, ponte des tortues : elles **s'ajoutent** à la saison du calendrier (un peu plus
+    ou moins de pluie et de nuages, de chaleur), donnent un 2ᵉ produit de saison et leur décor ; succès « Saisons de
+    l'île ». L'en-tête montre les deux puces. La guirlande de décembre reste liée au vrai mois de décembre.
 - **Sieste sur le rocher** : fatigué en plein soleil, il fait sa sieste à plat ventre sur le rocher chaud et s'y
   réchauffe ; des « z z Z » montent au-dessus de sa tête dès qu'il dort (sable, rocher ou palmier).
 - **Mutations de couleur** : à chaque mue, sa peau peut changer selon sa vie (alimentation, soleil, bains, jeux,
@@ -190,25 +194,45 @@ Il faut qu'il soit éveillé, pas malade, avec au moins 15 d'énergie. Chaque pa
 lancement**, corpulence −2. On peut **abandonner** une partie (bouton « Abandonner », ou ✕) : aucun gain, et l'énergie
 dépensée pour la lancer ne revient pas. Toutes les règles chiffrées : `docs/PHILIBERT-REGLES.md`.
 
-1. **Pluie de feuilles** (30 s) : déplacer Philibert (souris, doigt ou flèches) pour attraper les feuilles et
-   fleurs qui tombent du palmier en évitant les insectes (il les refuserait). Pendant la partie, la souris reste
-   dans le cadre (verrouillage du pointeur du navigateur ; Échap, Alt+Tab ou la touche Windows la libèrent). Si le
-   navigateur le refuse, la souris reste libre et un message le dit.
-2. **Gauche ou droite ?** (5 manches) : deviner de quel côté il va tourner la tête. Le côté est tiré par le
-   serveur *après* le choix.
-3. **Le hochement** (jeu de mémoire et de rythme) : Philibert « parle » avec trois gestes, ceux d'un vrai iguane
-   vert — petit hochement, grand hochement, fanon déployé ; il faut répéter sa suite (boutons, ← → ↓ ou 1 2 3).
-   À chaque réussite, le serveur tire **une nouvelle suite au hasard**, plus longue d'un geste (de 3 à 10, jamais
-   trois fois le même geste d'affilée), et Philibert va **de plus en plus vite** (un temps passe de 0,78 s à 0,34 s ;
-   la vitesse est affichée). Le serveur refuse une réponse donnée avant la fin de la démonstration.
-4. **Course au rocher chaud** (30 s au plus) : il court vers le rocher ; on saute (Espace, ↑, clic, doigt)
-   par-dessus les crabes et les noix de coco ; les rayons de soleil le réchauffent (+1 point, il court plus vite),
-   l'ombre des nuages le refroidit. Il part avec **sa vraie chaleur du moment**. Arrivé : il finit étalé sur le
-   vrai rocher de l'île (chaleur +10). Récompense : rayons ÷ 3 (+3 s'il arrive), 10 au plus ; arrivée annoncée
-   avant 22 s refusée par le serveur ; succès « Coureur du soleil » (arriver avec 15 rayons).
+Chaque jeu devient **plus difficile au fil de la partie** et affiche son **palier** (ou son étape) ; il se termine
+tout seul en cas d'échec (vies, erreurs). Une bonne partie dure **2 à 3 minutes**, et la récompense grandit avec le
+palier atteint (donc la durée) et le score. Les règles des paliers viennent du serveur (`FEUILLES`, `COURSE`,
+`DEVIN`, `tempo_rythme` dans `philibert.py`), qui s'en sert aussi pour borner les scores.
 
-**Anti-triche** : partie ouverte par le serveur (jeton à usage unique), durée minimale vérifiée, score borné,
-récompense calculée par le serveur, **60 coquillages par jour au plus** gagnés aux jeux.
+1. **Pluie de feuilles** (3 min au plus) : déplacer Philibert (souris, doigt ou flèches) pour attraper les feuilles
+   (+1) et fleurs (+2) qui tombent du palmier. Toutes les 20 s, un **palier** de plus (9 au plus) : ça tombe plus
+   vite, plus dru, avec plus d'insectes. **5 vies** : attraper un insecte, ou rater 6 feuilles, coûte une vie.
+   Pendant la partie, la souris reste dans le cadre (verrouillage du pointeur du navigateur ; Échap, Alt+Tab ou la
+   touche Windows la libèrent). Si le navigateur le refuse, la souris reste libre et un message le dit.
+2. **Gauche ou droite ?** (20 manches, fin à la 3ᵉ erreur) : deviner de quel côté il va tourner la tête. Le côté
+   est tiré par le serveur avant le choix ; juste avant, Philibert jette un **coup d'œil** qui le trahit le plus
+   souvent (90 % au début, 75 % à la fin), de plus en plus bref à chaque palier (toutes les 4 manches).
+3. **En rythme** (jeu de mémoire et de rythme) : Philibert « parle » avec trois gestes, ceux d'un vrai iguane vert
+   — petit hochement, grand hochement, fanon déployé ; il faut reproduire **toute** sa suite, hochements de tête et
+   fanon (boutons, ← → ↓ ou 1 2 3). À chaque réussite (un palier de plus), le serveur tire **une nouvelle suite au
+   hasard**, plus longue d'un geste (de 3 à 14, jamais trois fois le même geste d'affilée), et **tous** ses gestes,
+   tête comme fanon, vont **de plus en plus vite** (un temps passe de 0,78 s à 0,30 s ; la vitesse est affichée). Le
+   serveur refuse une réponse donnée avant la fin de la démonstration.
+4. **Course au rocher chaud** (10 étapes, 4 min au plus) : il court vers le rocher ; on saute (Espace, ↑, clic,
+   doigt) par-dessus les crabes et les noix de coco ; **3 vies** (un choc = −1). À chaque étape, il court plus vite
+   et les obstacles sont plus serrés (jamais au point d'être impossibles à enchaîner). Les rayons de soleil le
+   réchauffent (+1 point, il court plus vite), l'ombre des nuages le refroidit. Il part avec **sa vraie chaleur du
+   moment**. Arrivé : il finit étalé sur le vrai rocher de l'île (chaleur +10) ; succès « Coureur du soleil »
+   (arriver avec 60 rayons).
+
+**Récompenses** (avant le bonus « bien au chaud » × 1,25) :
+
+| Jeu | Coquillages | Plafond par partie | Partie courte (≈ 30 s) | Bonne partie (2–3 min) |
+|---|---|---|---|---|
+| Pluie de feuilles | score ÷ 8 + 2 × (palier − 1) | 30 | palier 2, 28 points → 5 | palier 8, 140 points → 30 |
+| Course au rocher chaud | rayons ÷ 6 + 2 × (étape − 1) + 6 si arrivé | 30 | étape 2, 8 rayons → 3 | arrivé, 80 rayons → 30 |
+| Gauche ou droite ? | bonnes réponses + 2 × (palier − 1) | 20 | 6 manches, 3 bonnes (3 erreurs) → 5 | 20 manches, 18 bonnes → 20 |
+| En rythme | 2 × (longueur − 2) + (palier − 1) | 25 | suite de 4, puis erreur → 6 | suite de 14 → 25 |
+
+**Anti-triche** : partie ouverte par le serveur (jeton à usage unique), durée minimale (10 s) vérifiée, score,
+palier, distance et rayons bornés par la **durée réelle** de la partie — un résultat impossible est **refusé** (la
+partie est close, rien n'est gagné) —, récompense calculée par le serveur, **120 coquillages par jour au plus**
+gagnés aux jeux.
 
 ## 11. Coquillages, boutique, garde-robe
 
@@ -225,7 +249,19 @@ récompense calculée par le serveur, **60 coquillages par jour au plus** gagné
   | Cou | foulard 15, collier de fleurs 18, nœud papillon 30 | collier de perles 220 (rare), médaille d'or 400 (très rare), cape royale 900 (légendaire, posée sur le dos) |
   | Île | château de sable 12, coquillages 10, bouée 15, parasol 20, hamac 30 | statue tiki 120 et petit phare 260 (rares), coffre au trésor 500 (très rare), bénitier et sa perle 750 (légendaire) |
 
-  Avec ≈ 60 coquillages par jour aux jeux et les ramassages, une pièce légendaire demande une bonne dizaine de jours.
+  **Gains et dépenses** (ordres de grandeur) :
+
+  | Gains | Par jour | Dépenses | Prix |
+  |---|---|---|---|
+  | Mini-jeux (≈ 4 bonnes parties) | **120 au plus** | nourriture | 0 (trèfle) à 10 |
+  | Ramasser sur la plage (toutes les 3 h) | ≈ 8 | remède | 8 |
+  | Noix de coco, piège jeté ou refusé | +2 à +4, de temps en temps | vétérinaire | 15 au plus |
+  | Succès | 0 à 20, une fois chacun | accessoires et déco communs | 10 à 45 |
+  | | | lampe chauffante | 40 (une fois) |
+  | | | pièces rares, très rares, légendaires | 120 à 900 |
+
+  Chaque partie coûte 8 d'énergie : on fait 4 ou 5 bonnes parties par jour, pas plus. Avec ≈ 100 coquillages par
+  jour (jeux et ramassages), une pièce légendaire demande environ une semaine.
   Les **soins essentiels ne sont jamais bloqués** : remède et nourriture restent à 10 coquillages au plus, le trèfle
   est gratuit et un séjour chez la vétérinaire ne demande jamais plus que ce qu'on a. Succès « Pièce de collection »
   pour un premier objet légendaire. Dans la boutique : ruban et bordure de couleur (bleu, violet, or ; reflet doré
@@ -399,7 +435,7 @@ et de plages des Caraïbes ; conseils de peintres pour le ciel et les cumulus.
   vétérinaire, palmier, rocher chaud, flaque, lanterne (lumière), lampe chauffante, déco, crottes cliquables ;
   jauges, « ce qui ne va pas », évènements, tous les soins, panneaux nourrir / bain / jouer / boutique /
   garde-robe / carnet / réglages, carte postale, bandeaux de succès et de fiches.
-- Mini-jeux (`philibert-jeux.js`) : Pluie de feuilles (canevas + `nxImage`), Gauche ou droite ?, Le hochement.
+- Mini-jeux (`philibert-jeux.js`) : Pluie de feuilles (canevas + `nxImage`), Gauche ou droite ?, En rythme.
 - Vérifié dans le navigateur intégré (copie isolée, port 8015) : jour, nuit, coucher + pluie, aube + arc-en-ciel,
   boutique, nourrir, 3 mini-jeux joués jusqu'au bout, téléphone (375 px), Échap (panneau puis île), mode jeu
   (animations coupées), profils Pure, Sakura, Dés du destin, Phosphore, Néon minuit (couloir bien placé).

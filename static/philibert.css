@@ -125,7 +125,7 @@
 .phb-tete-ile h2::before, .phb-tete-ile h2::after { content: none; }
 .phb-puces { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 13px; color: var(--tete-t2); }
 .phb-puces span + span::before { content: "·"; margin-right: 10px; opacity: .7; }
-.phb-ciel-info { display: flex; flex-wrap: wrap; gap: 6px; }
+.phb-ciel-info { display: flex; flex-wrap: wrap; gap: 6px; flex: 1 1 260px; min-width: 0; justify-content: flex-end; }
 .phb-puce { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 13px;
   background: rgba(255, 255, 255, .14); color: var(--tete-t2); border: 1px solid rgba(255, 255, 255, .18); }
 .phb-coq { display: inline-flex; align-items: center; gap: 6px; padding: 3px 12px 3px 6px; border-radius: 20px; background: #fff3d1; color: #5a3b00;
@@ -477,11 +477,17 @@ button.phb-carte:hover:not(:disabled) { transform: translateY(-2px); box-shadow:
 .phb-devin-perso { width: min(280px, 70%); aspect-ratio: 2 / 1; }
 .phb-devin-perso svg { width: 100%; height: 100%; display: block; transition: transform .25s; }
 .phb-devin-perso.gauche svg { transform: scaleX(-1); }
+/* « Gauche ou droite ? » : le coup d'œil (indice) — il se penche une fraction de seconde vers un côté */
+.phb-devin-perso.lorgne-gauche svg { transform: translateX(-6%) rotate(-6deg); transition-duration: .08s; }
+.phb-devin-perso.lorgne-droite svg { transform: translateX(6%) rotate(6deg); transition-duration: .08s; }
+.phb-vies { color: #e0507a; letter-spacing: 1px; white-space: nowrap; }
+.phb-vies i { font-style: normal; color: color-mix(in srgb, var(--bord) 85%, transparent); }
+.phb-puce-ile { background: rgba(255, 214, 120, .22); border-color: rgba(255, 214, 120, .42); }
 .phb-suite { display: flex; justify-content: center; gap: 8px; min-height: 22px; margin: 8px 0; }
 .phb-chip { display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: color-mix(in srgb, var(--bord) 60%, var(--carte)); border: 2px solid var(--bord); }
 .phb-chip.grand { width: 22px; height: 22px; }
 .phb-chip.fanon { width: 18px; height: 18px; border-radius: 4px; transform: rotate(45deg); }
-/* « Le hochement » : les gestes suivent la vitesse de la manche (--phb-t = durée d'un temps) */
+/* « En rythme » : les gestes (tête et fanon) suivent la vitesse de la manche (--phb-t = durée d'un temps) */
 .phb-devin-perso.phb-anim.hoche-petit .phb-tete { animation: phb-hoche calc(var(--phb-t, .78s) * .42) ease-in-out 2; }
 .phb-devin-perso.phb-anim.hoche-grand .phb-tete { animation: phb-hoche-g calc(var(--phb-t, .78s) * 1.2) ease-in-out 1; }
 .phb-devin-perso.phb-anim.fanon .phb-fanon { animation: phb-fanon calc(var(--phb-t, .78s) * .35) ease-in-out 4 alternate; }
@@ -522,7 +528,7 @@ button.phb-carte:hover:not(:disabled) { transform: translateY(-2px); box-shadow:
   .phb-perso { width: 20%; }
   .phb-tete-ile h2 { font-size: 18px; }
   .phb-tete-ile { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto auto; gap: 8px 8px; }
-  .phb-ciel-info { grid-row: 2; grid-column: 1 / -1; }
+  .phb-ciel-info { grid-row: 2; grid-column: 1 / -1; justify-content: flex-start; }
   .phb-dlg .phb-theme { grid-row: 1; grid-column: 3; }
   .phb-dlg .phb-amb:not(.phb-theme) { grid-row: 1; grid-column: 4; }
   .phb-coq { grid-row: 1; grid-column: 5; }

@@ -1,14 +1,16 @@
 "use strict";
 /* Les quatre mini-jeux de Philibert (dans un panneau de son île). Le serveur ouvre la partie (jeton à usage unique),
-   tire les côtés et les suites, vérifie la durée et calcule la récompense : la page ne fait qu'afficher.
-   1. Pluie de feuilles (30 s) : déplacer Philibert (souris, doigt, flèches) pour attraper feuilles et fleurs ;
-      les insectes, il les refuse (−1). Dessin sur un canevas avec nxImage (60 i/s max), en pause onglet caché.
-   2. Gauche ou droite ? : deviner de quel côté il tourne la tête (5 manches).
-   3. Le hochement : répéter ses suites de petits et grands hochements de tête et de fanon déployé (mémoire et
-      rythme) ; chaque manche tire une nouvelle suite, plus longue, et il va de plus en plus vite.
-   4. Course au rocher chaud (30 s au plus) : il court vers le rocher ; sauter (Espace, ↑, clic ou doigt) par-dessus
-      les crabes et les noix de coco ; les rayons de soleil le réchauffent (il court plus vite), l'ombre des nuages le
-      refroidit (sang froid !). Il part avec sa vraie chaleur du moment. Canevas + nxImage, en pause onglet caché. */
+   donne les règles des paliers, tire les côtés et les suites, vérifie la durée, borne le score et calcule la
+   récompense : la page applique les règles et affiche. Chaque jeu devient plus difficile au fil de la partie, montre
+   son palier, et finit tout seul en cas d'échec (vies, erreurs) ; une bonne partie dure 2 à 3 minutes.
+   1. Pluie de feuilles (3 min au plus) : déplacer Philibert (souris, doigt, flèches) pour attraper feuilles et
+      fleurs ; un palier toutes les 20 s (plus vite, plus d'objets, plus d'insectes) ; 5 vies.
+   2. Gauche ou droite ? (20 manches, 3 erreurs) : un coup d'œil le trahit souvent… de plus en plus bref.
+   3. En rythme : répéter ses suites de hochements de tête ET de fanon déployé ; une nouvelle suite à chaque
+      manche, plus longue (3 à 14 gestes), et tous les gestes de plus en plus rapides.
+   4. Course au rocher chaud (10 étapes, 3 vies) : sauter (Espace, ↑, clic ou doigt) par-dessus les crabes et les
+      noix de coco ; à chaque étape il court plus vite et les obstacles sont plus serrés ; rayons de soleil et ombres
+      des nuages. Canevas + nxImage (60 i/s max), tout s'arrête onglet caché. */
 (() => {
   const D = window.PhilibertDessin;
   let actif = null;          // { arreter() }
@@ -42,7 +44,19 @@
   const son = t => window.PhilibertSon && window.PhilibertSon(t);
 
   const ico = n => (window.PhilibertIcones ? window.PhilibertIcones.ico(n) : "");
-  const ICONES = { "Pluie de feuilles": "nourrir", "Gauche ou droite ?": "loupe", "Le hochement": "coeur", "Course au rocher chaud": "drapeau" };
+  const ICONES = { "Pluie de feuilles": "nourrir", "Gauche ou droite ?": "loupe", "En rythme": "coeur", "Course au rocher chaud": "drapeau" };
+  const calme = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const vies = (n, max) => `<span class="phb-vies" aria-label="${n} vie${n > 1 ? "s" : ""} sur ${max}">${"♥".repeat(Math.max(0, n))}<i>${"♥".repeat(Math.max(0, max - n))}</i></span>`;
+  const mmss = t => { t = Math.max(0, Math.ceil(t)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; };
+  // bandeau « Palier 3 ! » dessiné sur le canevas (il s'efface en 1,4 s ; sans fondu si les animations sont réduites)
+  function bandeau(g, W, texte, age) {
+    if (age > 1.4) return;
+    const a = calme() ? 1 : Math.min(1, (1.4 - age) / .5);
+    g.save(); g.globalAlpha = a; g.font = "bold 26px Trebuchet MS, sans-serif"; g.textAlign = "center";
+    const l = g.measureText(texte).width + 36;
+    g.fillStyle = "rgba(13, 100, 112, .88)"; g.beginPath(); g.roundRect ? g.roundRect(W / 2 - l / 2, 44, l, 40, 20) : g.rect(W / 2 - l / 2, 44, l, 40); g.fill();
+    g.fillStyle = "#fff"; g.fillText(texte, W / 2, 73); g.restore();
+  }
   function entete(box, titre, aide) {
     box.hidden = false;
     box.className = "phb-feuille phb-f-jeu";
@@ -93,11 +107,14 @@
   // ---------------------------------------------------------------- 1. Pluie de feuilles
   async function feuilles(box, ctx) {
     const e = ctx.etat();
-    const zone = entete(box, "Pluie de feuilles", "Attrape les feuilles (+1) et les fleurs (+2) qui tombent du palmier. Les insectes, il n'en mange pas : évite-les ! Souris, doigt ou flèches ← →. Pendant la partie, la souris reste dans le cadre (Échap, Alt+Tab ou la touche Windows pour en sortir).");
+    const zone = entete(box, "Pluie de feuilles", "Attrape les feuilles (+1) et les fleurs (+2) qui tombent du palmier. Les insectes, il n'en mange pas : en attraper un coûte une vie, et 6 feuilles ratées aussi. Toutes les 20 s, un palier de plus : ça tombe plus vite, plus dru, avec plus d'insectes. Souris, doigt ou flèches ← →. Pendant la partie, la souris reste dans le cadre (Échap, Alt+Tab ou la touche Windows pour en sortir).");
     let partie;
     try { partie = await api2("debut", { jeu: "feuilles" }); } catch (x) { zone.innerHTML = `<p class="phb-dit">${esc(x.message)}</p>`; return; }
     ouverte(partie, ctx, box);
-    zone.innerHTML = `<div class="phb-jeu-infos"><span>Score : <b data-score>0</b></span><span>Temps : <b data-temps>30</b> s</span><span data-msg aria-live="polite"></span></div>
+    const R = partie.regles, MAXT = partie.duree || R.duree_max;
+    const palierDe = t => Math.min(R.palier_max, 1 + Math.floor(Math.max(0, t) / R.palier_s));
+    const vitesse = p => 1 + R.vitesse_pas * (p - 1), cadence = p => 1 + R.cadence_pas * (p - 1);
+    zone.innerHTML = `<div class="phb-jeu-infos"><span>Palier <b data-palier>1</b> / ${R.palier_max}</span><span>Score : <b data-score>0</b></span><span data-vies>${vies(R.vies, R.vies)}</span><span>Ratées : <b data-ratees>0</b> / ${R.ratees_par_vie}</span><span>Temps : <b data-temps>${mmss(MAXT)}</b></span><span data-msg aria-live="polite"></span></div>
       <canvas class="phb-canevas" tabindex="0" aria-label="Zone de jeu : déplace Philibert avec les flèches gauche et droite"></canvas>`;
     const cv = zone.querySelector("canvas"), g = cv.getContext("2d");
     const img = imgSvg(dessin(e, { leger: true }));
@@ -113,7 +130,8 @@
       fond = fondPlage(W, Hh, .52, .7);
     }
     taille();
-    let px = W / 2, vise = px, score = 0, insectes = 0, reste = 30, compte = 3, objets = [], prochain = 0, dernier = 0, fini = false, msgT = 0, touches = {};
+    let px = W / 2, vise = px, score = 0, insectes = 0, joue = 0, compte = partie.compte || 3, objets = [], prochain = 0, dernier = 0, fini = false, msgT = 0, touches = {};
+    let palier = 1, palierT = 99, nbVies = R.vies, ratees = 0, raison = "";
     const msg = t => { const m = zone.querySelector("[data-msg]"); m.textContent = t; clearTimeout(msgT); msgT = setTimeout(() => { m.textContent = ""; }, 1400); };
     // La souris reste « prisonnière » du cadre pendant la partie (Pointer Lock) : on lit ses déplacements, le curseur
     // ne peut plus sortir (Échap, Alt+Tab ou la touche Windows le libèrent, c'est le navigateur qui le garantit).
@@ -138,14 +156,20 @@
     cv.focus();
 
     function nouvel() {
-      const r = Math.random();
-      const type = r < .58 ? "feuille" : r < .76 ? "fleur" : "insecte";
-      objets.push({ type, x: 20 + Math.random() * (W - 40), y: -20, v: 110 + Math.random() * 90, a: Math.random() * 6, va: (Math.random() - .5) * 3, k: Math.floor(Math.random() * 3), ph: Math.random() * 6 });
+      const r = Math.random(), pi = R.insectes + R.insectes_pas * (palier - 1);
+      const type = r < pi ? "insecte" : r < pi + R.fleurs ? "fleur" : "feuille";
+      objets.push({ type, x: 20 + Math.random() * (W - 40), y: -20, v: (R.vitesse[0] + Math.random() * R.vitesse[1]) * vitesse(palier),
+        a: Math.random() * 6, va: (Math.random() - .5) * 3, k: Math.floor(Math.random() * 3), ph: Math.random() * 6 });
     }
+    const perdre = t => {
+      nbVies--; zone.querySelector("[data-vies]").innerHTML = vies(nbVies, R.vies); msg(t); son("non");
+      if (nbVies <= 0) raison = "Plus de vies !";
+    };
     function dessinerObjet(o) {
-      g.save(); g.translate(o.x + (o.type === "feuille" ? Math.sin(o.y / 40 + o.ph) * 10 : 0), o.y);
+      const ondule = !calme() && o.type === "feuille";
+      g.save(); g.translate(o.x + (ondule ? Math.sin(o.y / 40 + o.ph) * 10 : 0), o.y);
       if (o.type === "insecte") { g.rotate(Math.sin(o.y / 25 + o.ph) * .25); if (pret(IM.insecte)) g.drawImage(IM.insecte, -15, -15, 30, 30); }
-      else { g.rotate(o.a); const im = o.type === "fleur" ? IM.fleur : IM.feuille[o.k]; if (pret(im)) g.drawImage(im, -17, -17, 34, 34); }
+      else { if (!calme()) g.rotate(o.a); const im = o.type === "fleur" ? IM.fleur : IM.feuille[o.k]; if (pret(im)) g.drawImage(im, -17, -17, 34, 34); }
       g.restore();
     }
     function image(now) {
@@ -155,22 +179,30 @@
       dernier = now;
       if (compte > 0) { compte -= dt; }
       else {
-        reste -= dt;
+        joue += dt; palierT += dt;
+        const p = palierDe(joue);
+        if (p !== palier) { palier = p; palierT = 0; zone.querySelector("[data-palier]").textContent = p; msg(`Palier ${p} : ça tombe plus vite !`); son("ding"); }
         prochain -= dt;
-        if (prochain <= 0) { nouvel(); prochain = .5 + Math.random() * .35; }
+        if (prochain <= 0) { nouvel(); prochain = (R.cadence[0] + Math.random() * R.cadence[1]) / cadence(palier); }
       }
-      if (touches.ArrowLeft) vise = Math.max(40, vise - 420 * dt);
-      if (touches.ArrowRight) vise = Math.min(W - 40, vise + 420 * dt);
+      const vk = 420 * (1 + .07 * (palier - 1));                                 // les flèches suivent le rythme du palier
+      if (touches.ArrowLeft) vise = Math.max(40, vise - vk * dt);
+      if (touches.ArrowRight) vise = Math.min(W - 40, vise + vk * dt);
       px += (vise - px) * Math.min(1, dt * 12);
       const py = Hh - 40;
       for (const o of objets) { o.y += o.v * dt; o.a += o.va * dt; }
       objets = objets.filter(o => {
         if (o.y > py - 18 && o.y < py + 10 && Math.abs(o.x - px) < 38) {
-          if (o.type === "insecte") { insectes++; score = Math.max(0, score - 1); msg("Beurk ! Il refuse les insectes."); son("non"); }
+          if (o.type === "insecte") { insectes++; perdre("Beurk ! Il refuse les insectes (une vie en moins)."); }
           else { score += o.type === "fleur" ? 2 : 1; son("croc"); }
           return false;
         }
-        return o.y < Hh + 30;
+        if (o.y >= Hh + 30) {
+          if (o.type !== "insecte" && ++ratees >= R.ratees_par_vie) { ratees = 0; perdre("Trop de feuilles ratées : une vie en moins."); }
+          zone.querySelector("[data-ratees]").textContent = ratees;
+          return false;
+        }
+        return true;
       });
       // dessin
       g.clearRect(0, 0, W, Hh);
@@ -182,13 +214,15 @@
       if (verrouille()) { g.fillStyle = "rgba(255,255,255,.85)"; g.beginPath(); g.moveTo(vise, py + 22); g.lineTo(vise - 6, py + 30); g.lineTo(vise + 6, py + 30); g.fill(); }
       objets.forEach(dessinerObjet);
       if (pret(IM.cime)) { const hc = Math.min(120, W * .2); for (let x = 0; x < W; x += hc * 600 / 130) g.drawImage(IM.cime, x, 0, hc * 600 / 130, hc); }
+      if (palier > 1) bandeau(g, W, `Palier ${palier}`, palierT);
       zone.querySelector("[data-score]").textContent = score;
-      zone.querySelector("[data-temps]").textContent = compte > 0 ? "…" : Math.max(0, Math.ceil(reste));
+      zone.querySelector("[data-temps]").textContent = compte > 0 ? "…" : mmss(MAXT - joue);
       if (compte > 0) {
         g.fillStyle = "rgba(20, 40, 50, .75)"; g.font = "bold 46px Trebuchet MS, sans-serif"; g.textAlign = "center";
         g.fillText(String(Math.ceil(compte)), W / 2, Hh / 2);
       }
-      if (reste <= 0) { fin(); return; }
+      if (joue >= MAXT && !raison) raison = "Fin du temps : bravo, il est rassasié !";
+      if (raison) { fin(); return; }
       nxImage(image);
     }
     async function fin() {
@@ -197,7 +231,8 @@
       removeEventListener("resize", taille);
       let r = null;
       terminee();
-      try { r = await api2("fin", { jeton: partie.jeton, score, insectes }); } catch (x) { r = { message: x.message }; }
+      msg(raison);
+      try { r = await api2("fin", { jeton: partie.jeton, score, insectes, palier }); } catch (x) { r = { message: x.message }; }
       finir(r, ctx, zone);
     }
     actif = { arreter() { fini = true; deverrouiller(); removeEventListener("resize", taille); } };
@@ -207,27 +242,47 @@
   // ---------------------------------------------------------------- 2. Gauche ou droite ?
   async function devin(box, ctx) {
     const e = ctx.etat();
-    const zone = entete(box, "Gauche ou droite ?", "De quel côté Philibert va-t-il tourner la tête ? 5 manches. Flèches ← → au clavier.");
+    const zone = entete(box, "Gauche ou droite ?", "De quel côté Philibert va-t-il tourner la tête ? Observe-le : juste avant, il jette souvent un coup d'œil du bon côté… pas toujours ! À chaque palier (toutes les 4 manches), ce coup d'œil est plus bref. 20 manches, la partie s'arrête à la 3ᵉ erreur. Flèches ← → au clavier.");
     let partie;
     try { partie = await api2("debut", { jeu: "devin" }); } catch (x) { zone.innerHTML = `<p class="phb-dit">${esc(x.message)}</p>`; return; }
     ouverte(partie, ctx, box);
-    zone.innerHTML = `<div class="phb-jeu-infos"><span>Manche <b data-m>1</b> / 5</span><span>Score : <b data-s>0</b></span></div>
+    const MAXM = partie.manches || 20, MAXE = partie.erreurs || 3;
+    zone.innerHTML = `<div class="phb-jeu-infos"><span>Manche <b data-m>1</b> / ${MAXM}</span><span>Palier <b data-p>1</b></span><span>Score : <b data-s>0</b></span><span data-vies>${vies(MAXE, MAXE)}</span></div>
       <div class="phb-devin"><div class="phb-devin-perso phb-anim">${dessin(e, { humeur: "calme" })}</div></div>
-      <p class="phb-dit" data-r aria-live="polite">Fais ton choix !</p>
-      <div class="phb-ligne phb-centre"><button class="phb-b phb-prim" data-d="gauche">◀ Gauche</button><button class="phb-b phb-prim" data-d="droite">Droite ▶</button></div>`;
-    let occupe = false, fini = false;
+      <p class="phb-dit" data-r aria-live="polite">Regarde-le bien…</p>
+      <div class="phb-ligne phb-centre"><button class="phb-b phb-prim" data-d="gauche" disabled>◀ Gauche</button><button class="phb-b phb-prim" data-d="droite" disabled>Droite ▶</button></div>`;
+    let occupe = true, fini = false, timers = [];
     const perso = zone.querySelector(".phb-devin-perso");
+    const boutons = on => zone.querySelectorAll("[data-d]").forEach(b => { b.disabled = !on; });
+    // le coup d'œil : la tête se penche une fraction de seconde vers un côté (l'indice du serveur, vrai le plus souvent)
+    function indice(m) {
+      occupe = true; boutons(false);
+      perso.classList.remove("gauche", "lorgne-gauche", "lorgne-droite");
+      zone.querySelector("[data-p]").textContent = m.palier;
+      zone.querySelector("[data-r]").textContent = "Regarde-le bien…";
+      timers.push(setTimeout(() => {
+        if (fini) return;
+        perso.classList.add("lorgne-" + m.indice);
+        timers.push(setTimeout(() => {
+          perso.classList.remove("lorgne-gauche", "lorgne-droite");
+          if (fini) return;
+          occupe = false; boutons(true);
+          zone.querySelector("[data-r]").textContent = "À toi : gauche ou droite ?";
+        }, m.indice_ms));
+      }, 700 + Math.random() * 500));
+    }
     async function choisir(c) {
       if (occupe || fini) return;
-      occupe = true;
+      occupe = true; boutons(false);
       let r;
-      try { r = await api2("coup", { jeton: partie.jeton, choix: c }); } catch (x) { zone.querySelector("[data-r]").textContent = x.message; occupe = false; return; }
+      try { r = await api2("coup", { jeton: partie.jeton, choix: c }); } catch (x) { zone.querySelector("[data-r]").textContent = x.message; occupe = false; boutons(true); return; }
       perso.classList.toggle("gauche", r.cote === "gauche");
       perso.classList.add("hoche");
-      setTimeout(() => perso.classList.remove("hoche"), 700);
+      timers.push(setTimeout(() => perso.classList.remove("hoche"), 700));
       zone.querySelector("[data-r]").textContent = (r.bon ? "Bien vu ! " : "Raté… ") + `Il a tourné la tête à ${r.cote}.`;
-      son(r.bon ? "ding" : "pop");
+      son(r.bon ? "ding" : "non");
       zone.querySelector("[data-s]").textContent = r.score;
+      zone.querySelector("[data-vies]").innerHTML = vies(MAXE - r.erreurs, MAXE);
       if (r.fini) {
         fini = true;
         let f = null;
@@ -236,30 +291,32 @@
         finir(f, ctx, zone);
       } else {
         zone.querySelector("[data-m]").textContent = r.manche + 1;
-        setTimeout(() => { occupe = false; zone.querySelector("[data-r]").textContent = "Et maintenant ?"; }, 900);
+        if (r.suivante.palier > r.palier || (r.manche % 4 === 0)) son("pop");
+        timers.push(setTimeout(() => { if (!fini) indice(r.suivante); }, 1000));
       }
     }
-    zone.addEventListener("click", ev => { const b = ev.target.closest("[data-d]"); if (b) choisir(b.dataset.d); });
+    zone.addEventListener("click", ev => { const b = ev.target.closest("[data-d]"); if (b && !b.disabled) choisir(b.dataset.d); });
     const kd = ev => { if (ev.key === "ArrowLeft") { ev.preventDefault(); choisir("gauche"); } if (ev.key === "ArrowRight") { ev.preventDefault(); choisir("droite"); } };
     document.addEventListener("keydown", kd);
+    actif = { arreter() { fini = true; timers.forEach(clearTimeout); document.removeEventListener("keydown", kd); } };
+    indice(partie);
     zone.querySelector("[data-d]").focus();
-    actif = { arreter() { fini = true; document.removeEventListener("keydown", kd); } };
   }
 
-  // ---------------------------------------------------------------- 3. Le hochement
+  // ---------------------------------------------------------------- 3. En rythme
   async function rythme(box, ctx) {
     const e = ctx.etat();
-    const zone = entete(box, "Le hochement", "Les iguanes « parlent » avec la tête et le fanon. Regarde Philibert, puis répète : petit hochement (← ou 1), grand hochement (→ ou 2), fanon déployé (↓ ou 3). À chaque manche, une nouvelle suite, un geste de plus… et il va de plus en plus vite !");
+    const zone = entete(box, "En rythme", "Les iguanes « parlent » avec la tête et le fanon. Regarde Philibert, puis reproduis toute sa suite, hochements de tête ET fanon : petit hochement (← ou 1), grand hochement (→ ou 2), fanon déployé (↓ ou 3). À chaque manche (un palier de plus), une nouvelle suite, un geste de plus, et ses hochements comme son fanon vont de plus en plus vite. Jusqu'à 14 gestes !");
     let partie;
     try { partie = await api2("debut", { jeu: "rythme" }); } catch (x) { zone.innerHTML = `<p class="phb-dit">${esc(x.message)}</p>`; return; }
     ouverte(partie, ctx, box);
-    zone.innerHTML = `<div class="phb-jeu-infos"><span>Suite de <b data-n>3</b></span><span>Vitesse <b data-v>1</b></span><span data-etat aria-live="polite">Regarde bien…</span></div>
+    zone.innerHTML = `<div class="phb-jeu-infos"><span>Palier <b data-p>1</b></span><span>Suite de <b data-n>3</b> / ${partie.max || 14}</span><span>Vitesse <b data-v>1</b></span><span data-etat aria-live="polite">Regarde bien…</span></div>
       <div class="phb-devin"><div class="phb-devin-perso phb-anim">${dessin(e, { humeur: "calme" })}</div></div>
       <div class="phb-suite" aria-hidden="true"></div>
       <div class="phb-ligne phb-centre"><button class="phb-b phb-prim" data-h="petit" disabled>• Petit hochement</button><button class="phb-b phb-prim" data-h="grand" disabled>● Grand hochement</button>
         <button class="phb-b phb-prim" data-h="fanon" disabled>◆ Fanon</button></div>`;
     const perso = zone.querySelector(".phb-devin-perso"), chips = zone.querySelector(".phb-suite");
-    let suite = partie.suite, tempo = partie.tempo || .78, rep = [], ecoute = false, fini = false, timers = [];
+    let suite = partie.suite, tempo = partie.tempo || .78, palier = partie.palier || 1, rep = [], ecoute = false, fini = false, timers = [];
     const T0 = partie.tempo || .78, DUREE = { petit: 1, grand: 1.5, fanon: 1.4 };
     const dire = t => { zone.querySelector("[data-etat]").textContent = t; };
     const boutons = on => zone.querySelectorAll("[data-h]").forEach(b => { b.disabled = !on; });
@@ -270,6 +327,7 @@
     function montrer() {
       ecoute = false; rep = []; boutons(false);
       zone.querySelector("[data-n]").textContent = suite.length;
+      zone.querySelector("[data-p]").textContent = palier;
       zone.querySelector("[data-v]").textContent = (T0 / tempo).toFixed(1).replace(".", ",") + "×";
       perso.style.setProperty("--phb-t", tempo + "s");                 // vitesse des animations de la tête et du fanon
       dire("Regarde bien…");
@@ -302,7 +360,7 @@
       ecoute = false; boutons(false);
       let r;
       try { r = await api2("coup", { jeton: partie.jeton, reponse: rep }); } catch (x) { dire(x.message); return; }
-      if (r.bon && !r.fini) { son("ding"); dire("Bravo ! Nouvelle suite, un peu plus vite…"); suite = r.suite; tempo = r.tempo || tempo; timers.push(setTimeout(montrer, 1100)); return; }
+      if (r.bon && !r.fini) { son("ding"); dire(`Bravo ! Palier ${r.palier} : nouvelle suite, un peu plus vite…`); suite = r.suite; tempo = r.tempo || tempo; palier = r.palier || palier + 1; timers.push(setTimeout(montrer, 1100)); return; }
       fini = true;
       dire(r.bon ? "Parfait, jusqu'au bout !" : "Oups, ce n'était pas tout à fait ça.");
       let f = null;
@@ -324,11 +382,14 @@
   // ---------------------------------------------------------------- 4. Course au rocher chaud
   async function course(box, ctx) {
     const e = ctx.etat();
-    const zone = entete(box, "Course au rocher chaud", "Philibert court jusqu'au rocher chaud. Saute par-dessus les crabes et les noix de coco (Espace, ↑, clic ou doigt). Les rayons de soleil le réchauffent : plus il a chaud, plus il court vite. L'ombre des nuages le refroidit.");
+    const zone = entete(box, "Course au rocher chaud", "Philibert court jusqu'au rocher chaud, en 10 étapes. Saute par-dessus les crabes et les noix de coco (Espace, ↑, clic ou doigt) : chaque choc coûte une vie (3 en tout). À chaque étape, il court plus vite et les obstacles sont plus serrés. Les rayons de soleil le réchauffent : plus il a chaud, plus il court vite. L'ombre des nuages le refroidit.");
     let partie;
     try { partie = await api2("debut", { jeu: "course" }); } catch (x) { zone.innerHTML = `<p class="phb-dit">${esc(x.message)}</p>`; return; }
     ouverte(partie, ctx, box);
-    zone.innerHTML = `<div class="phb-jeu-infos"><span>Rayons : <b data-score>0</b></span><span>Temps : <b data-temps>30</b> s</span><span data-msg aria-live="polite"></span></div>
+    const R = partie.regles, BUT = R.etape_px * R.etapes, LIMITE = partie.duree || R.duree_max;
+    const etapeDe = d => Math.min(R.etapes, 1 + Math.floor(Math.max(0, d) / R.etape_px));
+    const vitesse = k => 1 + R.vitesse_pas * (k - 1), ecart = k => 1 / (1 + R.ecart_pas * (k - 1));
+    zone.innerHTML = `<div class="phb-jeu-infos"><span>Étape <b data-etape>1</b> / ${R.etapes}</span><span>Rayons : <b data-score>0</b></span><span data-vies>${vies(R.vies, R.vies)}</span><span>Temps : <b data-temps>${mmss(LIMITE)}</b></span><span data-msg aria-live="polite"></span></div>
       <canvas class="phb-canevas course" tabindex="0" aria-label="Course : appuie sur Espace ou flèche haut pour sauter"></canvas>`;
     const cv = zone.querySelector("canvas"), g = cv.getContext("2d");
     // tirage reproductible à partir de la graine du serveur (mulberry32)
@@ -351,13 +412,14 @@
       fond = fondPlage(W, Hh, .46, .62);
     }
     taille();
-    const BUT = 5600, LIMITE = 30;
-    // parcours : obstacles, rayons et ombres de nuages répartis sur la distance
+    // parcours : obstacles (de plus en plus serrés à chaque étape, jamais moins de R.ecart_min entre deux), rayons et
+    // ombres de nuages répartis sur la distance
     const obstacles = [], rayons = [], ombres = [];
-    for (let x = 700; x < BUT - 500; x += 380 + alea() * 420) obstacles.push({ x, type: alea() < .6 ? "crabe" : "coco", touche: false });
-    for (let x = 420; x < BUT - 300; x += 170 + alea() * 260) rayons.push({ x, h: alea() < .45 ? 95 : 30, pris: false });
+    for (let x = 700; x < BUT - 500; x += Math.max(R.ecart_min, (R.ecart[0] + alea() * R.ecart[1]) * ecart(etapeDe(x)))) obstacles.push({ x, type: alea() < .6 ? "crabe" : "coco", touche: false });
+    for (let x = 420; x < BUT - 300; x += R.rayon_min + alea() * 260) rayons.push({ x, h: alea() < .45 ? 95 : 30, pris: false });
     for (let x = 1300; x < BUT - 700; x += 1100 + alea() * 900) ombres.push({ x, l: 260 + alea() * 200 });
-    let dist = 0, chaleur = Math.max(20, Math.min(100, e.jauges.chaleur)), score = 0, temps = 0, compte = 3, dernier = 0, fini = false, arrive = false;
+    let dist = 0, chaleur = Math.max(20, Math.min(100, e.jauges.chaleur)), score = 0, temps = 0, compte = partie.compte || 3, dernier = 0, fini = false, arrive = false;
+    let etape = 1, etapeT = 99, nbVies = R.vies, raison = "";
     let y = 0, vy = 0, trebuche = 0, pas = 0, msgT = 0;
     const msg = t => { const m = zone.querySelector("[data-msg]"); m.textContent = t; clearTimeout(msgT); msgT = setTimeout(() => { m.textContent = ""; }, 1300); };
     const sauter = () => { if (compte <= 0 && !fini && y === 0) { vy = -560; son("saut"); } };
@@ -419,6 +481,8 @@
       if (pret(im)) { g.save(); if (trebuche > 0) { g.translate(px, sol + y); g.rotate(-.12); g.translate(-px, -(sol + y)); } g.drawImage(im, px - 56, sol - 50 + y, 112, 56); g.restore(); }
       // barres : progression vers le rocher, chaleur
       g.fillStyle = "rgba(255,255,255,.85)"; g.fillRect(12, 10, W - 24, 10); g.fillStyle = "#0d6470"; g.fillRect(12, 10, (W - 24) * Math.min(1, dist / BUT), 10);
+      g.fillStyle = "rgba(13,100,112,.55)"; for (let k = 1; k < R.etapes; k++) g.fillRect(12 + (W - 24) * k / R.etapes - 1, 8, 2, 14);
+      if (etape > 1) bandeau(g, W, `Étape ${etape} : plus vite !`, etapeT);
       g.fillStyle = "#8f8478"; g.beginPath(); g.arc(W - 12, 15, 7, 0, Math.PI * 2); g.fill();
       g.fillStyle = "rgba(255,255,255,.85)"; g.fillRect(12, 26, 120, 8); g.fillStyle = chaleur < 35 ? "#3b7fd0" : "#e8731a"; g.fillRect(12, 26, 1.2 * chaleur, 8);
       g.fillStyle = "#1f3036"; g.font = "bold 11px Segoe UI, sans-serif"; g.textAlign = "left"; g.fillText(chaleur < 35 ? "il a froid…" : "chaleur", 138, 34);
@@ -434,31 +498,39 @@
       else {
         temps += dt;
         const px = 0;                                   // (coordonnées du monde : Philibert est à « dist »)
-        const v = (150 + 105 * chaleur / 100) * (trebuche > 0 ? .45 : 1);
+        const k = etapeDe(dist);
+        if (k !== etape) { etape = k; etapeT = 0; zone.querySelector("[data-etape]").textContent = k; msg(`Étape ${k} / ${R.etapes}`); son("ding"); }
+        etapeT += dt;
+        const v = (R.vitesse[0] + R.vitesse[1] * chaleur / 100) * vitesse(etape) * (trebuche > 0 ? .45 : 1);
         dist += v * dt;
         pas += dt * v / 34;
         trebuche = Math.max(0, trebuche - dt);
         vy += 1600 * dt; y = Math.min(0, y + vy * dt); if (y === 0) vy = 0;
-        chaleur = Math.max(0, chaleur - 1.4 * dt);
-        if (ombres.some(o => dist > o.x && dist < o.x + o.l)) chaleur = Math.max(0, chaleur - 14 * dt);
+        chaleur = Math.max(0, chaleur - 1 * dt);
+        if (ombres.some(o => dist > o.x && dist < o.x + o.l)) chaleur = Math.max(0, chaleur - 9 * dt);
         for (const r of rayons) if (!r.pris && Math.abs(r.x - dist - px) < 26 && Math.abs(-r.h - y) < 42) { r.pris = true; score++; chaleur = Math.min(100, chaleur + 8); son("ding"); }
-        for (const o of obstacles) if (!o.touche && Math.abs(o.x - dist) < 22 && y > -26) { o.touche = true; trebuche = .8; score = Math.max(0, score - 1); msg(o.type === "crabe" ? "Oups, un crabe !" : "Aïe, une noix de coco !"); son("non"); }
-        if (dist >= BUT) { arrive = true; finPartie(); return; }
-        if (temps >= LIMITE) { finPartie(); return; }
+        for (const o of obstacles) if (!o.touche && Math.abs(o.x - dist) < 22 && y > -26) {
+          o.touche = true; trebuche = .8; nbVies--; zone.querySelector("[data-vies]").innerHTML = vies(nbVies, R.vies);
+          msg(o.type === "crabe" ? "Oups, un crabe ! Une vie en moins." : "Aïe, une noix de coco ! Une vie en moins."); son("non");
+          if (nbVies <= 0) raison = "Trop de chocs : il s'arrête pour souffler.";
+        }
+        if (dist >= BUT) { arrive = true; raison = "Arrivé ! Il s'étale sur le rocher chaud."; }
+        else if (temps >= LIMITE && !raison) raison = "Le temps est écoulé : le rocher était encore loin.";
+        if (raison) { finPartie(); return; }
       }
       dessiner();
       zone.querySelector("[data-score]").textContent = score;
-      zone.querySelector("[data-temps]").textContent = compte > 0 ? "…" : Math.max(0, Math.ceil(LIMITE - temps));
+      zone.querySelector("[data-temps]").textContent = compte > 0 ? "…" : mmss(LIMITE - temps);
       nxImage(tour);
     }
     async function finPartie() {
       fini = true;
       removeEventListener("resize", taille);
       dessiner();
-      msg(arrive ? "Arrivé ! Il s'étale sur le rocher chaud." : "Presque… le rocher était tout proche.");
+      msg(raison);
       let r = null;
       terminee();
-      try { r = await api2("fin", { jeton: partie.jeton, score, arrivee: arrive }); } catch (x) { r = { message: x.message }; }
+      try { r = await api2("fin", { jeton: partie.jeton, score, arrivee: arrive, palier: etape, distance: Math.round(Math.min(dist, BUT)) }); } catch (x) { r = { message: x.message }; }
       finir(r, ctx, zone);
     }
     actif = { arreter() { fini = true; removeEventListener("resize", taille); } };

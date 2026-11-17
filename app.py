@@ -1205,7 +1205,8 @@ async def api_philibert_jeu(etape: str, request: Request) -> JSONResponse:
     if etape == "coup":
         return _philibert(philibert_svc.jeu_coup, body.get("jeton"), body.get("choix"), body.get("reponse"))
     if etape == "fin":
-        return _philibert(philibert_svc.jeu_fin, body.get("jeton"), body.get("score"), body.get("insectes"), body.get("arrivee"))
+        return _philibert(philibert_svc.jeu_fin, body.get("jeton"), body.get("score"), body.get("insectes"), body.get("arrivee"),
+                          body.get("palier"), body.get("distance"))
     if etape == "annuler":
         return _philibert(philibert_svc.jeu_annuler, body.get("jeton"))
     raise BadRequest("étape inconnue", 404)

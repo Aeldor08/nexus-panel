@@ -30,13 +30,81 @@ PENSION_S = 3 * JOUR            # au-delà : la voisine le prend en pension
 PLANCHERS = {"faim": 20, "bonheur": 25, "proprete": 20, "chaleur": 20, "energie": 20}
 SANTE_MIN = 5
 JAUGES = ("faim", "bonheur", "energie", "proprete", "sante", "chaleur")
-GAINS_JEUX_JOUR = 60
+GAINS_JEUX_JOUR = 120
 ENERGIE_JEU = 8                    # énergie prise au lancement d'une partie (perdue si on l'abandonne)
-# « Le hochement » : petit hochement, grand hochement, fanon déployé (les trois vrais signaux de l'iguane vert).
-# Chaque manche tire une NOUVELLE suite, un geste de plus, et Philibert va de plus en plus vite (durée d'un temps).
+
+# ---- Mini-jeux : paliers de difficulté. Le serveur fixe les règles (envoyées à la page au lancement) et s'en sert
+# pour borner les scores : un score impossible pour la durée réelle de la partie est refusé.
+JEU_COMPTE = 3                     # compte à rebours avant le départ (s)
+JEU_DUREE_MIN = 10                 # durée réelle minimale d'une partie à score (compte à rebours compris)
+FEUILLES = {"duree_max": 180, "palier_s": 20, "palier_max": 9, "vies": 5, "ratees_par_vie": 6,
+            "vitesse": [110, 90], "vitesse_pas": .16, "cadence": [.5, .35], "cadence_pas": .14,
+            "fleurs": .18, "insectes": .22, "insectes_pas": .03}
+COURSE = {"duree_max": 240, "etape_px": 4000, "etapes": 10, "vies": 3, "vitesse": [150, 105], "vitesse_pas": .06,
+          "ecart": [380, 420], "ecart_pas": .1, "ecart_min": 250, "rayon_min": 170}
+DEVIN = {"manches": 20, "erreurs": 3, "palier_manches": 4, "indice_ms": [900, 650, 460, 330, 240],
+         "fiabilite": [.9, .86, .82, .78, .75]}
+# « En rythme » : petit hochement, grand hochement, fanon déployé (les trois vrais signaux de l'iguane vert).
+# Chaque manche tire une NOUVELLE suite, un geste de plus, et TOUS les gestes vont de plus en plus vite.
 GESTES = {"petit": 1.0, "grand": 1.5, "fanon": 1.4}          # durée de chaque geste, en « temps »
-RYTHME_MAX = 10
-tempo_rythme = lambda manche: max(.34, .78 - .06 * manche)  # noqa: E731  (secondes par temps)
+RYTHME_MAX = 14
+tempo_rythme = lambda manche: max(.3, .78 - .045 * manche)  # noqa: E731  (secondes par temps)
+
+
+def feuilles_palier(t: float) -> int:
+    """Palier de « Pluie de feuilles » après t secondes de jeu (un de plus toutes les 20 s)."""
+    return min(FEUILLES["palier_max"], 1 + int(max(0.0, t) // FEUILLES["palier_s"]))
+
+
+def feuilles_vitesse(p: int) -> float:
+    """Facteur de vitesse de chute au palier p."""
+    return 1 + FEUILLES["vitesse_pas"] * (p - 1)
+
+
+def feuilles_cadence(p: int) -> float:
+    """Facteur du nombre d'objets qui tombent par seconde au palier p."""
+    return 1 + FEUILLES["cadence_pas"] * (p - 1)
+
+
+def feuilles_objets_max(t: float) -> float:
+    """Nombre d'objets au plus qui peuvent tomber en t secondes de jeu (intervalle le plus court à chaque palier)."""
+    n, x, pas = 0.0, 0.0, FEUILLES["palier_s"]
+    while x < t:
+        d = min(pas, t - x)
+        n += d * feuilles_cadence(feuilles_palier(x)) / FEUILLES["cadence"][0]
+        x += d
+    return n
+
+
+def course_etape(dist: float) -> int:
+    return min(COURSE["etapes"], 1 + int(max(0.0, dist) // COURSE["etape_px"]))
+
+
+def course_vitesse(p: int) -> float:
+    """Facteur de vitesse de la course à l'étape p."""
+    return 1 + COURSE["vitesse_pas"] * (p - 1)
+
+
+def course_ecart(p: int) -> float:
+    """Facteur d'écart entre deux obstacles à l'étape p (plus petit = obstacles plus fréquents)."""
+    return 1 / (1 + COURSE["ecart_pas"] * (p - 1))
+
+
+def devin_palier(manche: int) -> int:
+    """Palier de « Gauche ou droite ? » pour la manche n (1, 2…) : un de plus toutes les 4 manches."""
+    return min(len(DEVIN["indice_ms"]), 1 + max(0, manche - 1) // DEVIN["palier_manches"])
+
+
+def recompense_jeu(jeu: str, score: int, palier: int, arrivee: bool = False) -> tuple[int, int]:
+    """(coquillages, bonheur) d'une partie : grandit avec le score ET le palier atteint (donc la durée)."""
+    p = max(1, palier)
+    if jeu == "feuilles":
+        return min(30, score // 8 + 2 * (p - 1)), min(25, 5 + score // 6 + p)
+    if jeu == "course":
+        return min(30, score // 6 + 2 * (p - 1) + (6 if arrivee else 0)), min(25, 6 + score // 5 + p)
+    if jeu == "devin":
+        return min(20, score + 2 * (p - 1)), min(25, 4 + 2 * score)
+    return min(25, 2 * max(0, score - 2) + (p - 1)), min(25, 4 + 2 * score)
 
 
 def _suite_hochements(n: int) -> list[str]:
@@ -56,9 +124,13 @@ def _duree_suite(suite: list[str], tempo: float) -> float:
 SEUIL_ATTENTION = 30
 METEO_FORCEE: str | None = None  # tests : "soleil", "nuages", "pluie"
 SAISON_FORCEE: str | None = None  # tests : "printemps", "ete", "automne", "hiver"
-# Saisons de l'île : elles ne suivent PAS le calendrier réel. Chaque île a son propre roulement (tiré de sa graine) :
-# une saison dure de 2 à 7 jours, puis une autre (jamais la même deux fois de suite) lui succède. Pour chacune :
-# probabilités de pluie et de nuages, chaleur en plus ou en moins, produit de saison (1 coquillage de moins).
+# Saisons : DEUX systèmes qui cohabitent.
+# 1. Les saisons du calendrier (mois réels, comme à l'origine) : printemps, été, saison des pluies, saison fraîche ;
+#    probabilités de pluie et de nuages, chaleur en plus ou en moins, produit de saison (1 coquillage de moins).
+# 2. Les saisons de l'île (SAISONS_ILE), qui n'ont rien à voir avec le calendrier : chaque île a son roulement (tiré de
+#    sa graine), une période de 2 à 7 jours, puis une autre (jamais la même deux fois de suite) ; parfois aucune
+#    (« temps ordinaire »). Elles s'AJOUTENT à la saison du calendrier : un peu plus ou moins de pluie et de nuages,
+#    de chaleur, un second produit de saison, leur décor.
 SAISONS = {
     "printemps": {"nom": "Printemps", "pluie": .15, "nuages": .45, "chaleur": 0, "promo": "fleur_pissenlit",
                   "texte": "Les fleurs de pissenlit et d'hibiscus éclosent partout sur l'île."},
@@ -68,17 +140,20 @@ SAISONS = {
                 "texte": "Les averses sont fréquentes : pense à la lampe chauffante. Les figues sont mûres."},
     "hiver": {"nom": "Saison fraîche", "pluie": .14, "nuages": .55, "chaleur": -6, "promo": "chou_vert",
               "texte": "Les nuits sont plus fraîches : Philibert a besoin de plus de chaleur. Le chou vert est de saison."},
-    "floraison": {"nom": "Grande floraison", "pluie": .1, "nuages": .35, "chaleur": 2, "promo": "hibiscus",
+}
+SAISONS_ILE = {
+    "floraison": {"nom": "Grande floraison", "pluie": -.04, "nuages": -.08, "chaleur": 2, "promo": "hibiscus",
                   "texte": "Toute l'île est en fleurs : hibiscus, liserons et pissenlits. Les papillons sont partout."},
-    "tempetes": {"nom": "Saison des tempêtes", "pluie": .32, "nuages": .72, "chaleur": -4, "promo": "feuilles_murier",
+    "tempetes": {"nom": "Saison des tempêtes", "pluie": .14, "nuages": .18, "chaleur": -4, "promo": "feuilles_murier",
                  "texte": "Le vent souffle fort et la mer est agitée : garde-le au chaud, la lampe chauffante est précieuse."},
-    "brumes": {"nom": "Saison des brumes", "pluie": .12, "nuages": .68, "chaleur": -3, "promo": "haricots",
+    "brumes": {"nom": "Saison des brumes", "pluie": 0, "nuages": .22, "chaleur": -3, "promo": "haricots",
                "texte": "Une brume douce enveloppe l'île : le soleil perce par moments, le rocher chauffe moins."},
-    "tortues": {"nom": "Ponte des tortues", "pluie": .1, "nuages": .3, "chaleur": 3, "promo": "courge",
+    "tortues": {"nom": "Ponte des tortues", "pluie": -.04, "nuages": -.06, "chaleur": 3, "promo": "courge",
                 "texte": "Les tortues marines viennent pondre la nuit : on voit leurs traces dans le sable au matin."},
 }
-SAISON_DUREE = (2, 7)            # jours, au hasard entre les deux pour chaque saison
+SAISON_DUREE = (2, 7)            # jours, au hasard entre les deux pour chaque saison de l'île
 ROTATION_DEBUT = 1767225600.0    # 1ᵉʳ janvier 2026 : point de départ du roulement (le même pour tous)
+SAISON_ILE_FORCEE: str | None = None   # tests : "aucune" ou une clé de SAISONS_ILE
 
 
 def maintenant() -> float:
@@ -109,11 +184,11 @@ def heure_de_dormir(t: float) -> bool:
 _ROULEMENTS: dict[str, list[tuple[float, float, str]]] = {}
 
 
-def periode_saison(t: float, graine: str = "") -> tuple[str, float, float]:
-    """(saison, début, fin) au temps t pour l'île de cette graine : roulement de saisons de 2 à 7 jours, tiré au
-    hasard (reproductible), jamais deux fois la même saison de suite."""
+def periode_saison_ile(t: float, graine: str = "") -> tuple[str | None, float, float]:
+    """(saison de l'île ou None, début, fin) au temps t pour l'île de cette graine : roulement de périodes de 2 à 7
+    jours, tirées au hasard (reproductible), jamais deux fois la même de suite ; None = temps ordinaire."""
     L = _ROULEMENTS.setdefault(graine, [])
-    noms = list(SAISONS)
+    noms: list = [*SAISONS_ILE, None]
 
     def suivante(i: int, debut: float, avant: str | None) -> tuple[float, float, str]:
         d = (SAISON_DUREE[0] + (SAISON_DUREE[1] - SAISON_DUREE[0]) * _alea(graine, "saison-duree", i)) * JOUR
@@ -136,15 +211,27 @@ def periode_saison(t: float, graine: str = "") -> tuple[str, float, float]:
 
 
 def saison(t: float, graine: str = "") -> str:
+    """Saison du calendrier (mois réels), comme à l'origine."""
     if SAISON_FORCEE:
         return SAISON_FORCEE
-    return periode_saison(t, graine)[0]
+    m = datetime.fromtimestamp(t).month
+    return "printemps" if 3 <= m <= 5 else "ete" if 6 <= m <= 8 else "automne" if 9 <= m <= 11 else "hiver"
+
+
+def saison_ile(t: float, graine: str = "") -> str | None:
+    """Saison de l'île en cours (roulement de 2 à 7 jours), ou None (temps ordinaire)."""
+    if SAISON_ILE_FORCEE:
+        return None if SAISON_ILE_FORCEE == "aucune" else SAISON_ILE_FORCEE
+    return periode_saison_ile(t, graine)[0]
 
 
 def _ciel_brut(graine: str, bloc: int) -> str:
     r = _alea(graine, "meteo", bloc)
-    sa = SAISONS[saison(bloc * 2 * H, graine)]
-    return "pluie" if r < sa["pluie"] else "nuages" if r < sa["nuages"] else "soleil"
+    t = bloc * 2 * H
+    sa, sp = SAISONS[saison(t, graine)], SAISONS_ILE.get(saison_ile(t, graine) or "", {})
+    pluie = min(.6, max(0, sa["pluie"] + sp.get("pluie", 0)))
+    nuages = min(.9, max(pluie, sa["nuages"] + sp.get("pluie", 0) + sp.get("nuages", 0)))
+    return "pluie" if r < pluie else "nuages" if r < nuages else "soleil"
 
 
 def meteo(t: float, graine: str) -> str:
@@ -326,9 +413,9 @@ SUCCES = {
     "refus": ("Il sait ce qu'il mange", "Voir Philibert refuser un aliment qui n'est pas pour lui", 5),
     "comme_neuf": ("Comme neuf", "Le voir revenir de chez la tortue vétérinaire", 5),
     "gueri": ("Remis sur pattes", "Le soigner à la maison", 8),
-    "feuilles": ("Attrape-feuilles", "20 feuilles ou plus à « Pluie de feuilles »", 10),
-    "devin": ("Devin de l'île", "5 sur 5 à « Gauche ou droite ? »", 10),
-    "rythme": ("Hochement parfait", "Répéter une suite de 6 hochements", 10),
+    "feuilles": ("Attrape-feuilles", "Atteindre le palier 5 à « Pluie de feuilles »", 10),
+    "devin": ("Devin de l'île", "10 bonnes réponses dans une partie de « Gauche ou droite ? »", 10),
+    "rythme": ("Dans le rythme", "Répéter une suite de 8 gestes à « En rythme »", 10),
     "juvenile": ("Ça pousse !", "Devenir juvénile", 5),
     "adulte": ("Grand iguane", "Devenir adulte", 10),
     "sage": ("Vieux sage", "Devenir un vieux sage", 20),
@@ -336,9 +423,9 @@ SUCCES = {
     "coquet": ("Coquet", "Avoir 3 accessoires", 5),
     "decorateur": ("Décorateur", "Installer 3 décorations sur l'île", 5),
     "tresor": ("Trésor de l'île", "Avoir 100 coquillages en poche", 0),
-    "coureur": ("Coureur du soleil", "Arriver au rocher chaud avec 15 rayons de soleil ou plus", 10),
-    "saisons": ("Quatre saisons", "Vivre quatre saisons différentes sur l'île", 15),
-    "tour_saisons": ("Tour des saisons", "Vivre les huit saisons de l'île", 20),
+    "coureur": ("Coureur du soleil", "Arriver au rocher chaud (étape 10) avec 60 rayons de soleil ou plus", 10),
+    "saisons": ("Les quatre saisons", "Vivre les quatre saisons de l'île", 15),
+    "tour_saisons": ("Saisons de l'île", "Vivre les quatre saisons spéciales de l'île (floraison, tempêtes, brumes, ponte des tortues)", 20),
     "mutation": ("Couleurs uniques", "Voir Philibert changer de couleur à une mue", 10),
     "collection": ("Pièce de collection", "Acheter un objet légendaire", 0),
 }
@@ -351,7 +438,7 @@ EVENEMENTS = {
     "bouteille": {"texte": "Une bouteille à la mer s'est échouée. Il y a un message dedans !", "choix": {"lire": "Lire le message"}},
     "crabe": {"texte": "Un petit crabe tourne autour de Philibert : il a l'air de vouloir jouer.", "choix": {"jouer": "Les laisser jouer"}},
 }
-JEUX = {"feuilles": "Pluie de feuilles", "devin": "Gauche ou droite ?", "rythme": "Le hochement", "course": "Course au rocher chaud"}
+JEUX = {"feuilles": "Pluie de feuilles", "devin": "Gauche ou droite ?", "rythme": "En rythme", "course": "Course au rocher chaud"}
 
 
 class PhilibertErreur(Exception):
@@ -413,7 +500,7 @@ class Philibert:
             "reglages": {"visible": True, "vitesse": "normale", "sons": True, "ambiance": True, "theme": "auto", "notif_windows": False, "discord": False,
                          **(reglages or {})},
             "jeu": None, "jeux_jour": {"jour": "", "gagnes": 0}, "ramasse": 0.0, "bonne": None,
-            "album": list(album or []), "etapes": [], "saisons_vues": [],
+            "album": list(album or []), "etapes": [], "saisons_vues": [], "saisons_ile_vues": [],
             "cd": {}, "bain_sante_jour": "", "dernier_froid": False, "nouveau": [],
         }
 
@@ -465,7 +552,7 @@ class Philibert:
             "gourmet": len(s["gouts"]) >= 6, "fleurs": st["fleurs"] >= 5, "bronzage": st["soleil"] >= 10,
             "nageur": st["bains_mer"] >= 10, "premiere_mue": st["mues"] >= 1, "bonne_nuit": st["nuits_eteintes"] >= 5,
             "refus": st["refus"] >= 1, "comme_neuf": st["sejours_veto"] >= 1, "gueri": st["gueris"] >= 1,
-            "feuilles": st["meilleur_feuilles"] >= 20, "devin": st["meilleur_devin"] >= 5, "rythme": st["meilleur_rythme"] >= 6,
+            "feuilles": st.get("palier_feuilles", 0) >= 5, "devin": st["meilleur_devin"] >= 10, "rythme": st["meilleur_rythme"] >= 8,
             "semaine": s["age_s"] >= 7 * JOUR, "coquet": len(s["accessoires"]) >= 3, "decorateur": len(s["deco"]) >= 3,
             "tresor": s["coquillages"] >= 100,
             "collection": any(OBJETS[x]["rarete"] == "legendaire" for x in s["accessoires"] + s["deco"] if x in OBJETS),
@@ -517,7 +604,7 @@ class Philibert:
             c = {"soleil": 62, "arc": 62, "nuages": 52, "pluie": 38}[ciel]
             if ph != "jour":
                 c -= 6
-        c += SAISONS[saison(t, s["graine"])]["chaleur"]
+        c += SAISONS[saison(t, s["graine"])]["chaleur"] + SAISONS_ILE.get(saison_ile(t, s["graine"]) or "", {}).get("chaleur", 0)
         if s["lampe"]["possede"] and s["lampe"]["allumee"]:
             c = max(c, 72 if ph == "nuit" else 76)
         return c
@@ -535,13 +622,19 @@ class Philibert:
         sa = saison(t, s["graine"])
         if sa not in s["saisons_vues"]:
             s["saisons_vues"].append(sa)
-            if sa in ("ete", "tortues"):
+            if sa == "ete":
                 self._fait("ponte")
-            elif sa in ("hiver", "brumes"):
+            elif sa == "hiver":
                 self._fait("fraicheur")
             if len(s["saisons_vues"]) >= 4:
                 self._succes("saisons", t)
-            if len(s["saisons_vues"]) >= len(SAISONS):
+        sp = saison_ile(t, s["graine"])
+        vues_ile = s.setdefault("saisons_ile_vues", [])
+        if sp and sp not in vues_ile:
+            vues_ile.append(sp)
+            if sp == "tortues":
+                self._fait("ponte")
+            if len(vues_ile) >= len(SAISONS_ILE):
                 self._succes("tour_saisons", t)
         nuit = heure_de_dormir(t)
         eveille = s["eveil_nuit"] > t
@@ -969,7 +1062,8 @@ class Philibert:
         else:
             humeur = "calme"
         jeux = s["jeux_jour"]
-        sa_now, _, sa_fin = periode_saison(now, s["graine"]) if not SAISON_FORCEE else (SAISON_FORCEE, 0, 0)
+        sa_now = saison(now, s["graine"])
+        sp_now, _, sp_fin = periode_saison_ile(now, s["graine"]) if not SAISON_ILE_FORCEE else (saison_ile(now), 0, 0)
         a = s["appel"]
         if a and a["type"] == "caprice" and j["bonheur"] > SEUIL_ATTENTION:
             s["appel"] = a = None
@@ -982,8 +1076,10 @@ class Philibert:
             "position": s["position"], "lumiere": s["lumiere"], "lampe": dict(s["lampe"]),
             "ciel": {"phase": phase_du_ciel(now), "meteo": meteo(now, s["graine"]), "heure": round(_heure(now), 2),
                      "saison": sa_now, "saison_nom": SAISONS[sa_now]["nom"], "saison_texte": SAISONS[sa_now]["texte"],
-                     "saison_reste_s": max(0, round(sa_fin - now)) if not SAISON_FORCEE else None},
+                     "saison_ile": ({"id": sp_now, "nom": SAISONS_ILE[sp_now]["nom"], "texte": SAISONS_ILE[sp_now]["texte"],
+                                     "reste_s": max(0, round(sp_fin - now)) if not SAISON_ILE_FORCEE else None} if sp_now else None)},
             "promo": SAISONS[sa_now]["promo"],
+            "promo_ile": SAISONS_ILE[sp_now]["promo"] if sp_now else None,
             "mutation": self._mutation_vue(),
             "crottes": s["crottes"], "mue": bool(s["mue"]),
             "malade": {"cause": s["malade"]["cause"], "texte": MALADIES[s["malade"]["cause"]], "depuis": s["malade"]["depuis"]} if s["malade"] else None,
@@ -1018,7 +1114,8 @@ class Philibert:
             "succes": {k: {"nom": v[0], "texte": v[1], "gain": v[2]} for k, v in SUCCES.items()},
             "faits_total": len(FAITS), "variantes": VARIANTES, "raretes": RARETES,
             "mutations": {k: {"nom": v["nom"], "texte": v["texte"], "condition": v["condition"]} for k, v in MUTATIONS.items()},
-            "saisons": {k: {"nom": v["nom"], "texte": v["texte"], "promo": v["promo"]} for k, v in SAISONS.items()}, "stades": STADES, "jeux": JEUX,
+            "saisons": {k: {"nom": v["nom"], "texte": v["texte"], "promo": v["promo"]} for k, v in SAISONS.items()},
+            "saisons_ile": {k: {"nom": v["nom"], "texte": v["texte"], "promo": v["promo"]} for k, v in SAISONS_ILE.items()}, "stades": STADES, "jeux": JEUX,
         }
 
     def carnet(self) -> dict:
@@ -1033,7 +1130,7 @@ class Philibert:
                 "succes": {k: {"nom": v[0], "texte": v[1], "gain": v[2], "quand": s["succes"].get(k)} for k, v in SUCCES.items()},
                 "cartes": list(reversed(s["cartes"])),
                 "faits": [{"id": f, "texte": FAITS[f]} for f in s["faits"]], "faits_total": len(FAITS),
-                "etapes": list(s["etapes"]), "album": list(reversed(s["album"])), "saisons_vues": list(s["saisons_vues"]),
+                "etapes": list(s["etapes"]), "album": list(reversed(s["album"])), "saisons_vues": list(s["saisons_vues"]), "saisons_ile_vues": list(s.get("saisons_ile_vues") or []),
                 "mutations_vues": list(s.get("mutations_vues") or []), "mutation": self._mutation_vue(),
             }
 
@@ -1340,7 +1437,8 @@ class Philibert:
             qte = 1
         if art in ALIMENTS:
             prix, nom = ALIMENTS[art]["prix"], ALIMENTS[art]["nom"]
-            if prix and art == SAISONS[saison(now, s["graine"])]["promo"]:
+            sp = saison_ile(now, s["graine"])
+            if prix and (art == SAISONS[saison(now, s["graine"])]["promo"] or (sp and art == SAISONS_ILE[sp]["promo"])):
                 prix = max(1, prix - 1)                        # de saison : un coquillage de moins
             if not prix:
                 raise PhilibertErreur("Le trèfle pousse sur l'île : il est gratuit.")
@@ -1490,20 +1588,30 @@ class Philibert:
             j["energie"] = _borne(j["energie"] - ENERGIE_JEU)            # pris au départ : perdu si on abandonne
             jeton = secrets.token_urlsafe(12)
             s["jeu"] = {"jeton": jeton, "jeu": jeu, "debut": now, "score": 0, "manche": 0, "fini": False, "graine": secrets.randbelow(2 ** 31)}
-            out = {"jeton": jeton, "jeu": jeu, "graine": s["jeu"]["graine"]}
+            out = {"jeton": jeton, "jeu": jeu, "graine": s["jeu"]["graine"], "compte": JEU_COMPTE}
             if jeu == "feuilles":
-                out["duree"] = 30
+                out.update(duree=FEUILLES["duree_max"], regles=FEUILLES)
             elif jeu == "course":
-                out["duree"] = 30
+                out.update(duree=COURSE["duree_max"], regles=COURSE)
             elif jeu == "devin":
-                out["manches"] = 5
+                out.update(manches=DEVIN["manches"], erreurs=DEVIN["erreurs"], **self._devin_manche(s["jeu"], now))
             else:
                 s["jeu"].update(suite=_suite_hochements(3), montre=now, tempo=tempo_rythme(0))
-                out["suite"], out["tempo"] = list(s["jeu"]["suite"]), s["jeu"]["tempo"]
+                out.update(suite=list(s["jeu"]["suite"]), tempo=s["jeu"]["tempo"], palier=1, max=RYTHME_MAX)
             self._fait("hochement" if jeu == "rythme" else "oeil" if jeu == "devin" else "herbivore")
             s["contact"] = now
             self._sauver(force=True)
             return out
+
+    @staticmethod
+    def _devin_manche(g: dict, now: float) -> dict:
+        """Tire le côté de la manche suivante (avant le choix) et l'indice : un coup d'œil de Philibert, vrai le plus
+        souvent, de plus en plus bref et un peu moins fiable à chaque palier."""
+        p = devin_palier(g["manche"] + 1)
+        cote = secrets.choice(("gauche", "droite"))
+        vrai = secrets.randbelow(1000) < DEVIN["fiabilite"][p - 1] * 1000
+        g.update(cote=cote, montre=now)
+        return {"palier": p, "indice": cote if vrai else ("droite" if cote == "gauche" else "gauche"), "indice_ms": DEVIN["indice_ms"][p - 1]}
 
     def _jeu_courant(self, jeton: str, now: float) -> dict:
         g = self.s["jeu"]
@@ -1523,14 +1631,21 @@ class Philibert:
             if g["jeu"] == "devin":
                 if choix not in ("gauche", "droite"):
                     raise PhilibertErreur("Choisis gauche ou droite.")
-                cote = secrets.choice(("gauche", "droite"))
+                if now - g.get("montre", 0) < .25:
+                    raise PhilibertErreur("Trop rapide : regarde d'abord Philibert.")
+                cote = g.get("cote") or secrets.choice(("gauche", "droite"))
                 g["manche"] += 1
                 bon = cote == choix
                 g["score"] += bon
-                g["fini"] = g["manche"] >= 5
-                return {"cote": cote, "bon": bon, "manche": g["manche"], "score": g["score"], "fini": g["fini"]}
+                g["erreurs"] = g.get("erreurs", 0) + (not bon)
+                g["fini"] = g["manche"] >= DEVIN["manches"] or g["erreurs"] >= DEVIN["erreurs"]
+                out = {"cote": cote, "bon": bon, "manche": g["manche"], "score": g["score"], "erreurs": g["erreurs"],
+                       "palier": devin_palier(g["manche"]), "fini": g["fini"]}
+                if not g["fini"]:
+                    out["suivante"] = self._devin_manche(g, now)
+                return out
             if g["jeu"] == "rythme":
-                if not isinstance(reponse, list) or len(reponse) > 12:
+                if not isinstance(reponse, list) or len(reponse) > RYTHME_MAX + 2:
                     raise PhilibertErreur("Réponse invalide.")
                 if now - g["montre"] < .8 * _duree_suite(g["suite"], g.get("tempo", .78)):   # pas avant d'avoir vu la suite
                     raise PhilibertErreur("Trop rapide : regarde d'abord Philibert hocher la tête.")
@@ -1541,59 +1656,87 @@ class Philibert:
                         g["fini"] = True
                         return {"bon": True, "score": g["score"], "fini": True}
                     g.update(suite=_suite_hochements(len(g["suite"]) + 1), montre=now, tempo=tempo_rythme(g["manche"]))
-                    return {"bon": True, "score": g["score"], "suite": list(g["suite"]), "tempo": g["tempo"], "fini": False}
+                    return {"bon": True, "score": g["score"], "suite": list(g["suite"]), "tempo": g["tempo"], "palier": g["manche"] + 1, "fini": False}
                 g["fini"] = True
                 return {"bon": False, "score": g["score"], "attendu": list(g["suite"]), "fini": True}
             raise PhilibertErreur("Ce jeu ne se joue pas coup par coup.")
 
-    def jeu_fin(self, jeton: str, score=None, insectes=None, arrivee=None) -> dict:
+    def _refuser(self, msg: str):
+        """Score impossible : la partie est close (jeton consommé), rien n'est gagné."""
+        self.s["jeu"] = None
+        self.s["stats"]["refus_jeux"] = self.s["stats"].get("refus_jeux", 0) + 1
+        self._sauver(force=True)
+        raise PhilibertErreur(msg)
+
+    def jeu_fin(self, jeton: str, score=None, insectes=None, arrivee=None, palier=None, distance=None) -> dict:
         now = maintenant()
         with self._lock:
             self._avancer(now)
             g = self._jeu_courant(jeton, now)
             s, j = self.s, self.s["j"]
+            duree = now - g["debut"]                      # durée réelle (compte à rebours compris)
+            jeu_t = max(0.0, duree - JEU_COMPTE)          # temps de jeu au plus
+            try:
+                sc = int(score or 0)
+                ins = int(insectes or 0)
+                pc = int(palier or 1)
+                dist = float(distance or 0)
+            except (TypeError, ValueError):
+                self._refuser("Partie refusée : résultat illisible.")
+            if sc < 0 or ins < 0 or pc < 1 or dist < 0:
+                self._refuser("Partie refusée : résultat impossible.")
+            if g["jeu"] in ("feuilles", "course") and duree < JEU_DUREE_MIN:
+                self._refuser("Partie trop courte : elle n'est pas comptée.")
             if g["jeu"] == "course":
-                if now - g["debut"] < 22:
-                    raise PhilibertErreur("La course n'est pas terminée.")
-                try:
-                    sc = max(0, min(40, int(score or 0)))
-                except (TypeError, ValueError):
-                    sc = 0
+                vmax = sum(COURSE["vitesse"]) * course_vitesse(COURSE["etapes"])
+                if dist > vmax * min(jeu_t, COURSE["duree_max"]) * 1.05 + 100:
+                    self._refuser("Partie refusée : distance impossible pour la durée de la course.")
                 arrive = bool(arrivee)
-                gain, bonheur = min(10, sc // 3 + (3 if arrive else 0)), min(20, 6 + sc // 2)
+                but = COURSE["etape_px"] * COURSE["etapes"]
+                if arrive and dist < but:
+                    self._refuser("Partie refusée : le rocher chaud n'était pas encore atteint.")
+                if sc > dist / COURSE["rayon_min"] + 2:
+                    self._refuser("Partie refusée : plus de rayons de soleil qu'il n'y en avait sur le parcours.")
+                pal = course_etape(dist)
+                if pc > pal:
+                    self._refuser("Partie refusée : étape impossible pour la distance parcourue.")
+                gain, bonheur = recompense_jeu("course", sc, pal, arrive)
                 s["stats"]["meilleur_course"] = max(s["stats"]["meilleur_course"], sc if arrive else 0)
+                s["stats"]["etape_course"] = max(s["stats"].get("etape_course", 0), pal)
                 if arrive:
                     s["stats"]["courses_gagnees"] += 1
                     j["chaleur"] = _borne(j["chaleur"] + 10)
                     if not heure_de_dormir(now):
                         s["position"], s["rocher_depuis"] = "rocher", now
-                    if sc >= 15:
+                    if sc >= 60:
                         self._succes("coureur", now)
                 self._fait("sang_froid")
-                txt = f"{sc} rayon{'s' if sc > 1 else ''} de soleil" + (", arrivé sur le rocher chaud" if arrive else ", pas tout à fait arrivé")
+                txt = f"étape {pal}, {sc} rayon{'s' if sc > 1 else ''} de soleil" + (", arrivé sur le rocher chaud" if arrive else "")
             elif g["jeu"] == "feuilles":
-                if now - g["debut"] < 27:
-                    raise PhilibertErreur("La partie n'est pas terminée.")
-                try:
-                    sc = max(0, min(45, int(score or 0)))
-                    ins = max(0, min(30, int(insectes or 0)))
-                except (TypeError, ValueError):
-                    sc, ins = 0, 0
-                gain, bonheur = min(10, sc // 3), min(20, 5 + sc // 2)
+                t = min(jeu_t, FEUILLES["duree_max"])
+                pal = feuilles_palier(t + 1)
+                objets = feuilles_objets_max(t + 1)
+                if pc > pal:
+                    self._refuser("Partie refusée : palier impossible pour la durée de la partie.")
+                if sc > 1.3 * objets + 4 or ins > objets + 2:
+                    self._refuser("Partie refusée : score impossible pour la durée de la partie.")
+                pal = pc
+                gain, bonheur = recompense_jeu("feuilles", sc, pal)
                 s["stats"]["meilleur_feuilles"] = max(s["stats"]["meilleur_feuilles"], sc)
+                s["stats"]["palier_feuilles"] = max(s["stats"].get("palier_feuilles", 0), pal)
                 if ins:
                     self._fait("refus")
-                txt = f"{sc} feuille{'s' if sc > 1 else ''} attrapée{'s' if sc > 1 else ''}"
+                txt = f"palier {pal}, {sc} point{'s' if sc > 1 else ''}"
             elif g["jeu"] == "devin":
-                sc = g["score"]
-                gain, bonheur = min(10, sc * 2), 4 + 3 * sc
-                s["stats"]["meilleur_devin"] = max(s["stats"]["meilleur_devin"], sc if g["manche"] >= 5 else 0)
-                txt = f"{sc} sur {max(g['manche'], 1)}"
+                sc, pal = g["score"], devin_palier(max(1, g["manche"]))
+                gain, bonheur = recompense_jeu("devin", sc, pal)
+                s["stats"]["meilleur_devin"] = max(s["stats"]["meilleur_devin"], sc)
+                txt = f"{sc} bonne{'s' if sc > 1 else ''} réponse{'s' if sc > 1 else ''} sur {max(g['manche'], 1)}, palier {pal}"
             else:
-                sc = g["score"]
-                gain, bonheur = min(10, max(0, (sc - 2) * 2)), 4 + 2 * sc
+                sc, pal = g["score"], min(g["manche"] + 1, RYTHME_MAX - 2)   # palier = manche jouée (12 au plus)
+                gain, bonheur = recompense_jeu("rythme", sc, pal)
                 s["stats"]["meilleur_rythme"] = max(s["stats"]["meilleur_rythme"], sc)
-                txt = f"suite de {sc} hochements"
+                txt = f"palier {pal}, suite de {sc} gestes"
             if j["chaleur"] >= 70:
                 gain = round(gain * 1.25)
             jj = s["jeux_jour"]
@@ -1611,7 +1754,7 @@ class Philibert:
             self._verifier_succes(now)
             self._sauver(force=True)
             plafond = jj["gagnes"] >= GAINS_JEUX_JOUR
-            return {"ok": True, "score": sc, "gain": gain, "bonheur": bonheur,
+            return {"ok": True, "score": sc, "palier": pal, "gain": gain, "bonheur": bonheur, "duree_s": round(duree),
                     "message": f"{JEUX[g['jeu']]} : {txt} ! +{gain} coquillage{'s' if gain > 1 else ''}, bonheur +{bonheur}."
                     + (" (Plafond de coquillages des jeux atteint pour aujourd'hui.)" if plafond else ""),
                     "etat": self._vue(now)}

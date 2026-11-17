@@ -89,7 +89,9 @@ réchauffe vite et se refroidit lentement :
 | Dans l'eau (bain) | 40 | 40 | 40 |
 | **La nuit** (21 h–6 h) | plage 25 · palmier 28 · rocher 30 | idem | idem |
 
-Puis on ajoute la **saison** : printemps 0 · été **+5** · saison des pluies **−2** · saison fraîche **−6** · grande floraison +2 · tempêtes −4 · brumes −3 · ponte des tortues +3.
+Puis on ajoute la **saison du calendrier** : printemps 0 · été **+5** · saison des pluies **−2** · saison fraîche
+**−6** ; et, s'il y en a une, la **saison de l'île** : grande floraison +2 · tempêtes −4 · brumes −3 · ponte des
+tortues +3 (les deux s'additionnent : une saison des tempêtes en saison fraîche, c'est −10).
 
 ### 3.2 Soleil ou lampe : qui chauffe ?
 
@@ -119,22 +121,33 @@ Puis on ajoute la **saison** : printemps 0 · été **+5** · saison des pluies 
 La météo est tirée **par tranches de 2 heures** (la même sur le PC et le téléphone). Jamais deux pluies de suite ;
 la tranche qui suit une pluie, s'il fait beau, c'est l'**arc-en-ciel**.
 
-**Les saisons ne suivent pas le calendrier réel.** Chaque île a son propre **roulement** (tiré de sa graine, depuis
-le 1ᵉʳ janvier 2026) : une saison dure **entre 2 et 7 jours** (au hasard), puis une autre lui succède, jamais la
-même deux fois de suite. Huit saisons possibles ; l'en-tête de l'île dit combien de temps il reste.
+Deux systèmes de saisons **cohabitent** :
 
-| Saison | Pluie | Nuages | Soleil | Chaleur | Produit de saison (−1 coquillage) | Décor |
+**1. Les saisons du calendrier** (mois réels, les mêmes pour toutes les îles) — la base de la météo :
+
+| Saison (mois réels) | Pluie | Nuages | Soleil | Chaleur | Produit de saison (−1 coquillage) | Décor |
 |---|---|---|---|---|---|---|
-| Printemps | 15 % | 30 % | 55 % | 0 | fleur de pissenlit | buisson d'hibiscus, fleurs, papillons |
-| Été | 8 % | 22 % | 70 % | **+5** | mangue | étoiles de mer, mer plus vive, papillons |
-| Saison des pluies | 26 % | 32 % | 42 % | −2 | figue | noix de coco tombées, flaque plus grande |
-| Saison fraîche | 14 % | 41 % | 45 % | **−6** | chou vert | bois flotté, ciel plus pâle |
-| Grande floraison | 10 % | 25 % | 65 % | +2 | fleur d'hibiscus | tapis de fleurs sur toute la plage, papillons |
-| Saison des tempêtes | 32 % | 40 % | 28 % | −4 | feuilles de mûrier | ciel et mer sombres, palmes secouées par le vent, algues |
-| Saison des brumes | 12 % | 56 % | 32 % | −3 | haricots verts | brume douce sur l'île |
-| Ponte des tortues | 10 % | 20 % | 70 % | +3 | courge | traces de tortue et nid dans le sable, une tortue la nuit |
+| Printemps (mars–mai) | 15 % | 30 % | 55 % | 0 | fleur de pissenlit | buisson d'hibiscus, fleurs, papillons |
+| Été (juin–août) | 8 % | 22 % | 70 % | **+5** | mangue | étoiles de mer, mer plus vive, papillons |
+| Saison des pluies (sept.–nov.) | 26 % | 32 % | 42 % | −2 | figue | noix de coco tombées, flaque plus grande, tonnerre lointain |
+| Saison fraîche (déc.–févr.) | 14 % | 41 % | 45 % | **−6** | chou vert | bois flotté, ciel plus pâle, pas de lucioles |
 
-(Les pourcentages sont ceux du tirage ; « jamais deux pluies de suite » en retire un peu au profit des nuages.)
+**2. Les saisons de l'île**, qui n'ont rien à voir avec le calendrier. Chaque île a son propre **roulement** (tiré
+de sa graine, depuis le 1ᵉʳ janvier 2026) : une période dure **entre 2 et 7 jours** (au hasard), puis une autre lui
+succède, jamais la même deux fois de suite ; une période peut aussi être du **temps ordinaire** (aucune saison de
+l'île). Elles **s'ajoutent** à la saison du calendrier (points de pourcentage en plus ou en moins) ; l'en-tête de
+l'île montre les deux puces, et combien de temps il reste à la saison de l'île.
+
+| Saison de l'île | Pluie | Nuages | Soleil | Chaleur | 2ᵉ produit de saison (−1) | Décor |
+|---|---|---|---|---|---|---|
+| Grande floraison | −4 | −8 | +12 | +2 | fleur d'hibiscus | tapis de fleurs sur toute la plage, papillons |
+| Saison des tempêtes | **+14** | +18 | −32 | −4 | feuilles de mûrier | ciel et mer sombres, palmes secouées par le vent, algues, tonnerre |
+| Saison des brumes | 0 | **+22** | −22 | −3 | haricots verts | brume douce sur l'île |
+| Ponte des tortues | −4 | −6 | +10 | +3 | courge | traces de tortue et nid dans le sable, une tortue la nuit |
+
+Exemple : saison des tempêtes en été → pluie 22 %, nuages 40 %, soleil 38 %. (Les pourcentages sont ceux du
+tirage ; « jamais deux pluies de suite » en retire un peu au profit des nuages.) Succès « Les quatre saisons » (les
+4 du calendrier) et « Saisons de l'île » (les 4 de l'île).
 
 ## 5. Les soins (effet immédiat)
 
@@ -248,12 +261,13 @@ Elle dure **30 h** ou se termine avec un bain ; pendant la mue, bonheur −0,5 /
 |---|---|
 | Pour jouer | éveillé, pas malade, énergie ≥ 15 |
 | **Coût** | **−8 énergie au lancement**. **Abandonner** une partie : aucun gain, et ces 8 points ne reviennent pas |
-| Plafond | **60 coquillages par jour** aux jeux |
+| Plafond | **120 coquillages par jour** aux jeux ; par partie : 20 à 30 coquillages et +25 de bonheur au plus |
 | Bien au chaud (chaleur ≥ 70) | gains × 1,25 |
-| Pluie de feuilles (30 s) | score borné à 45 ; gain min(10, score ÷ 3) ; bonheur 5 + score ÷ 2 (20 au plus) |
-| Course au rocher chaud (30 s) | gain min(10, rayons ÷ 3 + 3 si arrivé) ; bonheur 6 + rayons ÷ 2 (20 au plus) ; arrivé : chaleur +10 et il s'étale sur le rocher |
-| Gauche ou droite ? (5 manches) | gain min(10, bonnes réponses × 2) ; bonheur 4 + 3 × bonnes réponses |
-| Le hochement | suites de 3 à **10** gestes (petit hochement, grand hochement, fanon), **nouvelle suite à chaque manche**, jamais 3 fois le même geste d'affilée ; vitesse : un temps = max(0,34 s ; 0,78 s − 0,06 s × manche) ; gain min(10, (longueur − 2) × 2) ; bonheur 4 + 2 × longueur |
+| Pluie de feuilles (3 min au plus) | **palier** + 1 toutes les 20 s (9 au plus) : vitesse de chute × (1 + 0,16 × (palier − 1)), objets par seconde × (1 + 0,14 × (palier − 1)), insectes 22 % + 3 % par palier (46 % au palier 9), fleurs 18 % ; **5 vies** (insecte attrapé, ou 6 feuilles ratées = −1 vie) ; gain min(30, score ÷ 8 + 2 × (palier − 1)) ; bonheur min(25, 5 + score ÷ 6 + palier) |
+| Course au rocher chaud (4 min au plus) | **10 étapes** de 4 000 px jusqu'au rocher ; vitesse × (1 + 0,06 × (étape − 1)) ; écart entre obstacles ÷ (1 + 0,1 × (étape − 1)), jamais moins de 250 px ; **3 vies** (un choc = −1) ; gain min(30, rayons ÷ 6 + 2 × (étape − 1) + 6 si arrivé) ; bonheur min(25, 6 + rayons ÷ 5 + étape) ; arrivé : chaleur +10 et il s'étale sur le rocher |
+| Gauche ou droite ? (20 manches) | côté tiré **avant** le choix ; un **coup d'œil** (indice) le montre, vrai 90 % du temps au palier 1 puis 86, 82, 78, 75 %, et de plus en plus bref (900, 650, 460, 330, 240 ms) ; un palier toutes les 4 manches ; **fin à la 3ᵉ erreur** ; gain min(20, bonnes réponses + 2 × (palier − 1)) ; bonheur min(25, 4 + 2 × bonnes réponses) |
+| En rythme | suites de 3 à **14** gestes (petit hochement, grand hochement, fanon) à reproduire **en entier**, **nouvelle suite à chaque manche** (palier = manche), jamais 3 fois le même geste d'affilée ; vitesse de **tous** les gestes : un temps = max(0,30 s ; 0,78 s − 0,045 s × manche) ; gain min(25, 2 × (longueur − 2) + palier − 1) ; bonheur min(25, 4 + 2 × longueur) |
+| **Anti-triche** | jeton à usage unique ; Pluie de feuilles et Course : partie de moins de 10 s refusée ; score, palier, distance et rayons bornés par la **durée réelle** de la partie (nombre d'objets qui ont pu tomber, vitesse maximale, écart minimal des rayons) : un résultat impossible est **refusé** (partie close, rien gagné) ; Gauche ou droite et En rythme sont comptés par le serveur, coup par coup (réponse trop rapide refusée) |
 | Autres gains | ramasser 1 à 3 (toutes les 3 h), noix de coco +4, piège jeté +3 ou refusé +2, succès (0 à 20) |
 | Départ | 20 coquillages |
 

@@ -108,7 +108,7 @@
     function demarrer() {
       const c = C();
       if (c.state === "suspended") c.resume().catch(() => {});
-      const ph = e.ciel.phase, met = e.ciel.meteo, sa = e.ciel.saison, nuit = ph === "nuit";
+      const ph = e.ciel.phase, met = e.ciel.meteo, sa = e.ciel.saison, nuit = ph === "nuit", sp = e.ciel.saison_ile ? e.ciel.saison_ile.id : null;
       maitre = c.createGain(); maitre.gain.value = .0001; maitre.connect(c.destination);
       maitre.gain.exponentialRampToValueAtTime(.9, c.currentTime + 2);
       // houle : bruit grave dont le volume monte et descend lentement (une vague toutes les ~10 s), et l'écume plus aiguë
@@ -116,7 +116,7 @@
       const ecume = gain(.008); chaine(source(), filtre("bandpass", 1500, .5), ecume, maitre); lfo(.1, .007, ecume.gain);
       if (met === "pluie") {
         const p = gain(nuit ? .03 : .036); chaine(source(), filtre("highpass", 1300), filtre("lowpass", 7500), p, maitre); lfo(2.6, .006, p.gain);
-        if (sa === "automne") plus_tard(() => {                         // tonnerre lointain : grondement grave qui roule
+        if (sa === "automne" || sp === "tempetes") plus_tard(() => {                         // tonnerre lointain : grondement grave qui roule
           const t = c.currentTime, s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
           s.buffer = bruit(); f.type = "lowpass"; f.frequency.value = 150; g.gain.setValueAtTime(.0001, t);
           g.gain.exponentialRampToValueAtTime(.09, t + .5); g.gain.exponentialRampToValueAtTime(.0001, t + 4.5);
@@ -379,32 +379,33 @@
   // ---- couleurs : phase du jour, météo et saison (teintes relevées sur des photos de lagons et de plages tropicales) ----
   function palette(e) {
     const ph = e.ciel.phase, met = e.ciel.meteo, sa = e.ciel.saison || "printemps", nuit = ph === "nuit";
+    const sp = e.ciel.saison_ile ? e.ciel.saison_ile.id : null;
+    const choix = (tab, def) => (sp && tab[sp]) || tab[sa] || def;     // la saison de l'île colore par-dessus celle du calendrier
     // ciel : [zénith, milieu, horizon] — l'horizon reste clair et un peu voilé (diffusion de la lumière)
     const CIELS = { aube: ["#38508e", "#c98aa0", "#fbd3a0"], jour: ["#2a6fc0", "#5aa3dd", "#cde6f2"], coucher: ["#252f66", "#b4577a", "#ff9a52"], nuit: ["#040a1c", "#0b1a3e", "#1a2f5a"] };
     let c = CIELS[ph];
-    if (ph === "jour") c = { ete: ["#1f68c2", "#4e9fe0", "#c9e8f5"], hiver: ["#4f82b8", "#86b0d6", "#dde8ef"], automne: ["#3a78b8", "#6ea6d6", "#d3e4ee"],
-      floraison: ["#2a72c8", "#62aee2", "#d8ecf4"], tempetes: ["#3c5a7c", "#6a88a6", "#b6c4cf"], brumes: ["#7a98b4", "#aec4d4", "#e4ecf0"], tortues: ["#2470c4", "#58a8e0", "#d0ebf5"] }[sa] || c;
+    if (ph === "jour") c = choix({ ete: ["#1f68c2", "#4e9fe0", "#c9e8f5"], hiver: ["#4f82b8", "#86b0d6", "#dde8ef"], automne: ["#3a78b8", "#6ea6d6", "#d3e4ee"],
+      floraison: ["#2a72c8", "#62aee2", "#d8ecf4"], tempetes: ["#3c5a7c", "#6a88a6", "#b6c4cf"], brumes: ["#7a98b4", "#aec4d4", "#e4ecf0"], tortues: ["#2470c4", "#58a8e0", "#d0ebf5"] }, c);
     if (met === "pluie") c = nuit ? ["#070d18", "#121c2b", "#1f2a3a"] : ["#58687a", "#7c8b9a", "#a9b4bd"];
-    else if (met === "nuages" && ph === "jour") c = sa === "tempetes" ? ["#34506e", "#62809c", "#aebcc8"] : sa === "brumes" ? ["#7e98b0", "#b2c4d2", "#e6ecf0"] : ["#4f7fae", "#8fb4d2", "#d6e3ec"];
+    else if (met === "nuages" && ph === "jour") c = sp === "tempetes" ? ["#34506e", "#62809c", "#aebcc8"] : sp === "brumes" ? ["#7e98b0", "#b2c4d2", "#e6ecf0"] : ["#4f7fae", "#8fb4d2", "#d6e3ec"];
     // mer profonde : [à l'horizon, au premier plan] ; lagon (eau peu profonde sur le sable blanc) : [clair, turquoise, bleu-vert]
     const mer = nuit ? ["#10264a", "#061430"] : met === "pluie" ? ["#5a6e7a", "#2d4652"] : ph === "coucher" ? ["#7a5f78", "#1c3a5e"] : ph === "aube" ? ["#6e7fa6", "#1f4a72"]
-      : { ete: ["#2f7fb0", "#0a4f80"], hiver: ["#4a7fa0", "#1a4f70"], automne: ["#3f7aa2", "#11507a"], tempetes: ["#3a5f78", "#152f48"], brumes: ["#6a8ea2", "#2a5a74"] }[sa] || ["#3580ad", "#0c5282"];
+      : choix({ ete: ["#2f7fb0", "#0a4f80"], hiver: ["#4a7fa0", "#1a4f70"], automne: ["#3f7aa2", "#11507a"], tempetes: ["#3a5f78", "#152f48"], brumes: ["#6a8ea2", "#2a5a74"] }, ["#3580ad", "#0c5282"]);
     const lagon = nuit ? ["#2c5a6e", "#1d4a62", "#143a56"] : met === "pluie" ? ["#9cc0ba", "#64a0a0", "#3f7a86"]
       : ph === "coucher" ? ["#a9cfc4", "#5aa3ac", "#2f7590"] : ph === "aube" ? ["#b1dcd6", "#62b4b8", "#2f7f98"]
-        : { ete: ["#aef2e6", "#3fd2cc", "#16a0b6"], hiver: ["#b0e2db", "#56bcbf", "#2a8aa4"], tempetes: ["#9cc8c4", "#4f9aa2", "#2a6a84"], brumes: ["#c2e4e0", "#7ab8bc", "#4a8aa0"] }[sa] || ["#a9ece2", "#47cbc8", "#1b98b0"];
+        : choix({ ete: ["#aef2e6", "#3fd2cc", "#16a0b6"], hiver: ["#b0e2db", "#56bcbf", "#2a8aa4"], tempetes: ["#9cc8c4", "#4f9aa2", "#2a6a84"], brumes: ["#c2e4e0", "#7ab8bc", "#4a8aa0"] }, ["#a9ece2", "#47cbc8", "#1b98b0"]);
     const sable = nuit ? ["#7d735c", "#625a48", "#4d4639"] : met === "pluie" ? ["#dccba4", "#c4ad80", "#a8905f"]
       : ph === "coucher" ? ["#f4d9b4", "#ddb98a", "#bf9866"] : ph === "aube" ? ["#f0dcc0", "#dcc29a", "#c2a47a"]
-        : { ete: ["#f7eaca", "#ead29e", "#d2b47c"], hiver: ["#ede2c6", "#dccaa0", "#c2a97c"] }[sa] || ["#f3e6c3", "#e5cf9e", "#cdb07a"];
+        : choix({ ete: ["#f7eaca", "#ead29e", "#d2b47c"], hiver: ["#ede2c6", "#dccaa0", "#c2a97c"] }, ["#f3e6c3", "#e5cf9e", "#cdb07a"]);
     // palmes : [claire, foncée, nervure, palmes du fond, nervure du fond]
     const palmes = nuit ? ["#3a5a44", "#2b4638", "#66724c", "#1e3430", "#48553b"]
       : met === "pluie" ? ["#55804a", "#3c6238", "#8a9256", "#2a4a2c", "#687346"]
         : ph === "coucher" ? ["#6f8a3c", "#4c672c", "#a8984e", "#34482a", "#7d7440"] : ph === "aube" ? ["#6a9244", "#476c34", "#a8a058", "#324a30", "#7a7a48"]
-          : { floraison: ["#6fb046", "#4a8c36", "#b6ba56", "#356c2e", "#8e9e48"], tempetes: ["#4f7f42", "#36602e", "#949c50", "#284a26", "#6e7a40"], hiver: ["#7aa046", "#567f35", "#b4b45c", "#3d6430", "#8d9a4a"], automne: ["#5b9a3d", "#3f7a30", "#a6aa52", "#2c5a28", "#7f8c42"], ete: ["#6aac42", "#478a33", "#b2b552", "#336a2c", "#8a9a44"] }[sa]
-        || ["#64a640", "#438532", "#adb050", "#30652b", "#879744"];
+          : choix({ floraison: ["#6fb046", "#4a8c36", "#b6ba56", "#356c2e", "#8e9e48"], tempetes: ["#4f7f42", "#36602e", "#949c50", "#284a26", "#6e7a40"], hiver: ["#7aa046", "#567f35", "#b4b45c", "#3d6430", "#8d9a4a"], automne: ["#5b9a3d", "#3f7a30", "#a6aa52", "#2c5a28", "#7f8c42"], ete: ["#6aac42", "#478a33", "#b2b552", "#336a2c", "#8a9a44"] }, ["#64a640", "#438532", "#adb050", "#30652b", "#879744"]);
     const stipe = nuit ? ["#262426", "#3d3a3a", "#57514c"] : met === "pluie" ? ["#4e443a", "#6f6253", "#93826c"] : ["#5e4f40", "#8c7862", "#bca684"];
     const herbe = nuit ? ["#3b4a35", "#2c3a2a"] : ph === "coucher" ? ["#a09048", "#76703a"] : met === "pluie" ? ["#76884a", "#55683a"] : sa === "hiver" ? ["#a3a25a", "#7f8442"] : ["#8fa44c", "#64803a"];
     const rocher = nuit ? ["#6a6662", "#55514e", "#3f3c3a", "#2c2a29"] : met === "pluie" ? ["#9c948c", "#7a7068", "#5a524c", "#3e3833"] : ["#c9beb2", "#9b8e81", "#6e635a", "#4b423b"];
-    return { c, mer, lagon, sable, palmes, stipe, herbe, rocher, nuit, ph, met, sa, sec: nuit ? ["#5a5040", "#433a2e"] : ["#b89c5c", "#8a6f3e"],
+    return { c, mer, lagon, sable, palmes, stipe, herbe, rocher, nuit, ph, met, sa, sp, sec: nuit ? ["#5a5040", "#433a2e"] : ["#b89c5c", "#8a6f3e"],
       noix: nuit ? ["#4a3a2a", "#2a2018", "#3e4a2c", "#28321c"] : ["#9a7344", "#5e4022", "#93a648", "#56702a"] };
   }
   const melange = D.melange;
@@ -514,8 +515,10 @@
     return `<path d="${tige}" stroke="${P.nuit ? "#3a3a2a" : "#7c6a3a"}" stroke-width="1.4" fill="none"/><path d="${f}" fill="${P.nuit ? "#2f4632" : "#5f9a3e"}" stroke="${P.nuit ? "#243626" : "#3f7a2c"}" stroke-width=".6"/>${fl}`;
   }
 
-  // décor au sol selon la saison
-  function solSaison(P) {
+  // décor au sol : celui de la saison du calendrier, plus celui de la saison de l'île s'il y en a une
+  function solSaison(P) { return solCalendrier(P) + solIle(P); }
+
+  function solCalendrier(P) {
     const n = P.nuit;
     if (P.sa === "printemps") {
       // buisson d'hibiscus : feuilles ovales dentées, fleurs rouges et roses
@@ -533,7 +536,12 @@
         <path d="M130 438 C128 414 146 396 172 396 C198 396 216 414 214 438 Z" fill="${n ? "#1f3a26" : "#2a5f2e"}"/>
         <path d="${fe2}" fill="${n ? "#233f2a" : "#3c7d3a"}"/><path d="${fe}" fill="${n ? "#2c4c32" : "#55984a"}"/>${fleurs}</g>`;
     }
-    if (P.sa === "floraison") {
+    return solCalendrierSuite(P);
+  }
+
+  function solIle(P) {
+    const n = P.nuit;
+    if (P.sp === "floraison") {
       // grande floraison : un tapis de fleurs d'hibiscus et de liserons sur toute la plage
       const r = N.alea(77);
       let f = "";
@@ -544,10 +552,10 @@
       }
       return `<g>${f}</g>`;
     }
-    if (P.sa === "tempetes") return `<g><path d="M480 468 c12 -6 22 -1 30 -6 c10 -5 20 1 32 -3 c10 -3 18 3 28 0 M620 478 c10 -5 18 0 26 -4 c8 -3 16 2 24 -1" stroke="${n ? "#3a3a22" : "#6a5a2a"}" stroke-width="5" fill="none" stroke-linecap="round" opacity=".75"/>
+    if (P.sp === "tempetes") return `<g><path d="M480 468 c12 -6 22 -1 30 -6 c10 -5 20 1 32 -3 c10 -3 18 3 28 0 M620 478 c10 -5 18 0 26 -4 c8 -3 16 2 24 -1" stroke="${n ? "#3a3a22" : "#6a5a2a"}" stroke-width="5" fill="none" stroke-linecap="round" opacity=".75"/>
       <path d="M700 462 l40 -4" stroke="${n ? "#4a4642" : "#a89c8c"}" stroke-width="6" stroke-linecap="round"/></g>`;
-    if (P.sa === "brumes") return `<g><path d="M520 474 c18 -4 40 -10 66 -9" stroke="${n ? "#4a4642" : "#a89c8c"}" stroke-width="6" fill="none" stroke-linecap="round"/></g>`;
-    if (P.sa === "tortues") {
+    if (P.sp === "brumes") return `<g><path d="M650 482 c18 -4 40 -10 66 -9" stroke="${n ? "#4a4642" : "#a89c8c"}" stroke-width="6" fill="none" stroke-linecap="round"/></g>`;
+    if (P.sp === "tortues") {
       // traces de nageoires de la mer jusqu'au nid, et le monticule de sable du nid
       let tr = "";
       for (let i = 0; i < 14; i++) { const t = i / 13, x = 860 - t * 150, y = 478 - t * 58 + Math.sin(t * 6) * 3; tr += `M${(x - 9).toFixed(0)} ${(y - 3).toFixed(0)} l-5 4 M${(x + 9).toFixed(0)} ${(y + 3).toFixed(0)} l-5 4 `; }
@@ -556,6 +564,11 @@
         ${n ? `<g transform="translate(790 452)"><ellipse rx="22" ry="13" fill="#3a4a2a"/><path d="M-14 -6 l8 -4 l12 0 l8 5 M-6 -10 l2 18 M6 -10 l-2 18" stroke="#2a3420" stroke-width="1.4" fill="none"/>
           <ellipse cx="24" cy="-2" rx="7" ry="5" fill="#4a5a36"/><path d="M-10 10 l-10 6 M10 10 l12 6 M-14 -8 l-12 -6 M14 -8 l12 -6" stroke="#3a4a2a" stroke-width="4" stroke-linecap="round"/></g>` : ""}</g>`;
     }
+    return "";
+  }
+
+  function solCalendrierSuite(P) {
+    const n = P.nuit;
     if (P.sa === "ete") return `<g>${[[612, 470, 1, 12], [372, 476, .72, -20]].map(([x, y, k, a]) => `<g transform="translate(${x} ${y}) rotate(${a}) scale(${k} .55)">
       <path d="M0 -15 C2 -6 4 -5 14 -5 C6 0 6 3 9 13 C2 7 -2 7 -9 13 C-6 3 -6 0 -14 -5 C-4 -5 -2 -6 0 -15 Z" fill="${n ? "#6a3a2a" : "#e0703a"}" stroke="${n ? "#4a2a1e" : "#b54d20"}" stroke-width="1.4" stroke-linejoin="round"/>
       ${[[0, -9], [7, -4], [4, 6], [-4, 6], [-7, -4], [0, -3], [3, 1], [-3, 1]].map(([u, v]) => `<circle cx="${u}" cy="${v}" r="1.2" fill="${n ? "#7a4a36" : "#f7b37a"}"/>`).join("")}</g>`).join("")}</g>`;
@@ -793,18 +806,18 @@
           <path d="M860 289 C862 283 870 283 872 288 Z" fill="#fff"/><path d="M866 284 v3.4 M864.3 285.7 h3.4" stroke="#e2464f" stroke-width="1.2"/>
           <path d="M808 299 q-10 2 -14 -2 M850 300 q8 4 14 2" stroke="${nuit ? "#5a6a3e" : "#9aa868"}" stroke-width="3.4" stroke-linecap="round" fill="none"/></g>` : ""}
       </svg>
-      <svg class="phb-l phb-palmes${jourSec || P.sa === "tempetes" ? " vent" : ""}${P.sa === "tempetes" ? " fort" : ""}" viewBox="0 0 1000 500" preserveAspectRatio="none" aria-hidden="true">
+      <svg class="phb-l phb-palmes${jourSec || P.sp === "tempetes" ? " vent" : ""}${P.sp === "tempetes" ? " fort" : ""}" viewBox="0 0 1000 500" preserveAspectRatio="none" aria-hidden="true">
         ${N.couronne([222, 200], { palmes: P.palmes, sec: P.sec, noix: P.noix }, "phbd-cr")}
       </svg>
       ${decembre ? `<div class="phb-l phb-guirlande${nuit ? " nuit" : ""}" aria-hidden="true">${[[12.2, 37.6], [14.6, 34.6], [17.4, 33.8], [20.2, 35.4], [22.8, 38.6], [25.2, 36.4], [27.8, 33.2], [30.2, 35], [32.8, 40]].map(([x, y], i) =>
         `<i style="left:${x}%;top:${y}%;--k:${["#ff5a5a", "#ffd34d", "#6fe07a", "#5ab4ff"][i % 4]};animation-delay:-${i * .4}s"></i>`).join("")}</div>` : ""}
       ${jourSec && ombres ? `<div class="phb-l phb-chaleur" aria-hidden="true">${[0, 1, 2].map(i => `<i style="left:${61 + i * 3.4}%;animation-delay:-${i * .9}s"></i>`).join("")}</div>` : ""}
       <div class="phb-l phb-crabes" aria-hidden="true">${[0, 1].map(i => `<div class="phb-crabe" style="left:${22 + i * 44}%;top:${85 - i * 4}%;--d:${7 + i * 3}s;--r:-${i * 2}s">${N.crabe("phbd-cb" + i)}</div>`).join("")}</div>
-      ${jourSec && ["printemps", "ete", "floraison"].includes(P.sa) ? `<div class="phb-l phb-papillons" aria-hidden="true">${[0, 1].map(i => `<div class="phb-papillon" style="left:${30 + i * 30}%;top:${58 - i * 8}%;--d:${11 + i * 4}s;--r:-${i * 3}s">${N.papillon(i === 1)}</div>`).join("")}</div>` : ""}
+      ${jourSec && (["printemps", "ete"].includes(P.sa) || P.sp === "floraison") ? `<div class="phb-l phb-papillons" aria-hidden="true">${[0, 1].map(i => `<div class="phb-papillon" style="left:${30 + i * 30}%;top:${58 - i * 8}%;--d:${11 + i * 4}s;--r:-${i * 3}s">${N.papillon(i === 1)}</div>`).join("")}</div>` : ""}
       ${nuit && met !== "pluie" && P.sa !== "hiver" ? `<div class="phb-l phb-lucioles" aria-hidden="true">${Array.from({ length: 7 }, (_, i) =>
         `<i style="left:${18 + (i * 37) % 60}%;top:${55 + (i * 13) % 28}%;--d:${5 + i % 3 * 2}s;animation-delay:-${i * 1.1}s"></i>`).join("")}</div>` : ""}
       ${met === "pluie" ? `<div class="phb-l phb-brume" aria-hidden="true"></div><div class="phb-l phb-pluie" aria-hidden="true"><svg viewBox="0 0 1000 1000" preserveAspectRatio="none">${gouttes()}</svg></div>` : ""}
-      ${P.sa === "brumes" && met !== "pluie" ? `<div class="phb-l phb-brume phb-brume-saison" aria-hidden="true"></div>` : ""}
+      ${P.sp === "brumes" && met !== "pluie" ? `<div class="phb-l phb-brume phb-brume-saison" aria-hidden="true"></div>` : ""}
       <div class="phb-l phb-nuit" style="opacity:${nuit ? (lumiere ? .2 : .34) : ph === "coucher" ? .1 : ph === "aube" ? .08 : 0}" aria-hidden="true"></div>
       ${absent() ? `<div class="phb-l phb-pancarte" role="status"><div>${e.veto
         ? `<b>Philibert se repose chez le vétérinaire</b><span>retour dans ${fmtH(e.veto.reste_s)} · la tortue s'occupe bien de lui</span>`
@@ -823,7 +836,7 @@
   function rendreScene() {
     const sc = dlg.querySelector(".phb-scene");
     if (!sc || !e) return;
-    const cle = [e.ciel.phase, e.ciel.meteo, e.ciel.saison, e.lumiere, e.lampe.possede, e.lampe.allumee, (e.deco || []).join(), e.niveau, Math.round(e.ciel.heure * 2),
+    const cle = [e.ciel.phase, e.ciel.meteo, e.ciel.saison, e.ciel.saison_ile ? e.ciel.saison_ile.id : "", e.lumiere, e.lampe.possede, e.lampe.allumee, (e.deco || []).join(), e.niveau, Math.round(e.ciel.heure * 2),
       e.veto ? Math.round(e.veto.reste_s / 600) : ""].join("|");
     if (cle !== cleScene) {
       sc.querySelector(".phb-decor").innerHTML = decor(e);
@@ -937,7 +950,8 @@
       <div class="phb-titres"><h2 id="phb-titre">${esc(e.titre)}</h2>
         <div class="phb-puces">${e.stade === "oeuf" ? `<span>Œuf</span>` : `<span>${esc(e.stade_nom)}</span><span>${age(e.age_jours)}</span><span>${poids(e.poids_g)}${e.ventre_rond ? " · ventre rond" : ""}</span>`}</div></div>
       <div class="phb-ciel-info"><span class="phb-puce" title="Météo de l'île">${ico(met)}${metTxt}</span>
-        <span class="phb-puce" title="${esc(e.ciel.saison_texte || "")}">${ico(ICO_SAISON[e.ciel.saison] || "fleur")}${esc(e.ciel.saison_nom || "")}${resteSaison(e.ciel.saison_reste_s)}</span></div>
+        <span class="phb-puce" title="${esc(e.ciel.saison_texte || "")}">${ico(ICO_SAISON[e.ciel.saison] || "fleur")}${esc(e.ciel.saison_nom || "")}</span>
+        ${e.ciel.saison_ile ? `<span class="phb-puce phb-puce-ile" title="${esc(e.ciel.saison_ile.texte || "")}">${ico(ICO_SAISON[e.ciel.saison_ile.id] || "fleur")}${esc(e.ciel.saison_ile.nom)}${resteSaison(e.ciel.saison_ile.reste_s)}</span>` : ""}</div>
       <button class="phb-b phb-fermer phb-amb phb-theme" data-phb="theme" aria-pressed="${interfaceSombre()}"
         aria-label="${interfaceSombre() ? "Passer l'interface en clair" : "Passer l'interface en sombre"}" title="Interface claire ou sombre (réglage complet dans Réglages)">${ico(interfaceSombre() ? "soleil" : "lune")}</button>
       <button class="phb-b phb-fermer phb-amb" data-phb="ambiance" aria-pressed="${!!(e.reglages.sons && e.reglages.ambiance !== false)}"
@@ -1026,9 +1040,10 @@
       <button class="phb-carte" data-phb="bain" data-lieu="mer"><span class="phb-ic phb-ic-ico" style="--c:#0f8fb0">${ico("vent")}</span><span>Nager dans la mer</span><small>bonheur, mais l'eau rafraîchit</small></button></div>`;
   }
   function feuilleJouer() {
-    const J = [["feuilles", "nourrir", "#3a9e4a", "Attrape les feuilles et les fleurs qui tombent du palmier, évite les insectes (30 s)"],
-      ["course", "drapeau", "#e8731a", "Cours jusqu'au rocher chaud : saute les crabes, attrape les rayons de soleil, évite l'ombre des nuages (30 s au plus)"],
-      ["devin", "loupe", "#7356cf", "Devine de quel côté il va tourner la tête (5 manches)"], ["rythme", "coeur", "#e0507a", "Répète ses hochements de tête, petits et grands"]];
+    const J = [["feuilles", "nourrir", "#3a9e4a", "Attrape les feuilles et les fleurs, évite les insectes : un palier de plus toutes les 20 s (9 paliers, 3 min au plus)"],
+      ["course", "drapeau", "#e8731a", "Cours jusqu'au rocher chaud en 10 étapes, de plus en plus vite : saute les crabes, attrape les rayons de soleil"],
+      ["devin", "loupe", "#7356cf", "Devine de quel côté il va tourner la tête : guette son coup d'œil (20 manches, 3 erreurs)"],
+      ["rythme", "coeur", "#e0507a", "Reproduis ses hochements de tête ET son fanon, de plus en plus vite (3 à 14 gestes)"]];
     return `${titre("de", "Jouer avec Philibert")}<div class="phb-grille phb-grille-2">${J.map(([id, ic, c, t]) => `<button class="phb-carte phb-carte-jeu" data-phb="jeu" data-jeu="${id}">
       <span class="phb-ic phb-ic-ico" style="--c:${c}">${ico(ic)}</span><span>${esc(cat.jeux[id] || id)}</span><small>${esc(t)}</small></button>`).join("")}</div>
       <p class="phb-astuce">${ico("coquillage")}<span>Encore ${e.jeux_restants} coquillages à gagner aujourd'hui aux jeux. Bien au chaud, il joue mieux !</span></p>`;
@@ -1038,7 +1053,7 @@
     const onglets = { nourriture: "Nourriture", soins: "Soins et équipement", accessoires: "Accessoires", deco: "Déco de l'île" };
     let items;
     if (boutiqueOnglet === "nourriture") items = Object.entries(A).filter(([, a]) => a.prix).map(([id, a]) => {
-      const promo = id === e.promo;
+      const promo = id === e.promo || id === e.promo_ile;
       return [id, a.nom, promo ? Math.max(1, a.prix - 1) : a.prix, a.texte, `en réserve : ${e.inventaire[id] || 0}`, false, promo];
     });
     else {
@@ -1097,8 +1112,8 @@
         const s = c.stats, L = [["Âge", age(c.age_jours)], ["Né le", new Date(c.ne * 1000).toLocaleDateString("fr-FR")], ["Repas", s.repas], ["dont verdure et légumes", s.verdure], ["Fleurs", s.fleurs],
           ["Friandises", s.friandises], ["Verdures goûtées", `${c.gouts.length} / 6`], ["Refus (aliments pas pour lui)", s.refus], ["Bains (dont mer)", `${s.bains} (${s.bains_mer})`], ["Séances au soleil", s.soleil],
           ["Parties jouées", s.jeux], ["Caresses", s.caresses], ["Mues", s.mues], ["Maladies (guéries à la maison)", `${s.maladies} (${s.gueris})`], ["Séjours chez le vétérinaire", s.sejours_veto],
-          ["Nuits dans le noir", s.nuits_eteintes], ["Saisons vécues", `${(c.saisons_vues || []).length} / ${Object.keys(cat.saisons || {}).length || 8}`], ["Coquillages gagnés", s.coquillages_gagnes],
-          ["Records : feuilles · course · devin · hochements", `${s.meilleur_feuilles} · ${s.meilleur_course || 0} · ${s.meilleur_devin}/5 · ${s.meilleur_rythme}`]];
+          ["Nuits dans le noir", s.nuits_eteintes], ["Saisons vécues", `${(c.saisons_vues || []).length} / ${Object.keys(cat.saisons || {}).length || 4}`], ["Saisons de l'île vécues", `${(c.saisons_ile_vues || []).length} / ${Object.keys(cat.saisons_ile || {}).length || 4}`], ["Coquillages gagnés", s.coquillages_gagnes],
+          ["Records : feuilles · course · devin · en rythme", `${s.meilleur_feuilles} (palier ${s.palier_feuilles || 0}) · ${s.meilleur_course || 0} (étape ${s.etape_course || 0}) · ${s.meilleur_devin} · ${s.meilleur_rythme} gestes`]];
         corps = `<table class="phb-tbl">${L.map(([k, v]) => `<tr><th scope="row">${esc(k)}</th><td>${esc(v)}</td></tr>`).join("")}</table>`;
       } else if (carnetOnglet === "succes") {
         const n = Object.values(c.succes).filter(s => s.quand).length;
