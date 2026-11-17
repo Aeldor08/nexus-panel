@@ -37,7 +37,14 @@ def main() -> int:
         print(f"{'OK   ' if ok else 'ÉCHEC'} {nom} ({time.time() - t0:.1f} s)")
         if not ok:
             echecs.append(nom)
-            print("\n".join("    " + ligne for ligne in sortie.strip().splitlines()[-40:]))
+            lignes = sortie.strip().splitlines()
+            # d'abord les vérifications en échec (où qu'elles soient dans la sortie), puis la fin de la sortie
+            en_echec = [ligne for ligne in lignes if ligne.lstrip().startswith(("ÉCHEC", "Traceback")) or "Error" in ligne]
+            if en_echec:
+                print("    --- en échec ---")
+                print("\n".join("    " + ligne for ligne in en_echec[:30]))
+                print("    --- fin de la sortie ---")
+            print("\n".join("    " + ligne for ligne in lignes[-40:]))
     print(f"\n{len(TESTS) - len(echecs)}/{len(TESTS)} fichiers de tests passés")
     return 1 if echecs else 0
 
