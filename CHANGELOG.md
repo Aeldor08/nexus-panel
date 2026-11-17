@@ -8,6 +8,15 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Modifié
+- Profil **Dés du destin 3.0** : visuels entièrement refaits, plus riches et plus nets (tous rendus une fois, dessins originaux, rendu 3D procédural)
+  - **Table du Maître du donjon** en 4K : chêne veiné à la lueur d'une bougie, carte de donjon dessinée à l'encre sur parchemin, sceau de cire, pièces d'or en relief et vrais dés polyédriques (d4, d6, d8, d10, d12, d20) en **résine rubis translucide** aux chiffres d'or gravés, faces opposées justes (n + 1) ; image allégée sur téléphone
+  - **Cartes en cuir de grimoire** avec équerres de laiton ciselé aux coins, couture et filet d'or ; boutons en jetons laqués cerclés d'or, onglet actif en sceau de cire, icônes du sommaire en sceaux, lecture en pièce d'or ; menus et dialogues assortis ; post-it en tons de parchemin
+  - **Jauges en traits de feu** redessinées : cœur blanc, halo, langues de flamme et étincelles, tête embrasée
+  - **Alertes plus lisibles** : plaque sombre et étiquette contrastée ; un 20 doré quand tout est résolu, un 1 rouge sur un dé d'obsidienne qui tremble pour une alerte critique
+  - **Nouvelle intro** : une bougie s'allume, la lumière gagne la table, un d20 est lancé, rebondit et roule en vraie 3D (60 images, flou de mouvement, éclairage qui suit, ombre portée) puis s'arrête sur 20 dans un éclat d'or ; anneau de runes en or gravé autour du logo
+  - Version fixe complète sans animation (`prefers-reduced-motion`) et en mode jeu ; profil plus léger (1,2 Mo au lieu de 1,8 Mo)
+
 ## [1.4.1] - 2026-11-17
 
 ### Modifié
