@@ -512,7 +512,7 @@ ok(all(not any(x[i] == x[i + 1] == x[i + 2] for i in range(6)) for x in gros), "
 ok(all(len(set(x)) >= 2 for x in gros) and {g for x in gros for g in x} == set(P.GESTES), "suites variées : petit, grand et fanon")
 ok(len({tuple(x) for x in gros}) > 250, "suites vraiment au hasard (presque jamais deux fois la même)")
 ok(sum(x[:7] != y[:7] for x, y in zip(suites[1:], [s + ["?"] for s in suites[:-1]])) >= 1, "chaque manche tire une nouvelle suite (pas seulement un geste ajouté)")
-horloge[0] += 5
+horloge[0] += 12   # assez pour avoir vu toute la suite, même longue (gestes tirés au hasard)
 r = p.jeu_coup(g["jeton"], None, ["faux"])
 ok(r["fini"] and not r["bon"], "erreur : partie finie")
 r = p.jeu_fin(g["jeton"])
