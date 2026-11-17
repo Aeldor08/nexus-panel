@@ -8,6 +8,8 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+## [1.4.0] - 2026-11-17
+
 ### Ajouté
 - Philibert : **volumes réglables** : un curseur pour les bruits de l'île et un pour les petits sons et les mini-jeux (Réglages), plus un petit curseur dans l'en-tête de chaque mini-jeu ; le changement s'entend tout de suite
 - Philibert : **bain animé** (il marche jusqu'à l'eau, y entre en éclaboussant, nage à moitié immergé en ondulant de la queue avec des ronds à la surface, puis ressort et s'ébroue) et **montée dans le palmier** le soir (il grimpe le long du tronc jusqu'à sa palme ; il redescend la tête la première le matin)
