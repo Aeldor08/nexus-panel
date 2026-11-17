@@ -703,9 +703,14 @@ P.SAISON_ILE_FORCEE = "aucune"
 ok(p.etat()["ciel"]["saison_ile"] is None and p.etat()["promo_ile"] is None, "temps ordinaire : pas de saison de l'île")
 P.SAISON_ILE_FORCEE = None
 P.SAISON_FORCEE = None
-e = nouveau().etat()
+p = nouveau()
+e = p.etat()
 si = e["ciel"]["saison_ile"]
-ok(e["ciel"]["saison"] == P.saison(horloge[0]) and (si is None or 0 < si["reste_s"] <= 7 * P.JOUR), "la page sait combien de temps dure encore la saison de l'île")
+ok(e["ciel"]["saison"] == P.saison(horloge[0]) and (si or {}).get("id") == P.saison_ile(horloge[0], p.s["graine"]), "la page sait quelle saison de l'île il fait")
+P.SAISON_ILE_FORCEE = "brumes"
+e = nouveau().etat()
+ok(set(e["ciel"]["saison_ile"]) == {"id", "nom", "texte"} and not any(k for k in e["ciel"] if "reste" in k or "fin" in k), "aucune durée ni compte à rebours de saison n'est envoyé à la page")
+P.SAISON_ILE_FORCEE = None
 p = nouveau()
 P.SAISON_FORCEE = "printemps"
 p.s["saisons_vues"] = ["printemps"]
@@ -783,6 +788,53 @@ for _ in range(36):
     q.etat()
 ok(q.s["stats"]["heures_froid"] > 4, "les heures passées à avoir froid sont comptées")
 ok(all(k in P.MUTATIONS for k in p.catalogue()["mutations"]) and len(P.MUTATIONS) >= 8, "le catalogue décrit les mutations")
+# ---- marques (fanon, crête, queue, yeux, motif), en plus de la couleur du corps ------------------------------
+ok(len(P.MARQUES) >= 10 and {m["cat"] for m in P.MARQUES.values()} == set(P.CATEGORIES_MARQUES)
+   and {m["rarete"] for m in P.MARQUES.values()} == {"commun", "rare", "tres_rare"}, "12 marques sur 5 parties du corps, trois raretés")
+ok(all(sum(1 for m in P.MARQUES.values() if m["cat"] == c and m["rarete"] == "commun") + sum(1 for m in P.MARQUES.values() if m["cat"] == c) >= 2 for c in P.CATEGORIES_MARQUES),
+   "chaque partie du corps a au moins deux marques possibles (ou une commune)")
+q = nouveau()
+q.s["stade"] = "adulte"
+ok(all(v < 1 for v in q.scores_marques().values()) and q.etat()["marques"] == [], "pas de marque au départ")
+q.s["stats"].update(nuits_eteintes=14)
+q._fin_mue(horloge[0], bain=False)
+ok(q.etat()["marques"] == ["queue_annelee"] and "queue_annelee" in q.carnet()["marques_vues"], "dormir souvent dans le noir : queue annelée (vue dans le carnet)")
+ok(q.s["mutation"] is None and "mutation" in q.s["succes"], "une marque sans changement de couleur du corps, succès « Couleurs uniques » quand même")
+q.s["stats"].update(caresses=60, heures_chaud=35)
+q._fin_mue(horloge[0], bain=False)
+ok(len(q.s["marques"]) == 2 and q.s["marques"]["motif"] == "motif_taches", "au plus une nouvelle marque par mue : la plus méritée d'abord (caresses : moucheté)")
+q._fin_mue(horloge[0], bain=False)
+ok(q.s["marques"].get("crete") == "crete_orange", "à la mue suivante, la suivante (beaucoup de chaleur : crête orangée)")
+q.s["stats"].update(caresses=500)
+q._fin_mue(horloge[0], bain=False)
+ok(q.s["marques"]["motif"] == "motif_taches", "une partie du corps garde sa marque (pas de remplacement)")
+q.s["stats"].update(repas=60, oranges=30, bains_mer=40)
+q._fin_mue(horloge[0], bain=True)
+ok(q.s["mutation"]["id"] == "turquoise" and q.s["marques"]["fanon"] == "fanon_orange", "la couleur du corps et les marques se combinent (Turquoise + fanon orangé)")
+v = q.etat()
+ok(set(v["marques"]) >= {"queue_annelee", "motif_taches", "crete_orange", "fanon_orange"} and all(d["nom"] for d in v["marques_detail"]), "les marques sont envoyées à la page (dessin)")
+q.s["stats"].update(meilleur_devin=16)
+q._fin_mue(horloge[0], bain=False)
+ok(q.s["marques"]["yeux"] == "yeux_rubis" and "marques" in q.s["succes"], "une marque sur chaque partie du corps : succès « Un iguane unique »")
+q._etape(horloge[0])
+ok(q.s["etapes"][-1]["marques"] and set(q.s["etapes"][-1]["marques"]) == set(q.s["marques"].values()), "album : la photo de l'étape garde ses marques")
+q.action("recommencer", {"confirmer": "NOUVEL OEUF"})
+ok(q.s["album"][-1]["marques"] and q.s["marques"] == {}, "album des Philibert d'avant : ses marques sont gardées ; le nouvel œuf repart sans")
+# très rares : il faut aussi de la chance (25 % par mue quand c'est mérité)
+chanceux = 0
+for k in range(200):
+    r = nouveau()
+    r.s["stade"], r.s["graine"] = "adulte", f"g{k}"
+    r.s["stats"]["meilleur_rythme"] = 14
+    r._fin_mue(horloge[0], bain=False)
+    chanceux += r.s["marques"].get("fanon") == "fanon_raye"
+ok(25 < chanceux < 80, f"fanon rayé (très rare) : mérité ET chanceux ({chanceux} îles sur 200 à la 1ʳᵉ mue)")
+b0 = nouveau()
+b0.s["stats"]["nuits_eteintes"] = 40
+b0._fin_mue(horloge[0], bain=False)
+ok(b0.s["marques"] == {}, "un bébé ne reçoit pas encore de marque")
+cat = b0.catalogue()
+ok(set(cat["marques"]) == set(P.MARQUES) and cat["categories_marques"] == P.CATEGORIES_MARQUES and all(m["condition"] for m in cat["marques"].values()), "le catalogue décrit les marques (onglet « Couleurs »)")
 
 # ---- course au rocher chaud ---------------------------------------------------------------------
 p = nouveau()

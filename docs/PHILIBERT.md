@@ -23,7 +23,7 @@ Deux principes guident toutes les règles :
 | `data/philibert.json` | État de Philibert (sur ce PC uniquement, hors Git, listé dans `NE_PAS_PARTAGER.md`) |
 | `static/js/philibert.js` | Philibert qui se promène en haut de la page + sa bulle |
 | `static/js/philibert-dessin.js` | Le dessin SVG de Philibert (stade, variante, humeur, accessoires, pose), d'après l'anatomie de l'iguane vert |
-| `static/js/philibert-nature.js` | Les éléments de nature réalistes partagés par l'île et les mini-jeux (cocotier, nuages, oiseaux, crabe fantôme, papillons, rocher, noix de coco, feuilles, hibiscus, scarabée) |
+| `static/js/philibert-nature.js` | Les éléments de nature réalistes partagés par l'île et les mini-jeux (cocotier, nuages, goélands en vol et posés, frégate, crabe fantôme, crabe violoniste, papillons, rocher, noix de coco, feuilles, hibiscus, scarabée) |
 | `static/js/philibert-ile.js` | L'île (fenêtre), les soins, la boutique, la garde-robe, le carnet, les réglages |
 | `static/js/philibert-jeux.js` | Les quatre mini-jeux |
 | `static/js/philibert-icones.js` | Les icônes dessinées de l'île (actions, jauges, météo, saisons, son) |
@@ -60,6 +60,12 @@ Deux principes guident toutes les règles :
 - **Mutations de couleur** : à chaque mue, sa peau peut changer selon sa vie (alimentation, soleil, bains, jeux,
   froid, maladies soignées trop tard, nuits réveillées…) : Émeraude, Orangé, Doré, Turquoise, Mélanique, Cendré,
   Arlequin, Lunaire, et le très rare Leucique ; trois intensités ; onglet « Couleurs » du carnet.
+- **Marques** : d'autres mutations, qui **s'ajoutent** à la couleur du corps, une par partie du corps — fanon (orangé,
+  rouge, bleu, rayé), crête (orangée, bicolore), queue annelée, yeux (rubis, azur), motif de la peau (moucheté, rayé,
+  dégradé). Elles apparaissent aussi à une mue selon sa vie (au plus une nouvelle par mue), avec une rareté (commune,
+  rare, très rare : il faut alors en plus un peu de chance). Elles se voient partout où il est dessiné, dans l'album,
+  et dans l'onglet « Couleurs » du carnet (découvertes, rareté, indices) ; succès « Un iguane unique » (une marque sur
+  chaque partie du corps).
 
 ## 3. Les jauges (0 à 100)
 
@@ -275,7 +281,7 @@ gagnés aux jeux.
 ## 12. Carnet
 
 Historique (naissance, éclosion, maladies, séjours chez le vétérinaire, mues, évolutions… 300 lignes au plus),
-statistiques (repas, friandises, bains, jeux, refus, séjours, saisons…), **succès** (24), **cartes postales** reçues,
+statistiques (repas, friandises, bains, jeux, refus, séjours, saisons…), **succès** (27), **cartes postales** reçues,
 fiches **« Le savais-tu ? »** débloquées (20), âge en jours.
 
 **Album** : une photo de chaque étape de sa vie (éclosion, juvénile, adulte avec sa variante, vieux sage) et
@@ -359,7 +365,8 @@ courbes douces pour les déplacements et à rebond pour ce qui apparaît.
 
 Chaque élément a été redessiné d'après des descriptions et des photos réelles (principes seulement, aucun dessin
 repris) : fiches d'espèces de l'iguane vert (zoo d'Honolulu, IUCN Iguana Specialist Group, Animal Diversity Web,
-université de Floride), du cocotier (Kew, CTAHR Hawaï), du crabe fantôme de l'Atlantique ; descriptions de lagons
+université de Floride), du cocotier (Kew, CTAHR Hawaï), du crabe fantôme de l'Atlantique et des crabes violonistes
+(études des signes de la grosse pince), du vol des goélands (battement, aile fléchie au poignet) ; descriptions de lagons
 et de plages des Caraïbes ; conseils de peintres pour le ciel et les cumulus.
 
 - **Philibert** : silhouette naturaliste de profil — tête haute aux joues fortes, **grande écaille ronde et pâle
@@ -383,8 +390,19 @@ et de plages des Caraïbes ; conseils de peintres pour le ciel et les cumulus.
   (éclairé du côté du soleil) avec lichens et air qui tremble au-dessus quand il chauffe ; flaque bordée de galets ;
   **ombres portées** à l'opposé du soleil, plus longues le matin et le soir ; crottes d'iguane avec leur partie
   blanche (comme chez tous les reptiles).
-- **Faune** : crabes fantômes (couleur sable, yeux noirs sur pédoncules, pinces blanches inégales, actifs aussi la
-  nuit), goélands et frégate qui plane, papillons julia et soufré.
+- **Faune** (d'après des photos et des vidéos de goélands argentés, de crabes fantômes et de crabes violonistes) :
+  - **goélands** : tête blanche, bec jaune épais à tache rouge, œil jaune pâle cerclé d'orange, manteau gris, bouts
+    d'ailes noirs à miroirs blancs, pattes roses ; en vol, chaque aile a un bras et une main articulés : vrai cycle de
+    battement (en remontant, la main se replie au poignet ; en descendant, l'aile s'étend), puis un long plané avec de
+    petits ajustements ; l'un d'eux vient **se poser** sur la plage (pattes sorties), **marche** (pattes en
+    alternance, la tête qui avance et recule), regarde autour de lui, picore le sable et repart ;
+  - **crabes fantômes** : carapace presque carrée couleur sable, granuleuse, très longs pédoncules aux gros yeux
+    sombres, pinces blanches inégales, pattes à trois articles ; ils filent de côté (pattes en alternance), s'arrêtent
+    net, dressent les yeux, agitent la pince, **s'enfouissent** dans le sable (grains projetés), laissent dépasser les
+    yeux, puis ressortent ; actifs aussi la nuit ;
+  - **crabe violoniste** : petite carapace bleu-vert tachetée, pédoncules fins, **énorme pince orange** aux doigts
+    blancs qu'il lève et rabaisse pour faire signe ;
+  - frégate qui plane, papillons julia et soufré.
 - **Couleurs du moment** : palmes plus chaudes au coucher, ternes sous la pluie (brume au loin), Philibert dans la
   pénombre la nuit (moins quand la lanterne est allumée).
 - **Objets et aliments** dessinés comme les vrais (mangue dégradée vert-jaune-rouge, papaye ouverte et ses graines,

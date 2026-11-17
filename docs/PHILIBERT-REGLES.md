@@ -136,7 +136,8 @@ Deux systèmes de saisons **cohabitent** :
 de sa graine, depuis le 1ᵉʳ janvier 2026) : une période dure **entre 2 et 7 jours** (au hasard), puis une autre lui
 succède, jamais la même deux fois de suite ; une période peut aussi être du **temps ordinaire** (aucune saison de
 l'île). Elles **s'ajoutent** à la saison du calendrier (points de pourcentage en plus ou en moins) ; l'en-tête de
-l'île montre les deux puces, et combien de temps il reste à la saison de l'île.
+l'île montre les deux puces : quelle saison il fait, **sans durée ni compte à rebours** (la fin d'une saison de l'île
+reste une surprise).
 
 | Saison de l'île | Pluie | Nuages | Soleil | Chaleur | 2ᵉ produit de saison (−1) | Décor |
 |---|---|---|---|---|---|---|
@@ -237,6 +238,30 @@ moteur calcule un **score** par mutation ; la plus forte, si elle atteint **1**,
 La couleur se voit partout (île, en haut de la page, médaillon, garde-robe, album) ; le froid et la maladie
 passent par-dessus tant qu'ils durent. Le carnet a un onglet **Couleurs** (découvertes et indices). Succès
 « Couleurs uniques » ; fiche « Le savais-tu ? » sur les formes de couleur des iguanes.
+
+**Marques** (`MARQUES`) : d'autres mutations qui s'ajoutent à la couleur du corps, **une par partie du corps**. À
+chaque fin de mue (à partir du stade juvénile), le moteur calcule un score par marque ; parmi les parties du corps qui
+n'ont pas encore de marque, la marque au plus haut score (≥ 1) apparaît — **au plus une nouvelle marque par mue**, et
+une marque n'est jamais remplacée. Les marques **très rares** demandent en plus un tirage chanceux à la mue (25 %).
+
+| Partie | Marque | Rareté | Score (≥ 1 pour l'obtenir) |
+|---|---|---|---|
+| Fanon | Fanon orangé | commune | aliments orangés ÷ 8 |
+| Fanon | Fanon rouge | rare | fleurs mangées ÷ 15 |
+| Fanon | Fanon bleu | rare | bains ÷ 25 |
+| Fanon | Fanon rayé | très rare | meilleure suite à « En rythme » ÷ 12 (+ chance) |
+| Crête | Crête orangée | commune | heures bien au chaud (≥ 75) ÷ 30 |
+| Crête | Crête bicolore | rare | courses gagnées jusqu'au rocher ÷ 3 |
+| Queue | Queue annelée | commune | nuits lumière éteinte ÷ 10 |
+| Yeux | Yeux rubis | rare | meilleur score à « Gauche ou droite ? » ÷ 15 |
+| Yeux | Yeux azur | très rare | le plus petit de : santé moyenne ÷ 90 et bonheur moyen ÷ 85, après 2 mues (+ chance) |
+| Motif | Moucheté | commune | caresses ÷ 40 |
+| Motif | Rayé | rare | séances au soleil ÷ 30 |
+| Motif | Dégradé | rare | mues ÷ 6 |
+
+Les marques se voient partout (île, haut de la page, médaillon, garde-robe, mini-jeux, album) ; le carnet (onglet
+**Couleurs**) les range par partie du corps avec leur rareté et un indice. Succès « Couleurs uniques » dès la première
+couleur ou marque, et « Un iguane unique » quand chaque partie du corps a sa marque.
 
 ## 9. Croissance et mue
 

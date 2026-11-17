@@ -30,7 +30,6 @@
     soleil: "soleil", ventre: "nourrir", lumiere: "ampoule" };
   const ICO_METEO = { soleil: "soleil", nuages: "nuage", pluie: "pluie", arc: "arc" };
   const ICO_SAISON = { printemps: "fleur", ete: "soleil", automne: "goutte", hiver: "vent", floraison: "fleur", tempetes: "eclair", brumes: "nuage", tortues: "coquillage" };
-  const resteSaison = sec => { if (sec == null) return ""; const j = sec / 86400; return j >= 1 ? ` · encore ${Math.round(j)} j` : ` · encore ${Math.max(1, Math.round(sec / 3600))} h`; };
   const fmtH = s => { const h = Math.floor(s / 3600), m = Math.round(s % 3600 / 60); return h ? `${h} h ${String(m).padStart(2, "0")}` : `${m} min`; };
   const age = j => j < 1 ? `${Math.max(0, Math.round(j * 24))} h` : `${j.toFixed(j < 10 ? 1 : 0).replace(".", ",")} jour${j >= 2 ? "s" : ""}`;
   const poids = g => g >= 1000 ? `${(g / 1000).toFixed(2).replace(".", ",")} kg` : `${g} g`;
@@ -812,7 +811,9 @@
       ${decembre ? `<div class="phb-l phb-guirlande${nuit ? " nuit" : ""}" aria-hidden="true">${[[12.2, 37.6], [14.6, 34.6], [17.4, 33.8], [20.2, 35.4], [22.8, 38.6], [25.2, 36.4], [27.8, 33.2], [30.2, 35], [32.8, 40]].map(([x, y], i) =>
         `<i style="left:${x}%;top:${y}%;--k:${["#ff5a5a", "#ffd34d", "#6fe07a", "#5ab4ff"][i % 4]};animation-delay:-${i * .4}s"></i>`).join("")}</div>` : ""}
       ${jourSec && ombres ? `<div class="phb-l phb-chaleur" aria-hidden="true">${[0, 1, 2].map(i => `<i style="left:${61 + i * 3.4}%;animation-delay:-${i * .9}s"></i>`).join("")}</div>` : ""}
-      <div class="phb-l phb-crabes" aria-hidden="true">${[0, 1].map(i => `<div class="phb-crabe" style="left:${22 + i * 44}%;top:${85 - i * 4}%;--d:${7 + i * 3}s;--r:-${i * 2}s">${N.crabe("phbd-cb" + i)}</div>`).join("")}</div>
+      <div class="phb-l phb-crabes" aria-hidden="true">${[0, 1].map(i => `<div class="phb-crabe" style="left:${18 + i * 50}%;top:${85 - i * 4}%;--d:${13 + i * 3}s;--r:-${i * 5}s">${N.crabe("phbd-cb" + i)}</div>`).join("")}
+        <div class="phb-violon" style="left:52%;top:87%;--d:17s;--r:-3s">${N.violoniste("phbd-cv")}</div>
+        ${jourSec ? `<div class="phb-goeland-sol" style="left:60%;top:77%;--d:48s;--r:-6s"><div class="gs-sol">${N.goelandPose("phbd-gp")}</div><div class="gs-vol">${N.goeland("phbd-gv")}</div></div>` : ""}</div>
       ${jourSec && (["printemps", "ete"].includes(P.sa) || P.sp === "floraison") ? `<div class="phb-l phb-papillons" aria-hidden="true">${[0, 1].map(i => `<div class="phb-papillon" style="left:${30 + i * 30}%;top:${58 - i * 8}%;--d:${11 + i * 4}s;--r:-${i * 3}s">${N.papillon(i === 1)}</div>`).join("")}</div>` : ""}
       ${nuit && met !== "pluie" && P.sa !== "hiver" ? `<div class="phb-l phb-lucioles" aria-hidden="true">${Array.from({ length: 7 }, (_, i) =>
         `<i style="left:${18 + (i * 37) % 60}%;top:${55 + (i * 13) % 28}%;--d:${5 + i % 3 * 2}s;animation-delay:-${i * 1.1}s"></i>`).join("")}</div>` : ""}
@@ -859,7 +860,7 @@
     perso.style.setProperty("--y", p.y);
     perso.style.setProperty("--rot", (p.rot || 0) + "deg");
     const h = e.humeur === "appel" ? "calme" : e.humeur;
-    const html = D.svg({ stade: e.stade, variante: e.variante, mutation: e.mutation, humeur: e.dort ? "dort" : reaction === "refus" ? "grognon" : h, pose: p.pose,
+    const html = D.svg({ stade: e.stade, variante: e.variante, mutation: e.mutation, marques: e.marques, humeur: e.dort ? "dort" : reaction === "refus" ? "grognon" : h, pose: p.pose,
       portes: e.portes, mue: e.mue, ventre: e.ventre_rond, malade: !!e.malade, froid: e.jauges.chaleur < 35, label: e.titre, fendu: e.stade === "oeuf" && e.age_jours > .004, uid: "i" });
     const box = perso.querySelector(".phb-flip");
     if (box.dataset.html !== html) { box.innerHTML = html; box.dataset.html = html; }
@@ -940,7 +941,7 @@
   // ---- en-tête, jauges, paroles, soins ----
   function medaillon(e) {
     return `<span class="phb-medaillon" aria-hidden="true">${e.stade === "oeuf" ? D.svg({ stade: "oeuf", uid: "m" })
-      : D.svg({ stade: e.stade, variante: e.variante, mutation: e.mutation, humeur: e.dort ? "dort" : "joyeux", portes: e.portes, malade: !!e.malade, label: "", uid: "m", leger: true })}</span>`;
+      : D.svg({ stade: e.stade, variante: e.variante, mutation: e.mutation, marques: e.marques, humeur: e.dort ? "dort" : "joyeux", portes: e.portes, malade: !!e.malade, label: "", uid: "m", leger: true })}</span>`;
   }
   function tete() {
     const met = e.ciel.phase === "nuit" ? (e.ciel.meteo === "pluie" ? "pluie" : e.ciel.meteo === "nuages" ? "nuage" : "lune") : ICO_METEO[e.ciel.meteo];
@@ -951,7 +952,7 @@
         <div class="phb-puces">${e.stade === "oeuf" ? `<span>Œuf</span>` : `<span>${esc(e.stade_nom)}</span><span>${age(e.age_jours)}</span><span>${poids(e.poids_g)}${e.ventre_rond ? " · ventre rond" : ""}</span>`}</div></div>
       <div class="phb-ciel-info"><span class="phb-puce" title="Météo de l'île">${ico(met)}${metTxt}</span>
         <span class="phb-puce" title="${esc(e.ciel.saison_texte || "")}">${ico(ICO_SAISON[e.ciel.saison] || "fleur")}${esc(e.ciel.saison_nom || "")}</span>
-        ${e.ciel.saison_ile ? `<span class="phb-puce phb-puce-ile" title="${esc(e.ciel.saison_ile.texte || "")}">${ico(ICO_SAISON[e.ciel.saison_ile.id] || "fleur")}${esc(e.ciel.saison_ile.nom)}${resteSaison(e.ciel.saison_ile.reste_s)}</span>` : ""}</div>
+        ${e.ciel.saison_ile ? `<span class="phb-puce phb-puce-ile" title="${esc(e.ciel.saison_ile.texte || "")}">${ico(ICO_SAISON[e.ciel.saison_ile.id] || "fleur")}${esc(e.ciel.saison_ile.nom)}</span>` : ""}</div>
       <button class="phb-b phb-fermer phb-amb phb-theme" data-phb="theme" aria-pressed="${interfaceSombre()}"
         aria-label="${interfaceSombre() ? "Passer l'interface en clair" : "Passer l'interface en sombre"}" title="Interface claire ou sombre (réglage complet dans Réglages)">${ico(interfaceSombre() ? "soleil" : "lune")}</button>
       <button class="phb-b phb-fermer phb-amb" data-phb="ambiance" aria-pressed="${!!(e.reglages.sons && e.reglages.ambiance !== false)}"
@@ -1039,6 +1040,22 @@
       <button class="phb-carte" data-phb="bain" data-lieu="flaque"><span class="phb-ic phb-ic-ico" style="--c:#2a86cc">${ico("goutte")}</span><span>Bain tiède dans la flaque</span><small>propreté, aide la mue</small></button>
       <button class="phb-carte" data-phb="bain" data-lieu="mer"><span class="phb-ic phb-ic-ico" style="--c:#0f8fb0">${ico("vent")}</span><span>Nager dans la mer</span><small>bonheur, mais l'eau rafraîchit</small></button></div>`;
   }
+  // onglet « Couleurs » du carnet : les marques (fanon, crête, queue, yeux, motif), qui s'ajoutent à la couleur du corps
+  function marquesCarnet(c) {
+    const MQ = cat.marques || {}, CAT = cat.categories_marques || {}, vues = new Set(c.marques_vues || []), porte = new Set(c.marques || []);
+    if (!Object.keys(MQ).length) return "";
+    const stade = c.stade === "oeuf" ? "bebe" : c.stade === "bebe" ? "juvenile" : c.stade;
+    return `<h4 class="phb-sous-titre">Marques</h4>
+      <p class="phb-gris">D'autres mutations, qui s'ajoutent à sa couleur : une par partie du corps, gagnée à une mue selon sa vie.
+        ${vues.size} marque${vues.size > 1 ? "s" : ""} découverte${vues.size > 1 ? "s" : ""} sur ${Object.keys(MQ).length}.</p>
+      ${Object.entries(CAT).map(([k, nomCat]) => `<p class="phb-cat-marque">${esc(nomCat)}</p><div class="phb-grille phb-grille-album">${Object.entries(MQ).filter(([, m]) => m.cat === k).map(([id, m]) => `
+        <div class="phb-carte phb-couleur r-${m.rarete}${vues.has(id) ? " ok" : ""}">
+          ${m.rarete !== "commun" ? `<span class="phb-ruban phb-rare">${ico("etoile")}${esc((cat.raretes || {})[m.rarete] || m.rarete)}</span>` : ""}
+          <div class="phb-portrait">${vues.has(id) ? D.svg({ stade, variante: c.variante, mutation: c.mutation, marques: [id], humeur: "calme", label: m.nom, uid: "q" + id, leger: true })
+            : `<div class="phb-mystere" aria-hidden="true">?</div>`}</div>
+          <span>${vues.has(id) ? esc(m.nom) + (porte.has(id) ? " · porté" : "") : "Marque inconnue"}</span>
+          <small>${vues.has(id) ? esc(m.texte) + " (" + esc(m.condition) + ")" : "Indice : " + esc(m.condition)}</small></div>`).join("")}</div>`).join("")}`;
+  }
   function feuilleJouer() {
     const J = [["feuilles", "nourrir", "#3a9e4a", "Attrape les feuilles et les fleurs, évite les insectes : un palier de plus toutes les 20 s (9 paliers, 3 min au plus)"],
       ["course", "drapeau", "#e8731a", "Cours jusqu'au rocher chaud en 10 étapes, de plus en plus vite : saute les crabes, attrape les rayons de soleil"],
@@ -1075,12 +1092,12 @@
   function feuilleGarde() {
     const slots = { tete: "Tête", yeux: "Yeux", cou: "Cou" };
     const parSlot = s => e.accessoires.filter(a => cat.objets[a].emplacement === s);
-    return `${titre("chapeau", "Garde-robe")}<div class="phb-garde"><div class="phb-apercu">${D.svg({ stade: e.stade === "oeuf" ? "bebe" : e.stade, variante: e.variante, mutation: e.mutation, humeur: "joyeux", portes: e.portes, label: "Aperçu de Philibert", uid: "g" })}</div>
+    return `${titre("chapeau", "Garde-robe")}<div class="phb-garde"><div class="phb-apercu">${D.svg({ stade: e.stade === "oeuf" ? "bebe" : e.stade, variante: e.variante, mutation: e.mutation, marques: e.marques, humeur: "joyeux", portes: e.portes, label: "Aperçu de Philibert", uid: "g" })}</div>
       <div>${Object.entries(slots).map(([s, n]) => `<div class="phb-groupe">${n}</div><div class="phb-ligne">${parSlot(s).map(a => `<button class="phb-b${e.portes[s] === a ? " phb-on" : ""}" data-phb="${e.portes[s] === a ? "retirer" : "porter"}" data-article="${a}" data-emplacement="${s}" aria-pressed="${e.portes[s] === a}">
         <span class="phb-ic-mini">${icone(a)}</span>${esc(cat.objets[a].nom)}${cat.objets[a].rarete && cat.objets[a].rarete !== "commun" ? `<small class="phb-r-puce r-${cat.objets[a].rarete}">${esc((cat.raretes || {})[cat.objets[a].rarete] || "")}</small>` : ""}</button>`).join("") || `<small class="phb-gris">Rien pour l'instant (voir la boutique).</small>`}</div>`).join("")}</div></div>`;
   }
   function portrait(x) {
-    return `<div class="phb-portrait">${D.svg({ stade: x.stade, variante: x.variante, mutation: x.mutation, portes: x.portes, humeur: "joyeux", label: x.titre, uid: "a" })}</div>`;
+    return `<div class="phb-portrait">${D.svg({ stade: x.stade, variante: x.variante, mutation: x.mutation, marques: x.marques, portes: x.portes, humeur: "joyeux", label: x.titre, uid: "a" })}</div>`;
   }
   function feuilleCarnet() {
     const c = carnetDonnees;
@@ -1107,7 +1124,8 @@
           <div class="phb-grille phb-grille-album">${Object.entries(M).map(([id, m]) => `<div class="phb-carte phb-couleur${vues.has(id) ? " ok" : ""}">
             <div class="phb-portrait">${vues.has(id) ? D.svg({ stade: c.stade === "oeuf" ? "bebe" : c.stade === "bebe" ? "juvenile" : c.stade, variante: c.variante, mutation: { id, niveau: 3 }, humeur: "calme", label: m.nom, uid: "k" + id, leger: true })
               : `<div class="phb-mystere" aria-hidden="true">?</div>`}</div>
-            <span>${vues.has(id) ? esc(m.nom) : "Couleur inconnue"}</span><small>${vues.has(id) ? esc(m.texte) + " (" + esc(m.condition) + ")" : "Indice : " + esc(m.condition)}</small></div>`).join("")}</div>`;
+            <span>${vues.has(id) ? esc(m.nom) : "Couleur inconnue"}</span><small>${vues.has(id) ? esc(m.texte) + " (" + esc(m.condition) + ")" : "Indice : " + esc(m.condition)}</small></div>`).join("")}</div>
+          ${marquesCarnet(c)}`;
       } else if (carnetOnglet === "stats") {
         const s = c.stats, L = [["Âge", age(c.age_jours)], ["Né le", new Date(c.ne * 1000).toLocaleDateString("fr-FR")], ["Repas", s.repas], ["dont verdure et légumes", s.verdure], ["Fleurs", s.fleurs],
           ["Friandises", s.friandises], ["Verdures goûtées", `${c.gouts.length} / 6`], ["Refus (aliments pas pour lui)", s.refus], ["Bains (dont mer)", `${s.bains} (${s.bains_mer})`], ["Séances au soleil", s.soleil],

@@ -8,6 +8,15 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Ajouté
+- Philibert : **marques**, de nouvelles mutations qui s'ajoutent à la couleur du corps, une par partie du corps : fanon (orangé, rouge, bleu, rayé), crête (orangée, bicolore), queue annelée, yeux (rubis, azur), motif de la peau (moucheté, rayé, dégradé) ; elles apparaissent à une mue selon sa vie, avec une rareté (commune, rare, très rare), se voient partout et dans l'album, et ont leur section dans l'onglet « Couleurs » du carnet ; succès « Un iguane unique »
+- Philibert : un **crabe violoniste** (carapace bleu-vert, énorme pince orange qu'il agite pour faire signe) et un **goéland qui se pose** sur la plage, marche, regarde autour de lui, picore le sable et repart
+
+### Modifié
+- Philibert : **goélands redessinés** d'après des photos et des vidéos de goélands argentés (bec jaune à tache rouge, œil cerclé d'orange, manteau gris, bouts d'ailes noirs à miroirs blancs, pattes roses) avec un vrai cycle de battement (main de l'aile repliée au poignet en remontant, aile étendue en descendant) et un plané qui s'ajuste au vent
+- Philibert : **crabes fantômes redessinés** (carapace granuleuse, longs pédoncules, pattes articulées) : ils courent de côté pattes en alternance, s'arrêtent net, dressent les yeux, agitent la pince et s'enfouissent dans le sable en laissant dépasser les yeux
+- Philibert : la saison de l'île en cours s'affiche **sans durée ni compte à rebours** (en-tête de l'île et partout ailleurs) : on voit quelle saison il fait, sa fin reste une surprise
+
 ## [1.2.0] - 2026-11-17
 
 ### Ajouté

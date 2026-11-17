@@ -318,6 +318,37 @@ MUTATIONS = {
                  "condition": "une vie parfaite… et beaucoup de chance (très rare)"},
 }
 ORANGES = ("courge", "mangue", "papaye", "fleur_pissenlit", "banane")
+# Marques : d'autres mutations, qui s'ajoutent à la couleur du corps (une par partie du corps : fanon, crête, queue,
+# yeux, motif de la peau). Elles aussi apparaissent à une mue (à partir du stade juvénile), selon sa vie : au plus une
+# nouvelle marque par mue, la plus méritée. Rareté : « commun » (il suffit de le mériter), « rare » (conditions plus
+# longues à réunir), « tres_rare » (il faut en plus un peu de chance à la mue).
+CATEGORIES_MARQUES = {"fanon": "Fanon", "crete": "Crête", "queue": "Queue", "yeux": "Yeux", "motif": "Motif de la peau"}
+MARQUES = {
+    "fanon_orange": {"cat": "fanon", "rarete": "commun", "nom": "Fanon orangé", "texte": "Un fanon orange vif, comme les mâles en parade.",
+                     "condition": "manger souvent des aliments orangés"},
+    "fanon_rouge": {"cat": "fanon", "rarete": "rare", "nom": "Fanon rouge", "texte": "Un fanon rouge hibiscus, très voyant.",
+                    "condition": "manger beaucoup de fleurs"},
+    "fanon_bleu": {"cat": "fanon", "rarete": "rare", "nom": "Fanon bleu", "texte": "Un fanon bleu lagon, rare chez les iguanes verts.",
+                   "condition": "prendre beaucoup de bains"},
+    "fanon_raye": {"cat": "fanon", "rarete": "tres_rare", "nom": "Fanon rayé", "texte": "Un fanon doré rayé de noir, à force de « parler » avec.",
+                   "condition": "réussir une longue suite de gestes à « En rythme »… et un peu de chance"},
+    "crete_orange": {"cat": "crete", "rarete": "commun", "nom": "Crête orangée", "texte": "Des épines orange, réchauffées par le soleil.",
+                     "condition": "passer beaucoup d'heures bien au chaud"},
+    "crete_annelee": {"cat": "crete", "rarete": "rare", "nom": "Crête bicolore", "texte": "Des épines alternées, sombres et claires.",
+                      "condition": "gagner plusieurs courses jusqu'au rocher chaud"},
+    "queue_annelee": {"cat": "queue", "rarete": "commun", "nom": "Queue annelée", "texte": "De larges anneaux noirs bien contrastés sur la queue.",
+                      "condition": "dormir souvent dans le noir, lumière éteinte"},
+    "yeux_rubis": {"cat": "yeux", "rarete": "rare", "nom": "Yeux rubis", "texte": "Un iris rouge-orangé, comme un rubis.",
+                   "condition": "deviner souvent juste à « Gauche ou droite ? »"},
+    "yeux_azur": {"cat": "yeux", "rarete": "tres_rare", "nom": "Yeux azur", "texte": "Un iris bleu clair : une rareté.",
+                  "condition": "une santé et un bonheur excellents… et beaucoup de chance"},
+    "motif_taches": {"cat": "motif", "rarete": "commun", "nom": "Moucheté", "texte": "De petites taches sombres semées sur le corps.",
+                     "condition": "recevoir beaucoup de caresses"},
+    "motif_rayures": {"cat": "motif", "rarete": "rare", "nom": "Rayé", "texte": "De larges bandes sombres en travers du corps, bien marquées.",
+                      "condition": "beaucoup de séances au soleil sur le rocher"},
+    "motif_degrade": {"cat": "motif", "rarete": "rare", "nom": "Dégradé", "texte": "Une tête et des épaules pâles qui foncent vers la queue.",
+                      "condition": "avoir mué de nombreuses fois"},
+}
 RARETES = {"commun": "Commun", "rare": "Rare", "tres_rare": "Très rare", "legendaire": "Légendaire"}
 OBJETS = {
     "remede": {"nom": "Remède de l'île", "type": "soin", "prix": 8, "texte": "À donner quand il est malade (il agit mieux au chaud)."},
@@ -426,7 +457,8 @@ SUCCES = {
     "coureur": ("Coureur du soleil", "Arriver au rocher chaud (étape 10) avec 60 rayons de soleil ou plus", 10),
     "saisons": ("Les quatre saisons", "Vivre les quatre saisons de l'île", 15),
     "tour_saisons": ("Saisons de l'île", "Vivre les quatre saisons spéciales de l'île (floraison, tempêtes, brumes, ponte des tortues)", 20),
-    "mutation": ("Couleurs uniques", "Voir Philibert changer de couleur à une mue", 10),
+    "mutation": ("Couleurs uniques", "Voir Philibert changer de couleur ou gagner une marque à une mue", 10),
+    "marques": ("Un iguane unique", "Avoir une marque sur chaque partie du corps (fanon, crête, queue, yeux, motif)", 20),
     "collection": ("Pièce de collection", "Acheter un objet légendaire", 0),
 }
 EVENEMENTS = {
@@ -494,7 +526,7 @@ class Philibert:
                       "coquillages_gagnes": 0, "meilleur_feuilles": 0, "meilleur_rythme": 0, "meilleur_devin": 0,
                       "meilleur_course": 0, "courses_gagnees": 0, "oranges": 0, "heures_froid": 0.0, "heures_chaud": 0.0,
                       "heures_malade": 0.0, "nuits_reveille": 0},
-            "mutation": None, "mutations_vues": [],
+            "mutation": None, "mutations_vues": [], "marques": {}, "marques_vues": [],
             "gouts": [], "moy": {"sante": 0.0, "bonheur": 0.0, "n": 0.0}, "regime": [], "friandises_t": [],
             "carnet": [], "cartes": [], "succes": {}, "succes_vus": [], "faits": [],
             "reglages": {"visible": True, "vitesse": "normale", "sons": True, "ambiance": True, "theme": "auto", "notif_windows": False, "discord": False,
@@ -855,7 +887,7 @@ class Philibert:
         """Une photo de chaque étape de sa vie (album illustré du carnet)."""
         s = self.s
         s["etapes"].append({"t": round(t), "stade": s["stade"], "variante": s["variante"], "portes": dict(s["portes"]),
-                            "mutation": dict(s["mutation"]) if s.get("mutation") else None,
+                            "mutation": dict(s["mutation"]) if s.get("mutation") else None, "marques": self._marques_ids(),
                             "age_jours": round(s["age_s"] / JOUR, 1), "titre": self.titre()})
         del s["etapes"][:-10]
 
@@ -869,6 +901,7 @@ class Philibert:
         self._fait("mue")
         self._succes("premiere_mue", t)
         self._muter(t)
+        self._marquer(t)
 
     def scores_mutation(self) -> dict:
         """Score de chaque mutation (≥ 1 : possible à la prochaine mue). Lisible pour les tests et le carnet."""
@@ -915,6 +948,61 @@ class Philibert:
                                    else f"Sa couleur « {m['nom']} » est encore plus marquée après cette mue."))
         self._fait("formes")
         self._succes("mutation", t)
+
+    def scores_marques(self) -> dict:
+        """Score de chaque marque (≥ 1 : méritée). Les très rares demandent en plus un tirage chanceux à la mue."""
+        s, st = self.s, self.s["stats"]
+        n = max(1e-9, s["moy"]["n"])
+        sante, bonheur = s["moy"]["sante"] / n, s["moy"]["bonheur"] / n
+        g = st.get
+        return {
+            "fanon_orange": g("oranges", 0) / 8,
+            "fanon_rouge": st["fleurs"] / 15,
+            "fanon_bleu": st["bains"] / 25,
+            "fanon_raye": st["meilleur_rythme"] / 12,
+            "crete_orange": g("heures_chaud", 0) / 30,
+            "crete_annelee": st["courses_gagnees"] / 3,
+            "queue_annelee": st["nuits_eteintes"] / 10,
+            "yeux_rubis": st["meilleur_devin"] / 15,
+            "yeux_azur": min(sante / 90, bonheur / 85) if st["mues"] >= 2 else 0,
+            "motif_taches": st["caresses"] / 40,
+            "motif_rayures": st["soleil"] / 30,
+            "motif_degrade": st["mues"] / 6,
+        }
+
+    def _marques_ids(self) -> list:
+        return [m for m in (self.s.get("marques") or {}).values() if m in MARQUES]
+
+    def _marquer(self, t: float) -> None:
+        """Après une mue : au plus une nouvelle marque, la plus méritée, sur une partie du corps qui n'en a pas encore."""
+        s = self.s
+        if s["stade"] == "bebe":
+            return
+        m = s.setdefault("marques", {})
+        sc = self.scores_marques()
+        possibles = []
+        for k, v in sc.items():
+            info = MARQUES[k]
+            if info["cat"] in m or v < 1:
+                continue
+            if info["rarete"] == "tres_rare" and _alea(s["graine"], "marque", k, s["stats"]["mues"]) >= .25:
+                continue                                                  # très rare : il faut aussi de la chance
+            possibles.append((v, k))
+        if not possibles:
+            return
+        _, k = max(possibles)
+        info = MARQUES[k]
+        m[info["cat"]] = k
+        if k not in s.setdefault("marques_vues", []):
+            s["marques_vues"].append(k)
+        self._note(t, "mutation", f"Nouvelle peau, nouvelle marque : « {info['nom']} » ! {info['texte']}")
+        self._fait("formes")
+        self._succes("mutation", t)
+        if all(c in m for c in CATEGORIES_MARQUES):
+            self._succes("marques", t)
+
+    def _marques_vue(self) -> list:
+        return [{"id": k, "cat": MARQUES[k]["cat"], "nom": MARQUES[k]["nom"], "rarete": MARQUES[k]["rarete"]} for k in self._marques_ids()]
 
     def _mutation_vue(self) -> dict | None:
         m = self.s.get("mutation")
@@ -1063,7 +1151,7 @@ class Philibert:
             humeur = "calme"
         jeux = s["jeux_jour"]
         sa_now = saison(now, s["graine"])
-        sp_now, _, sp_fin = periode_saison_ile(now, s["graine"]) if not SAISON_ILE_FORCEE else (saison_ile(now), 0, 0)
+        sp_now = saison_ile(now, s["graine"])           # quelle saison il fait, sans jamais dire combien de temps elle dure
         a = s["appel"]
         if a and a["type"] == "caprice" and j["bonheur"] > SEUIL_ATTENTION:
             s["appel"] = a = None
@@ -1076,11 +1164,12 @@ class Philibert:
             "position": s["position"], "lumiere": s["lumiere"], "lampe": dict(s["lampe"]),
             "ciel": {"phase": phase_du_ciel(now), "meteo": meteo(now, s["graine"]), "heure": round(_heure(now), 2),
                      "saison": sa_now, "saison_nom": SAISONS[sa_now]["nom"], "saison_texte": SAISONS[sa_now]["texte"],
-                     "saison_ile": ({"id": sp_now, "nom": SAISONS_ILE[sp_now]["nom"], "texte": SAISONS_ILE[sp_now]["texte"],
-                                     "reste_s": max(0, round(sp_fin - now)) if not SAISON_ILE_FORCEE else None} if sp_now else None)},
+                     "saison_ile": ({"id": sp_now, "nom": SAISONS_ILE[sp_now]["nom"], "texte": SAISONS_ILE[sp_now]["texte"]}
+                                    if sp_now else None)},
             "promo": SAISONS[sa_now]["promo"],
             "promo_ile": SAISONS_ILE[sp_now]["promo"] if sp_now else None,
             "mutation": self._mutation_vue(),
+            "marques": self._marques_ids(), "marques_detail": self._marques_vue(),
             "crottes": s["crottes"], "mue": bool(s["mue"]),
             "malade": {"cause": s["malade"]["cause"], "texte": MALADIES[s["malade"]["cause"]], "depuis": s["malade"]["depuis"]} if s["malade"] else None,
             "veto": {"retour": s["veto"]["retour"], "reste_s": max(0, round(s["veto"]["retour"] - now)), "raisons": s["veto"]["raisons"],
@@ -1114,6 +1203,7 @@ class Philibert:
             "succes": {k: {"nom": v[0], "texte": v[1], "gain": v[2]} for k, v in SUCCES.items()},
             "faits_total": len(FAITS), "variantes": VARIANTES, "raretes": RARETES,
             "mutations": {k: {"nom": v["nom"], "texte": v["texte"], "condition": v["condition"]} for k, v in MUTATIONS.items()},
+            "marques": {k: dict(v) for k, v in MARQUES.items()}, "categories_marques": CATEGORIES_MARQUES,
             "saisons": {k: {"nom": v["nom"], "texte": v["texte"], "promo": v["promo"]} for k, v in SAISONS.items()},
             "saisons_ile": {k: {"nom": v["nom"], "texte": v["texte"], "promo": v["promo"]} for k, v in SAISONS_ILE.items()}, "stades": STADES, "jeux": JEUX,
         }
@@ -1132,6 +1222,7 @@ class Philibert:
                 "faits": [{"id": f, "texte": FAITS[f]} for f in s["faits"]], "faits_total": len(FAITS),
                 "etapes": list(s["etapes"]), "album": list(reversed(s["album"])), "saisons_vues": list(s["saisons_vues"]), "saisons_ile_vues": list(s.get("saisons_ile_vues") or []),
                 "mutations_vues": list(s.get("mutations_vues") or []), "mutation": self._mutation_vue(),
+                "marques": self._marques_ids(), "marques_vues": list(s.get("marques_vues") or []),
             }
 
     # -- actions -------------------------------------------------------------------
@@ -1560,7 +1651,7 @@ class Philibert:
         album = list(o.get("album") or [])
         if o["stade"] != "oeuf":                     # un œuf qui n'a pas éclos n'entre pas dans l'album
             album.append({"titre": ancien, "stade": o["stade"], "variante": o["variante"], "portes": dict(o["portes"]),
-                          "mutation": dict(o["mutation"]) if o.get("mutation") else None,
+                          "mutation": dict(o["mutation"]) if o.get("mutation") else None, "marques": self._marques_ids(),
                           "ne": round(o["ne"]), "eclos": o["eclos"] and round(o["eclos"]), "fin": round(now),
                           "age_jours": round(o["age_s"] / JOUR, 1), "succes": len(o["succes"]), "faits": len(o["faits"]),
                           "repas": o["stats"]["repas"], "jeux": o["stats"]["jeux"], "mues": o["stats"]["mues"],

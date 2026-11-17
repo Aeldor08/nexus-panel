@@ -61,6 +61,14 @@
       for (const [cle2, v] of Object.entries(mu)) if (cle2 !== "iris" && c[cle2]) c[cle2] = melange(c[cle2], v, k);
       if (mu.iris) c.iris = mu.iris;
     }
+    const mq = new Set(o.marques || []);
+    if (mq.has("fanon_orange")) c.fanon = melange(c.fanon, "#f08a2e", .85);
+    if (mq.has("fanon_rouge")) c.fanon = melange(c.fanon, "#d0342a", .88);
+    if (mq.has("fanon_bleu")) c.fanon = melange(c.fanon, "#3f86c8", .85);
+    if (mq.has("fanon_raye")) c.fanon = melange(c.fanon, "#efb444", .85);
+    if (mq.has("crete_orange")) c.crete = "#f27a1c";
+    if (mq.has("yeux_rubis")) c.iris = "rubis";
+    if (mq.has("yeux_azur")) c.iris = "blue";
     if (o.malade) c = { ...c, ...MALADE };
     else if (o.froid) c = { ...c, ...FROID };
     c.corps = c.corps || c.clair;
@@ -91,6 +99,7 @@
       <radialGradient id="${u}-j" cx=".36" cy=".32" r=".8"><stop offset="0" stop-color="${teinte(c.joue, .32)}"/><stop offset=".55" stop-color="${c.joue}"/><stop offset="1" stop-color="${teinte(c.joue, -.2)}"/></radialGradient>
       <radialGradient id="${u}-i" cx=".42" cy=".38" r=".62">${c.iris === "blue"
         ? `<stop offset="0" stop-color="#cfe8ff"/><stop offset=".5" stop-color="#5a9ad8"/><stop offset=".82" stop-color="#2a5a9a"/><stop offset="1" stop-color="#14305a"/>`
+        : c.iris === "rubis" ? `<stop offset="0" stop-color="#ffc4a0"/><stop offset=".5" stop-color="#e04a2a"/><stop offset=".82" stop-color="#9a1e14"/><stop offset="1" stop-color="#4a0c08"/>`
         : `<stop offset="0" stop-color="#f9de80"/><stop offset=".5" stop-color="#e0a030"/><stop offset=".82" stop-color="#a35d18"/><stop offset="1" stop-color="#5e330e"/>`}</radialGradient>
       <radialGradient id="${u}-o"><stop offset="0" stop-color="#2b2112" stop-opacity=".34"/><stop offset=".6" stop-color="#2b2112" stop-opacity=".16"/><stop offset="1" stop-color="#2b2112" stop-opacity="0"/></radialGradient>
       <radialGradient id="${u}-l" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
@@ -115,7 +124,9 @@
   }
   function queue(c, u, o) {
     const taille = { bebe: .45, juvenile: .72, sage: 1.05 }[o.stade] || 1;
-    const opB = { bebe: .22, juvenile: .38, sage: .42 }[o.stade] || .55;
+    const annelee = (o.marques || []).includes("queue_annelee");
+    const opB = annelee ? .88 : { bebe: .22, juvenile: .38, sage: .42 }[o.stade] || .55;
+    const bandeQ = annelee ? "#1d1b15" : c.bande;
     const base = tube(Q_BASE, wBase), bout = tube(Q_BOUT, wBout, 0, 1, 18);
     const anneaux = (s, w, L) => L.map(([a, b]) => tube(s, w, a, b, 4).d).join(" ");
     // épines de la crête sur la base de la queue (penchées vers le bout)
@@ -131,12 +142,12 @@
     return `<g class="phb-queue"><g transform="${o.queueEch}">
         <path d="${ep}" fill="${c.crete}" stroke="${teinte(c.dos, -.2)}" stroke-width=".3" stroke-linejoin="round"/>
         <path d="${base.d}" fill="url(#${u}-q)"/>${o.leger ? "" : `<path d="${base.d}" fill="url(#${u}-e)"/>`}
-        <path d="${anneaux(Q_BASE, wBase, [[.44, .58], [.86, 1]])}" fill="${c.bande}" opacity="${opB}"/>
+        <path d="${anneaux(Q_BASE, wBase, [[.44, .58], [.86, 1]])}" fill="${bandeQ}" opacity="${opB}"/>
         <path d="${lum(Q_BASE, wBase, .05, 1)}" stroke="#fff" stroke-opacity=".2" stroke-width=".9" fill="none" stroke-linecap="round"/>
         <path d="${base.haut} ${base.bas}" ${trait}/>
         <g class="phb-queue-bout">
           <path d="${bout.d}" fill="url(#${u}-q)"/>${o.leger ? "" : `<path d="${bout.d}" fill="url(#${u}-e)"/>`}
-          <path d="${anneaux(Q_BOUT, wBout, [[.1, .21], [.32, .42], [.53, .62], [.72, .8], [.88, .94]])}" fill="${c.bande}" opacity="${opB}"/>
+          <path d="${anneaux(Q_BOUT, wBout, [[.1, .21], [.32, .42], [.53, .62], [.72, .8], [.88, .94]])}" fill="${bandeQ}" opacity="${opB}"/>
           <path d="${lum(Q_BOUT, wBout, 0, .7)}" stroke="#fff" stroke-opacity=".18" stroke-width=".7" fill="none" stroke-linecap="round"/>
           <path d="${bout.haut} ${bout.bas}" ${trait}/>
         </g>
@@ -147,7 +158,8 @@
   const DOS = [[[41.6, 37], [49, 31.8], [59, 30.4], [68, 30.6]], [[68, 30.6], [76, 30.8], [82.4, 29.6], [88.6, 30.6]]];
   function crete(c, o) {
     const taille = ({ bebe: .45, juvenile: .72, sage: 1.08 }[o.stade] || 1) * (o.variante === "royal" ? 1.15 : 1);
-    let d = "";
+    let d = "", d2 = "", n = 0;
+    const bicolore = (o.marques || []).includes("crete_annelee");
     const pas = [[0, .2, 1], [0, .32, 1], [0, .44, 1], [0, .56, 1], [0, .68, 1], [0, .8, 1], [0, .92, 1]];
     for (let i = 0; i <= 10; i++) pas.push([1, i / 10, 1]);
     for (const [k, t] of pas) {
@@ -157,9 +169,12 @@
       const tip = [b[0] + up[0] * h - dd[0] * h * .42, b[1] + up[1] * h - dd[1] * h * .42];
       const bl = [base[0] - dd[0] * .85, base[1] - dd[1] * .85], br = [base[0] + dd[0] * .85, base[1] + dd[1] * .85];
       const c1 = [bl[0] + up[0] * h * .5 + dd[0] * .2, bl[1] + up[1] * h * .5], c2 = [br[0] + up[0] * h * .45 - dd[0] * h * .25, br[1] + up[1] * h * .45];
-      d += `M${pt(bl)} Q${pt(c1)} ${pt(tip)} Q${pt(c2)} ${pt(br)} Z `;
+      const e = `M${pt(bl)} Q${pt(c1)} ${pt(tip)} Q${pt(c2)} ${pt(br)} Z `;
+      if (bicolore && n++ % 2) d2 += e; else d += e;
     }
-    return `<path class="phb-crete" d="${d}" fill="${c.crete}" stroke="${teinte(c.dos, -.22)}" stroke-width=".3" stroke-linejoin="round"/>`;
+    const trait = `stroke="${teinte(c.dos, -.22)}" stroke-width=".3" stroke-linejoin="round"`;
+    return bicolore ? `<g class="phb-crete"><path d="${d}" fill="#f1e6c4" ${trait}/><path d="${d2}" fill="#2e2b22" ${trait}/></g>`
+      : `<path class="phb-crete" d="${d}" fill="${c.crete}" ${trait}/>`;
   }
 
   // ---- pattes : cuisse/bras puis jambe/avant-bras (deux segments arrondis), pied à cinq doigts griffus ----
@@ -365,11 +380,32 @@
       ${T.map(([x, y, rx, ry, f], i) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${f}" transform="rotate(${(i * 37) % 50 - 25} ${x} ${y})"/>`).join("")}</g>`;
   }
 
+  // motifs des marques : moucheté (petites taches sombres), rayé (larges bandes en travers), dégradé (tête et épaules
+  // pâles qui foncent vers la queue)
+  function motifs(o, u, corpsD, c) {
+    const mq = o.marques || [];
+    if (mq.includes("motif_taches")) {
+      const r = (() => { let g = 91; return () => ((g = (g * 16807) % 2147483647) / 2147483647); })();
+      let t = "";
+      for (let i = 0; i < 26; i++) { const x = 44 + r() * 44, y = 32 + r() * 13; t += `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${(.55 + r() * .6).toFixed(2)}" ry="${(.45 + r() * .4).toFixed(2)}"/>`; }
+      return `<defs><clipPath id="${u}-cm"><path d="${corpsD}"/></clipPath></defs><g clip-path="url(#${u}-cm)" fill="${teinte(c.dos, -.45)}" opacity=".7">${t}</g>`;
+    }
+    if (mq.includes("motif_rayures")) {
+      return `<defs><clipPath id="${u}-cm"><path d="${corpsD}"/></clipPath></defs><g clip-path="url(#${u}-cm)" fill="none" stroke="${teinte(c.dos, -.42)}" stroke-width="3.2" opacity=".62" stroke-linecap="round">
+        <path d="M50 30 C48.6 35 49 40 50.6 46 M59.6 29.6 C58.4 35 58.8 41 60.4 47 M69.2 29.6 C68 35 68.4 41 70 47 M78.4 29.6 C77.4 34.6 77.8 40 79.2 45.6"/></g>`;
+    }
+    if (mq.includes("motif_degrade")) {
+      return `<defs><linearGradient id="${u}-dg" gradientUnits="userSpaceOnUse" x1="44" y1="0" x2="92" y2="0"><stop offset="0" stop-color="${teinte(c.dos, -.3)}" stop-opacity=".35"/>
+        <stop offset=".45" stop-color="#fff6dc" stop-opacity="0"/><stop offset="1" stop-color="#fff6dc" stop-opacity=".5"/></linearGradient></defs><path d="${corpsD}" fill="url(#${u}-dg)"/>`;
+    }
+    return "";
+  }
+
   // ---- Philibert ----
   function svg(o = {}) {
     if (o.stade === "oeuf") return oeuf(o);
     const c = couleurs(o);
-    const u = (o.uid || "x") + cle(c) + (o.ventre ? "v" : "") + (o.mutation ? o.mutation.id[0] + (o.mutation.niveau || 1) : "");
+    const u = (o.uid || "x") + cle(c) + (o.ventre ? "v" : "") + (o.mutation ? o.mutation.id[0] + (o.mutation.niveau || 1) : "") + (o.marques || []).map(m => m.slice(0, 2) + m.slice(-2)).join("");
     const h = o.humeur || "calme", leger = !!o.leger;
     const gourmand = o.variante === "gourmand" || o.ventre;
     const sage = o.stade === "sage", bebe = o.stade === "bebe";
@@ -409,7 +445,8 @@
       const hh = (bebe ? .7 : 1.15) * (1 - Math.abs(t - .5) * .6);
       epines += `M${pt([b[0] - d[0] * .55, b[1] - d[1] * .55])} L${pt([b[0] + nn[0] * hh + d[0] * .25, b[1] + nn[1] * hh + d[1] * .25])} L${pt([b[0] + d[0] * .55, b[1] + d[1] * .55])} Z `;
     }
-    const rayures = sage || o.variante === "royal" ? `<path d="M99.6 41 q-.6 4.4 -3.2 7.6 M95.8 40.8 q-.4 4.8 -2.6 8.4 M92 41.6 q-.2 3.6 -1.4 6.4" stroke="${teinte(c.fanon, -.3)}" stroke-width=".55" fill="none" opacity=".4" stroke-linecap="round"/>` : "";
+    const rayures = (o.marques || []).includes("fanon_raye") ? `<path d="M100.6 40.6 q-.6 4.8 -3.4 8.4 M97.4 40.4 q-.4 5.2 -2.8 9.2 M94 40.8 q-.2 4.8 -1.8 8.8 M90.6 42 q0 3.4 -.8 6.4" stroke="#2a1c10" stroke-width="1.15" fill="none" opacity=".78" stroke-linecap="round"/>`
+      : sage || o.variante === "royal" ? `<path d="M99.6 41 q-.6 4.4 -3.2 7.6 M95.8 40.8 q-.4 4.8 -2.6 8.4 M92 41.6 q-.2 3.6 -1.4 6.4" stroke="${teinte(c.fanon, -.3)}" stroke-width=".55" fill="none" opacity=".4" stroke-linecap="round"/>` : "";
 
     // œil, paupières, arcade
     const lid = teinte(c.dos, .05);
@@ -447,7 +484,7 @@
       ${defs(c, u, leger)}
       <ellipse class="phb-ombre" cx="60" cy="56.6" rx="${pose === "nage" ? 0 : 50}" ry="3.2" fill="url(#${u}-o)"/>
       <g transform="${echelle}"><g class="phb-corps-tout"><g class="phb-corps">
-        ${queue(c, u, { stade: o.stade, variante: o.variante, queueEch, leger })}
+        ${queue(c, u, { stade: o.stade, variante: o.variante, queueEch, leger, marques: o.marques })}
         ${patte("phb-p-ar-loin", [46.8, 41.8], [51.6, 47], [48.2, 53.6], { ...PA, w: [4.8, 3, 2.1], fill: loin, doigt: doigtLoin, arriere: true, k: .9, a: J.arl, g: J.garl })}
         ${patte("phb-p-av-loin", [75.2, 41.6], [72.2, 46.8], [75.8, 53.4], { ...PA, w: [3.6, 2.6, 1.9], fill: loin, doigt: doigtLoin, k: .9, a: J.avl, g: J.gavl })}
         ${crete(c, o)}
@@ -455,7 +492,7 @@
         ${leger ? "" : `<path d="${corpsD}" fill="url(#${u}-e)"/>`}
         <path d="M55.6 31.4 C54.6 36 55 41.4 56.4 46 M64.4 31 C63.6 36 64 41.6 65.2 46.4 M73.2 31.2 C72.4 36 72.8 41 74 45.6" stroke="${c.bande}" stroke-width="2.6" fill="none" opacity="${opBandes}"/>
         <path d="${ecaillesVentre}" stroke="${teinte(c.ventre, -.3)}" stroke-width=".3" opacity=".45"/>
-        ${taches(o, u, corpsD)}
+        ${taches(o, u, corpsD)}${motifs(o, u, corpsD, c)}
         <ellipse cx="64" cy="34.6" rx="22" ry="3.4" fill="url(#${u}-l)"/>
         <path d="M47.6 33.4 C57 31 71 30.9 84.6 31.3" stroke="#fff" stroke-opacity=".22" stroke-width="1.1" fill="none" stroke-linecap="round"/>
         <path d="M86.6 33.6 C85 36.8 84.6 40.4 85.4 43.6" stroke="${dosF}" stroke-width=".5" fill="none" opacity=".35"/>
@@ -470,6 +507,7 @@
             <path d="${epines}" fill="${teinte(c.fanon, .2)}" stroke="${dosF}" stroke-width=".25" stroke-linejoin="round"/></g>
           <path d="${teteD}" fill="url(#${u}-p)"/>
           ${leger ? "" : `<path d="${teteD}" fill="url(#${u}-e)" opacity=".7"/>`}
+          ${(o.marques || []).includes("motif_degrade") ? `<path d="${teteD}" fill="#fff6dc" opacity=".42"/>` : ""}
           <path d="M91 28.6 C96 26.6 103 26.6 109 28.6" stroke="#fff" stroke-opacity=".26" stroke-width=".9" fill="none" stroke-linecap="round"/>
           <path d="M91.6 28.8 L94.6 27.6 L97.8 27.2 M104.6 27.2 L107.8 28 L110.6 29.2 M95 27.6 l.4 1.4 M98.6 27.2 l-.2 1.2 M106.4 27.6 l-.2 1.1 M109 28.6 l-.3 1" stroke="${dosF}" stroke-width=".3" fill="none" opacity=".4"/>
           <circle cx="95.8" cy="27.6" r=".55" fill="#d3ddc8" opacity=".85"/>
