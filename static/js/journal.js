@@ -39,7 +39,8 @@
 
   // ---- Verrou ----
   function renderLock() {
-    root.innerHTML = `<section class="card c-journal jn-lock">
+    // (data-nx-hors : écran de passage, jamais un bloc déplaçable — il ne doit pas écraser la disposition du Journal)
+    root.innerHTML = `<section class="card c-journal jn-lock" data-nx-hors>
       <h2>🔒 Journal verrouillé</h2>
       <p>Le Journal demande le mot de passe du panel (celui du stream deck), même si le panel est ouvert.</p>
       <form id="jn-unlock" class="form-row"><input class="in grow" type="password" id="jn-pw" placeholder="Mot de passe" autocomplete="current-password" aria-label="Mot de passe">

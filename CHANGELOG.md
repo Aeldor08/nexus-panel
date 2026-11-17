@@ -8,6 +8,10 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Corrigé
+- Journal verrouillé : l'écran « Journal verrouillé » ne saute plus en bas à gauche, et il n'écrase plus la disposition du Journal ; une fois déverrouillé, la carte du jour (humeurs) et la vue mois restent à leur place (une disposition déjà abîmée par ce défaut est remise à l'origine automatiquement)
+- Disposition des blocs : un tableau reconstruit (page qui change de contenu) ne fait plus oublier la place des autres blocs enregistrés
+
 ## [1.1.0] - 2026-11-16 - Philibert arrive !
 
 **Philibert arrive !** Un petit iguane vert vient vivre dans NEXUS. Il se promène sous la barre du haut et, d'un clic,

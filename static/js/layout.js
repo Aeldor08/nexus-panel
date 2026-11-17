@@ -180,7 +180,9 @@ function NxBoard(board, opts) {
 
   function save() {
     const all = read(key()) || {};
-    all[narrow() ? "etroit" : "large"] = layout;
+    const k = narrow() ? "etroit" : "large", avant = all[k] && typeof all[k] === "object" ? all[k] : {};
+    // les blocs absents de ce tableau (page reconstruite, écran de passage…) gardent leur place enregistrée
+    all[k] = { ...avant, ...layout };
     write(key(), all);
   }
 

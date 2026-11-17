@@ -60,6 +60,7 @@
 
 /* ---- Toutes les catégories : blocs libres (js/layout.js + js/blocs.js) ---- */
 .nx-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.nx-tools[hidden] { display: none; }
 .nx-tools .btn { padding: 5px 12px; font-size: 13px; }
 /* État de la mise en page : verrouillée (ambre) ou déverrouillée (vert) ; un profil peut redéfinir ces couleurs */
 .nx-tools .nx-verrou[data-etat="verrouille"] { color: var(--warn); border-color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }

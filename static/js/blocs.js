@@ -11,7 +11,19 @@
   // Pages à valeurs qui bougent : les blocs prennent la hauteur de leur contenu (jamais de barre de défilement)
   const AJUSTE = new Set(["accueil", "pc", "media", "reseau", "statistiques"]);
 
-  const cardsOf = tab => [...tab.querySelectorAll(".card")].filter(c => !c.parentElement.closest(".card") && !c.closest("dialog"));
+  // (data-nx-hors : carte qui ne fait pas partie de la disposition, ex. l'écran « Journal verrouillé »)
+  const cardsOf = tab => [...tab.querySelectorAll(".card")].filter(c => !c.parentElement.closest(".card") && !c.closest("dialog")
+    && !c.hasAttribute("data-nx-hors"));
+
+  // Réparation (une fois) : avant ce correctif, l'écran « Journal verrouillé » (bloc « jn-unlock ») pouvait remplacer
+  // la disposition du Journal ; une disposition qui le contient est abîmée : on revient à celle d'origine.
+  for (const mode of ["terminal", "sentinelle"]) {
+    const k = "nexus-disposition-journal-" + mode;
+    try {
+      const d = JSON.parse(localStorage.getItem(k) || "null");
+      if (d && Object.values(d).some(v => v && typeof v === "object" && "jn-unlock" in v)) localStorage.removeItem(k);
+    } catch (e) {}
+  }
 
   function panelId(card, i, used) {
     const first = card.querySelector("[id]");
@@ -31,6 +43,7 @@
       s.tools = NxTools(s.bar, () => s.board, LABEL[name] || "");
     }
     const cards = cardsOf(tab);
+    s.bar.hidden = !cards.length;                 // pas de blocs (ex. Journal verrouillé) : pas de barre de disposition
     if (s.cards && s.cards.length === cards.length && s.cards.every((c, i) => c === cards[i])) return;   // inchangé
     if (s.board) s.board.destroy();
     s.cards = cards;
