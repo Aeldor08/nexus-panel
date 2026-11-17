@@ -8,6 +8,8 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+## [1.2.0] - 2026-11-17
+
 ### Ajouté
 - Philibert : **saisons de l'île en roulement**, en plus des saisons du calendrier (printemps, été, saison des pluies, saison fraîche, qui restent la base de la météo, du décor et des produits de saison) : chaque île a son roulement de périodes de 2 à 7 jours au hasard, parfois du temps ordinaire ; **4 saisons de l'île** (grande floraison, saison des tempêtes, saison des brumes, ponte des tortues) qui s'ajoutent à la saison du calendrier (un peu plus ou moins de pluie, de nuages et de chaleur, un 2ᵉ produit de saison, leur décor) ; l'en-tête montre les deux saisons et combien de temps il reste à celle de l'île ; succès « Saisons de l'île »
 - Philibert : **sieste sur le rocher chaud** (fatigué au soleil, il s'y endort et se réchauffe ; « Chauffer » pendant une sieste le pose sur le rocher sans le réveiller) et petits **« z z Z »** au-dessus de lui quand il dort
