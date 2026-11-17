@@ -297,13 +297,13 @@ sur téléphone (`@media (max-width: 700px)`). Quelques règles de plus :
 - plusieurs **SVG animés en interne** (flammes, braises) superposés en grand : chacun est redessiné à chaque
   image, et le cumul fait tomber l'écran à ~50 images/s. Mieux : une image fixe (WebP) animée **en bloc** par
   `opacity` ou `transform` (calculés par la carte graphique, sans redessin) — ex. `profils/des-du-destin` :
-  torches qui vacillent (`opacity`), braises qui montent (calque plus haut d'une tuile, `translateY` en boucle) ;
+  lumière de la bougie qui vacille (`opacity`), braises qui montent (calque plus haut d'une tuile, `translateY` en boucle) ;
 - même un petit SVG animé **répété sur chaque carte** (une frise de runes qui s'allume) fait redessiner toutes
   les cartes à chaque image : préfère une version fixe ;
 - **animation image par image** (un dé qui roule, un feu) : une planche de N images côte à côte en WebP, posée
   sur un élément de la taille d'UNE image (`background-size: N×100% 100%`), animée par `background-position`
   de `0 0` à `100% 0` avec `steps(N, jump-none)` (N positions, pas N - 1) — ex. `profils/des-du-destin` :
-  `de-roule.webp` (30 images) et `brasero.webp` (16 images en boucle) ;
+  `de-roule.webp` (60 images) et `flamme.webp` (16 images en boucle) ;
 - quand l'onglet est caché, le panel met toutes les animations CSS en pause (`html.nx-pause`) : rien à faire.
 
 **Mise en cache :** les fichiers du profil sont servis avec une adresse versionnée (`?v=<signature>`,
