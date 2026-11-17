@@ -8,6 +8,8 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+## [1.3.0] - 2026-11-17
+
 ### Ajouté
 - Philibert : **marques**, de nouvelles mutations qui s'ajoutent à la couleur du corps, une par partie du corps : fanon (orangé, rouge, bleu, rayé), crête (orangée, bicolore), queue annelée, yeux (rubis, azur), motif de la peau (moucheté, rayé, dégradé) ; elles apparaissent à une mue selon sa vie, avec une rareté (commune, rare, très rare), se voient partout et dans l'album, et ont leur section dans l'onglet « Couleurs » du carnet ; succès « Un iguane unique »
 - Philibert : un **crabe violoniste** (carapace bleu-vert, énorme pince orange qu'il agite pour faire signe) et un **goéland qui se pose** sur la plage, marche, regarde autour de lui, picore le sable et repart
