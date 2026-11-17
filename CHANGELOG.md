@@ -8,6 +8,8 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+## [1.4.1] - 2026-11-17
+
 ### Modifié
 - Philibert : **pluie plus naturelle** : une vraie averse enregistrée en plein air au bord de l'océan (CC0, « Outdoor Rain with Distant Ocean » de Jeff Final Boss), bouclée sans couture ; le tonnerre ne change pas
 
