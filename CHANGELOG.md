@@ -8,6 +8,14 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Ajouté
+- Philibert : **saisons de l'île en roulement** (elles ne suivent plus le calendrier réel) : chaque saison dure de 2 à 7 jours au hasard, puis une autre lui succède ; **4 nouvelles saisons** (grande floraison, saison des tempêtes, saison des brumes, ponte des tortues) avec leur météo, leur chaleur, leur produit de saison et leur décor ; l'en-tête de l'île dit combien de temps il reste ; succès « Tour des saisons »
+- Philibert : **sieste sur le rocher chaud** (fatigué au soleil, il s'y endort et se réchauffe ; « Chauffer » pendant une sieste le pose sur le rocher sans le réveiller) et petits **« z z Z »** au-dessus de lui quand il dort
+- Philibert : **mutations de couleur** à la mue, selon sa vie (alimentation, soleil, bains, jeux, froid, maladies soignées trop tard, nuits réveillées…) : Émeraude, Orangé, Doré, Turquoise, Mélanique, Cendré, Arlequin, Lunaire et le très rare Leucique, en trois intensités ; onglet « Couleurs » dans le carnet, succès « Couleurs uniques »
+
+### Modifié
+- Philibert : crabes et goélands redessinés et animés (le crabe file de côté par à-coups, s'arrête, redresse les yeux et agite la pince ; le goéland bat des ailes coudées au poignet puis plane) ; yeux un peu plus grands et plus brillants, tête du bébé plus ronde
+
 ## [1.1.1] - 2026-11-17
 
 ### Corrigé

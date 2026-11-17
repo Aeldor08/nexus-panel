@@ -137,33 +137,55 @@
   }
 
   // ------------------------------------------------------------------ oiseaux (svg complets)
-  const goeland = () => `<svg viewBox="0 0 60 24" aria-hidden="true"><g class="phb-ailes-o">
-      <path d="M30 12 C25 8 20 5.6 15 6.4 C10 7.2 5 9.4 1 12.6 C6 11.4 10 11.2 14 12 C19 13 24 13.4 30 13.4 Z" fill="#c9d1d8"/>
-      <path d="M30 12 C35 8 40 5.6 45 6.4 C50 7.2 55 9.4 59 12.6 C54 11.4 50 11.2 46 12 C41 13 36 13.4 30 13.4 Z" fill="#b9c2ca"/>
-      <path d="M1 12.6 C3.4 10.6 5.8 9.2 8.4 8.2 L9.4 10.8 C6.6 11 3.8 11.6 1 12.6 Z M59 12.6 C56.6 10.6 54.2 9.2 51.6 8.2 L50.6 10.8 C53.4 11 56.2 11.6 59 12.6 Z" fill="#23272b"/></g>
-      <ellipse cx="30" cy="13" rx="5.6" ry="2.4" fill="#f4f6f7"/><path d="M34.6 12.4 l2.6 .4 l-2.4 .8 Z" fill="#e3b23c"/><ellipse cx="26" cy="13.6" rx="3" ry="1.2" fill="#d7dde2"/></svg>`;
+  // goéland vu de côté, en vol : tête blanche ronde, bec jaune à tache rouge, œil noir ; ailes en deux parties (bras et
+  // main) pour que l'aile se plie au poignet quand elle bat ; bouts d'ailes noirs à petits « miroirs » blancs.
+  // Animations CSS (philibert.css) : .g-aile-p (aile proche), .g-aile-l (aile lointaine), .g-main (pliage), .g-corps.
+  const goeland = (id = "go") => `<svg viewBox="0 0 64 40" aria-hidden="true"><defs>
+      <linearGradient id="${id}-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d4dbe2"/><stop offset="1" stop-color="#a7b2bd"/></linearGradient>
+      <radialGradient id="${id}-c" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#d6dde3"/></radialGradient></defs>
+    <g class="g-aile-l"><path d="M30 20 C26 14 22 9 18 7 L22 18 Z" fill="#98a4b0"/>
+      <g class="g-main"><path d="M18 7 C14 5 9 5 5 7 C10 9 15 12 22 18 Z" fill="#8e9aa6"/><path d="M5 7 C8 6.4 11 6.6 13 7.4 L11 9.2 C9 8.4 7 7.8 5 7 Z" fill="#26292d"/></g></g>
+    <g class="g-corps"><path d="M18 22 C22 17.6 34 17 42 19.4 C46 20.6 47.6 22 46.4 23.4 C40 26 26 26.4 18 24 L10 25.6 L13.4 22.2 Z" fill="url(#${id}-c)"/>
+      <path d="M10 25.6 L13.4 22.2 L18 22.6 L16 25 Z" fill="#2c3034"/>
+      <path d="M20 24 C27 25.6 38 25.2 45 23" stroke="#c4ccd3" stroke-width=".8" fill="none"/>
+      <circle cx="45.4" cy="19.6" r="4.2" fill="url(#${id}-c)"/><circle cx="46.8" cy="18.8" r=".9" fill="#1a1c1e"/><circle cx="47.1" cy="18.5" r=".3" fill="#fff"/>
+      <path d="M49.2 19.6 L55.6 20.4 L49.4 21.8 Z" fill="#f2c12e"/><circle cx="53.4" cy="20.9" r=".55" fill="#d8402a"/>
+      <path d="M30 24.6 l-1.4 3 M33 24.8 l-.8 3" stroke="#e8a08a" stroke-width=".9" stroke-linecap="round"/></g>
+    <g class="g-aile-p"><path d="M28 21 C25 14 22 8 17 4.4 L22 19.6 Z" fill="url(#${id}-a)" stroke="#8994a0" stroke-width=".4"/>
+      <g class="g-main"><path d="M17 4.4 C12 2.2 6 2 1 4.4 C7 6.4 14 11 22 19.6 Z" fill="url(#${id}-a)" stroke="#8994a0" stroke-width=".4"/>
+        <path d="M1 4.4 C4.4 3.2 8.4 3 11.6 3.8 L9.6 6.8 C6.6 5.6 4 4.8 1 4.4 Z" fill="#202326"/>
+        <circle cx="4.6" cy="4.4" r=".55" fill="#fff"/><circle cx="7.6" cy="4.6" r=".5" fill="#fff"/></g>
+      <path d="M20 19 C22 15 24 12 26 9" stroke="#fff" stroke-width=".7" fill="none" opacity=".5"/></g></svg>`;
   const fregate = () => `<svg viewBox="0 0 70 26" aria-hidden="true"><path d="M35 12 C30 9 25 9.6 20 11.6 C14 13.8 8 13.4 1 10.4 C7 15 14 16.4 21 15 C26 14 31 13.6 35 14 C39 13.6 44 14 49 15 C56 16.4 63 15 69 10.4 C62 13.4 56 13.8 50 11.6 C45 9.6 40 9 35 12 Z" fill="#20242a"/>
       <path d="M35 13 l-1.6 9 l1.6 -3.2 l1.6 3.2 Z" fill="#20242a"/><path d="M35 11.4 l3.4 -.2 l2.2 .6" stroke="#20242a" stroke-width="1.2" fill="none"/></svg>`;
 
   // ------------------------------------------------------------------ crabe fantôme (svg complet, viewBox 48 × 30)
+  // crabe fantôme mignon et réaliste : carapace carrée couleur sable, gros yeux noirs au bout de pédoncules,
+  // une grosse pince blanche et une petite, pattes fines à articulations. Animations CSS (philibert.css) :
+  // .c-pattes-a / .c-pattes-b (paires qui trottinent en alternance), .c-pince (il l'agite de temps en temps),
+  // .c-yeux (les pédoncules se redressent), .c-corps (petit rebond).
   function crabe(id) {
-    const patte = (x, y, a, b, c) => `M${x} ${y} L${a[0]} ${a[1]} L${b[0]} ${b[1]}`;
-    const g = [patte(15, 16, [8, 12.4], [3.6, 25.4]), patte(15, 18, [7, 16.6], [4.4, 27.4]), patte(16, 19.4, [9.4, 20.4], [8, 28]), patte(17.6, 20, [13, 23], [12.4, 28.4])].join(" ");
-    const d = [patte(33, 16, [40, 12.4], [44.4, 25.4]), patte(33, 18, [41, 16.6], [43.6, 27.4]), patte(32, 19.4, [38.6, 20.4], [40, 28]), patte(30.4, 20, [35, 23], [35.6, 28.4])].join(" ");
-    return `<svg viewBox="0 0 48 30" aria-hidden="true"><defs>
-        <radialGradient id="${id}-c" cx=".42" cy=".3" r=".8"><stop offset="0" stop-color="#f3e8cf"/><stop offset=".6" stop-color="#dccaa2"/><stop offset="1" stop-color="#b9a37a"/></radialGradient>
-        <radialGradient id="${id}-o"><stop offset="0" stop-color="#3b2a12" stop-opacity=".35"/><stop offset="1" stop-color="#3b2a12" stop-opacity="0"/></radialGradient></defs>
-      <ellipse cx="24" cy="27.6" rx="19" ry="2.6" fill="url(#${id}-o)"/>
-      <g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="${g} ${d}" stroke="#bfa985" stroke-width="1.7"/><path d="${g} ${d}" stroke="#e8dcc2" stroke-width=".6" opacity=".7"/></g>
-      <path d="M13.6 15 C13.4 10 18 7.6 24 7.6 C30 7.6 34.6 10 34.4 15 C34.2 19 30 21 24 21 C18 21 13.8 19 13.6 15 Z" fill="url(#${id}-c)" stroke="#a99068" stroke-width=".5"/>
-      <path d="M18 11.4 q6 -2.2 12 0 M17 15.4 q7 2 14 0" stroke="#b39d77" stroke-width=".5" fill="none" opacity=".7"/>
-      <path d="M20.4 8.6 L19.4 3.4 M27.6 8.6 L28.6 3.4" stroke="#c9b48e" stroke-width="1.5" stroke-linecap="round"/>
-      <ellipse cx="19.2" cy="3.2" rx="1.25" ry="2.3" fill="#1c1914"/><ellipse cx="28.8" cy="3.2" rx="1.25" ry="2.3" fill="#1c1914"/>
-      <circle cx="18.8" cy="2.4" r=".4" fill="#fff" opacity=".8"/><circle cx="28.4" cy="2.4" r=".4" fill="#fff" opacity=".8"/>
-      <path d="M33.6 13.4 C37 11.6 40 11 42.4 12.4 C44.6 13.8 44.4 16.6 42 17.2 C39.6 17.8 36.4 16.4 33.8 16 Z" fill="#f6f1e6" stroke="#b9a37a" stroke-width=".5"/>
-      <path d="M42.2 12.4 l3.2 -1.8 M42.6 17 l2.8 .6" stroke="#efe7d6" stroke-width="1.4" stroke-linecap="round"/>
-      <path d="M14.4 13.6 C12 12.6 9.6 12.8 8.6 14.2 C7.8 15.6 9 17 11 16.8 C12.4 16.6 13.6 16 14.6 15.6 Z" fill="#f1eadb" stroke="#b9a37a" stroke-width=".5"/>
-      <ellipse cx="21" cy="11" rx="4" ry="1.6" fill="#fff" opacity=".3"/></svg>`;
+    const patte = (x, y, a, b) => `M${x} ${y} L${a[0]} ${a[1]} L${b[0]} ${b[1]}`;
+    const A = [patte(15, 17, [8, 12.6], [3.2, 24.6]), patte(16, 19.6, [9.6, 20.4], [7.6, 28]), patte(33, 18, [41, 16.6], [44, 27.4]), patte(31.6, 20.4, [36, 23.4], [36.4, 28.6])].join(" ");
+    const B = [patte(15, 18.4, [7, 16.6], [4.2, 27.4]), patte(17.6, 20.4, [13, 23.4], [12.4, 28.6]), patte(33, 16, [40, 12.6], [44.8, 24.6]), patte(32, 19.6, [38.4, 20.4], [40.4, 28])].join(" ");
+    const pattes = (d, cls) => `<g class="${cls}" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="${d}" stroke="#b59f7a" stroke-width="1.8"/><path d="${d}" stroke="#ece0c6" stroke-width=".6" opacity=".7"/></g>`;
+    return `<svg viewBox="0 0 48 32" aria-hidden="true"><defs>
+        <radialGradient id="${id}-c" cx=".42" cy=".3" r=".8"><stop offset="0" stop-color="#f6ecd4"/><stop offset=".6" stop-color="#dfcba2"/><stop offset="1" stop-color="#b9a37a"/></radialGradient>
+        <radialGradient id="${id}-o"><stop offset="0" stop-color="#3b2a12" stop-opacity=".35"/><stop offset="1" stop-color="#3b2a12" stop-opacity="0"/></radialGradient>
+        <radialGradient id="${id}-p" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e2d8c4"/></radialGradient></defs>
+      <ellipse cx="24" cy="29.4" rx="19" ry="2.4" fill="url(#${id}-o)"/>
+      ${pattes(A, "c-pattes-a")}${pattes(B, "c-pattes-b")}
+      <g class="c-corps">
+        <g class="c-yeux"><path d="M20.4 9.4 L19.2 3.6 M27.6 9.4 L28.8 3.6" stroke="#cbb68e" stroke-width="1.6" stroke-linecap="round"/>
+          <ellipse cx="19" cy="3.4" rx="1.6" ry="2.5" fill="#1c1914"/><ellipse cx="29" cy="3.4" rx="1.6" ry="2.5" fill="#1c1914"/>
+          <circle cx="18.5" cy="2.5" r=".6" fill="#fff"/><circle cx="28.5" cy="2.5" r=".6" fill="#fff"/></g>
+        <path d="M13.4 15.4 C13.2 10.4 18 8 24 8 C30 8 34.8 10.4 34.6 15.4 C34.4 19.6 30 21.6 24 21.6 C18 21.6 13.6 19.6 13.4 15.4 Z" fill="url(#${id}-c)" stroke="#a99068" stroke-width=".5"/>
+        <path d="M18 11.8 q6 -2.2 12 0" stroke="#b39d77" stroke-width=".5" fill="none" opacity=".7"/><ellipse cx="21" cy="11.4" rx="4" ry="1.6" fill="#fff" opacity=".35"/>
+        <path d="M21.4 17 q2.6 1.6 5.2 0" stroke="#8a7656" stroke-width=".6" fill="none" stroke-linecap="round"/>
+        <path d="M14.4 14 C12 13 9.6 13.2 8.6 14.6 C7.8 16 9 17.4 11 17.2 C12.4 17 13.6 16.4 14.6 16 Z" fill="url(#${id}-p)" stroke="#b9a37a" stroke-width=".5"/>
+        <g class="c-pince"><path d="M33.6 13.6 C37 11.8 40 11.2 42.4 12.6 C44.6 14 44.4 16.8 42 17.4 C39.6 18 36.4 16.6 33.8 16.2 Z" fill="url(#${id}-p)" stroke="#b9a37a" stroke-width=".5"/>
+          <path d="M42.2 12.6 l3.4 -2 M42.6 17.2 l3 .6" stroke="#efe7d6" stroke-width="1.5" stroke-linecap="round"/><path d="M42.2 12.6 l3.4 -2 M42.6 17.2 l3 .6" stroke="#b9a37a" stroke-width=".4" stroke-linecap="round"/></g>
+      </g></svg>`;
   }
   // papillons : julia (orange) ou soufré (jaune) ; ailes dans .phb-ailes (battement CSS)
   function papillon(jaune) {

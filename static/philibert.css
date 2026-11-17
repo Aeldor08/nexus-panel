@@ -167,12 +167,21 @@
 .phb-nuage { position: absolute; left: 0; animation: phb-nuage var(--d) linear infinite; animation-delay: var(--r); will-change: transform; }
 .phb-nuage svg { display: block; width: 100%; height: auto; }
 @keyframes phb-nuage { from { transform: translateX(-110%); } to { transform: translateX(640%); } }
-.phb-mouette { position: absolute; left: 0; width: 4%; animation: phb-mouette var(--d) linear infinite; animation-delay: var(--r); will-change: transform; }
-.phb-mouette svg { display: block; width: 100%; height: auto; }
-.phb-mouette .phb-ailes-o { transform-box: fill-box; transform-origin: 50% 85%; animation: phb-battre .55s ease-in-out infinite alternate; }
-.phb-mouette.plane { width: 5%; }   /* frégate : elle plane, sans battre des ailes */
+/* goélands : vol en vagues (quelques battements, puis il plane en ondulant), ailes coudées au poignet ;
+   la frégate plane sans battre des ailes */
+.phb-mouette { position: absolute; left: 0; width: 4.6%; animation: phb-mouette var(--d) linear infinite; animation-delay: var(--r); will-change: transform; }
+.phb-mouette svg { display: block; width: 100%; height: auto; overflow: visible; }
+.phb-mouette .g-corps { transform-box: fill-box; transform-origin: 50% 50%; animation: phb-g-corps 3.2s ease-in-out infinite; animation-delay: var(--r); }
+.phb-mouette .g-aile-p, .phb-mouette .g-aile-l { transform-box: fill-box; transform-origin: 90% 92%; animation: phb-g-aile 3.2s ease-in-out infinite; animation-delay: var(--r); }
+.phb-mouette .g-aile-l { animation-name: phb-g-aile-l; }
+.phb-mouette .g-main { transform-box: fill-box; transform-origin: 100% 100%; animation: phb-g-main 3.2s ease-in-out infinite; animation-delay: var(--r); }
+@keyframes phb-g-aile { 0%, 24% { transform: rotate(0); } 4%, 12%, 20% { transform: rotate(-30deg) scaleY(1.05); } 8%, 16% { transform: rotate(26deg) scaleY(.7); }
+  30%, 100% { transform: rotate(-6deg); } }
+@keyframes phb-g-aile-l { 0%, 24% { transform: rotate(0); } 4%, 12%, 20% { transform: rotate(-22deg); } 8%, 16% { transform: rotate(18deg) scaleY(.6); } 30%, 100% { transform: rotate(-4deg); } }
+@keyframes phb-g-main { 0%, 24% { transform: rotate(0); } 4%, 12%, 20% { transform: rotate(-12deg); } 8%, 16% { transform: rotate(24deg); } 30%, 100% { transform: rotate(-3deg); } }
+@keyframes phb-g-corps { 0%, 24% { transform: translateY(0); } 8%, 16% { transform: translateY(-3%); } 60% { transform: translateY(4%); } 100% { transform: translateY(0); } }
+.phb-mouette.plane { width: 5%; }
 @keyframes phb-mouette { from { transform: translate(-150%, 0); } 50% { transform: translate(1300%, -60%); } to { transform: translate(2700%, 10%); } }
-@keyframes phb-battre { to { transform: scaleY(-.35); } }
 .phb-reflets i { position: absolute; width: .6%; height: .5%; border-radius: 2px; background: #fff; opacity: 0; animation: phb-reflet 3.4s ease-in-out infinite; }
 @keyframes phb-reflet { 0%, 100% { opacity: 0; transform: scaleX(.5); } 45% { opacity: .85; transform: scaleX(1.6); } }
 .phb-vague { position: absolute; left: 0; width: 200%; height: 3.4%; animation: phb-vague var(--d) linear infinite; will-change: transform; }
@@ -184,11 +193,26 @@
 @keyframes phb-ecume { 50% { transform: scale(1.014, 1.035); opacity: .7; } }
 .phb-palmes { transform-origin: 22.2% 39.2%; }
 .phb-palmes.vent { animation: phb-palme 5.5s cubic-bezier(.45, .05, .55, .95) infinite alternate; }
+.phb-palmes.vent.fort { animation: phb-palme-fort 2.4s cubic-bezier(.45, .05, .55, .95) infinite alternate; }
+@keyframes phb-palme-fort { from { transform: rotate(-3deg) skewX(-2deg); } to { transform: rotate(2.4deg) skewX(1deg); } }
+.phb-brume-saison { background: linear-gradient(rgba(240, 244, 246, .05), rgba(232, 238, 242, .55) 46%, rgba(232, 238, 242, .32) 62%, rgba(240, 244, 246, .08));
+  animation: phb-brume 14s ease-in-out infinite alternate; }
+@keyframes phb-brume { from { opacity: .75; transform: translateX(-2%); } to { opacity: 1; transform: translateX(2%); } }
 @keyframes phb-palme { from { transform: rotate(-1.2deg); } to { transform: rotate(1.6deg); } }
-.phb-crabe { position: absolute; width: 3.6%; animation: phb-crabe var(--d) cubic-bezier(.45, .05, .55, .95) infinite alternate; animation-delay: var(--r); will-change: transform; }
-.phb-crabe svg { display: block; width: 100%; height: auto; animation: phb-trottine .3s steps(2) infinite; }
-@keyframes phb-crabe { from { transform: translateX(0); } to { transform: translateX(380%); } }
-@keyframes phb-trottine { 50% { transform: translateY(-6%); } }
+/* crabes fantômes : ils filent de côté par à-coups, s'arrêtent, redressent les yeux et agitent la pince */
+.phb-crabe { position: absolute; width: 3.8%; animation: phb-crabe var(--d) linear infinite; animation-delay: var(--r); will-change: transform; }
+.phb-crabe svg { display: block; width: 100%; height: auto; overflow: visible; }
+.phb-crabe .c-pattes-a, .phb-crabe .c-pattes-b { animation: phb-c-pattes .26s steps(2) infinite; }
+.phb-crabe .c-pattes-b { animation-delay: -.13s; }
+.phb-crabe .c-corps { transform-box: fill-box; transform-origin: 50% 100%; animation: phb-c-corps .26s ease-in-out infinite; }
+.phb-crabe .c-pince { transform-box: fill-box; transform-origin: 0% 60%; animation: phb-c-pince var(--d) ease-in-out infinite; animation-delay: var(--r); }
+.phb-crabe .c-yeux { transform-box: fill-box; transform-origin: 50% 100%; animation: phb-c-yeux var(--d) ease-in-out infinite; animation-delay: var(--r); }
+@keyframes phb-crabe { 0% { transform: translateX(0); } 16% { transform: translateX(150%); } 34% { transform: translateX(150%); } 50% { transform: translateX(330%); }
+  66% { transform: translateX(330%); } 84% { transform: translateX(120%); } 100% { transform: translateX(0); } }
+@keyframes phb-c-pattes { 50% { opacity: 0; } }
+@keyframes phb-c-corps { 50% { transform: translateY(-4%); } }
+@keyframes phb-c-pince { 0%, 18%, 32%, 100% { transform: rotate(0); } 22%, 28% { transform: rotate(-24deg); } 25% { transform: rotate(-6deg); } }
+@keyframes phb-c-yeux { 0%, 16%, 36%, 100% { transform: scaleY(1); } 20%, 30% { transform: scaleY(1.25); } }
 .phb-papillon { position: absolute; width: 2.6%; animation: phb-papillon var(--d) ease-in-out infinite alternate; animation-delay: var(--r); }
 .phb-papillon svg { display: block; width: 100%; height: auto; }
 .phb-papillon .phb-ailes { transform-box: fill-box; transform-origin: 50% 50%; animation: phb-ailes .2s ease-in-out infinite alternate; }
@@ -224,6 +248,16 @@
   transform: translate(calc(var(--x, 50) * 1cqw), calc(var(--y, 87) * .5cqw)) translateY(-100%) rotate(var(--rot, 0deg)); transform-origin: 50% 100%;
   transition: transform 1.2s cubic-bezier(.45, .05, .55, .95); z-index: 3; will-change: transform; }
 .phb-perso[hidden] { display: none; }
+/* « z z Z » qui montent au-dessus de sa tête quand il dort (sable, rocher ou palmier) */
+.phb-zz { position: absolute; right: 4%; top: -18%; width: 26%; height: 70%; pointer-events: none; display: none; }
+.phb-perso.dort .phb-zz { display: block; }
+.phb-perso.gauche .phb-zz { right: auto; left: 4%; }
+.phb-zz i { position: absolute; bottom: 0; left: 30%; font: italic 800 1.3cqw/1 "Trebuchet MS", system-ui, sans-serif; color: #fff;
+  text-shadow: 0 1px 0 #2a4a7a, 0 0 6px rgba(20, 40, 80, .6); opacity: 0; animation: phb-zz 3.6s ease-out infinite; }
+.phb-zz i:nth-child(2) { animation-delay: 1.2s; font-size: 1.6cqw; }
+.phb-zz i:nth-child(3) { animation-delay: 2.4s; font-size: 2cqw; }
+@keyframes phb-zz { 0% { opacity: 0; transform: translate(0, 0) rotate(-8deg); } 15% { opacity: 1; }
+  100% { opacity: 0; transform: translate(2.2cqw, -5cqw) rotate(12deg); } }
 /* la nuit, Philibert est dans la pénombre comme le reste de l'île (un peu moins quand la lanterne est allumée) */
 .phb-dlg[data-nuit] .phb-perso .phb-flip { filter: brightness(.6) saturate(.7); }
 .phb-dlg[data-nuit][data-lumiere] .phb-perso .phb-flip { filter: brightness(.78) saturate(.82); }
@@ -411,6 +445,10 @@ button.phb-carte:hover:not(:disabled) { transform: translateY(-2px); box-shadow:
 .phb-photo figcaption { display: grid; gap: 2px; margin-top: 6px; text-align: center; font-size: 13px; }
 .phb-photo small { color: #4b5b60; }
 .phb-ancien .phb-portrait { width: 100%; }
+.phb-couleur { opacity: .7; }
+.phb-couleur.ok { opacity: 1; border-color: #d6a73a; }
+.phb-couleur .phb-portrait { width: 100%; }
+.phb-mystere { display: grid; place-items: center; aspect-ratio: 2 / 1; font: 800 34px/1 "Trebuchet MS", sans-serif; color: rgba(255, 255, 255, .85); text-shadow: 0 2px 6px rgba(0, 0, 0, .3); }
 .phb-histo { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .phb-histo li { padding: 6px 10px; border-radius: 10px; background: var(--bouton); border: 1px solid var(--bord); font-size: 14px; }
 .phb-histo time { color: var(--t2); font-variant-numeric: tabular-nums; margin-right: 6px; }
@@ -497,6 +535,7 @@ button.phb-carte:hover:not(:disabled) { transform: translateY(-2px); box-shadow:
   .phb-nuage:nth-child(1) { transform: translateX(40%); } .phb-nuage:nth-child(2) { transform: translateX(260%); }
   .phb-nuage:nth-child(3) { transform: translateX(120%); } .phb-nuage:nth-child(n+4) { transform: translateX(380%); }
   .phb-mouette { transform: translateX(800%); }
+  .phb-zz i { opacity: .85; } .phb-zz i:nth-child(2) { transform: translate(1cqw, -2cqw); } .phb-zz i:nth-child(3) { transform: translate(2cqw, -4cqw); }
   .phb-reflets i { opacity: .5; }
   .phb-fx { display: none; }
 }

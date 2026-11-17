@@ -57,7 +57,7 @@
   function dessiner() {
     if (!e || ["veto", "pension"].includes(e.niveau)) return;
     const h = { appel: "calme", froid: "froid" }[e.humeur] || e.humeur;
-    const out = D.svg({ stade: e.stade, variante: e.variante, humeur: e.dort ? "dort" : h, portes: e.portes, mue: e.mue,
+    const out = D.svg({ stade: e.stade, variante: e.variante, mutation: e.mutation, humeur: e.dort ? "dort" : h, portes: e.portes, mue: e.mue,
       ventre: e.ventre_rond, malade: !!e.malade, froid: e.jauges && e.jauges.chaleur < 35, pose, label: "", fendu: false, uid: "w", leger: true });
     if (out !== html) { flip.innerHTML = out; html = out; }
   }

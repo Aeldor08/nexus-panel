@@ -541,15 +541,31 @@ ok(erreur(p.action, "_avancer", {}) is not None and erreur(p.action, "__init__",
 
 # ---- saisons de l'île -------------------------------------------------------------------------
 P.SAISON_FORCEE = None
-ok(P.saison(datetime(2026, 4, 10).timestamp()) == "printemps" and P.saison(datetime(2026, 7, 10).timestamp()) == "ete"
-   and P.saison(datetime(2026, 10, 10).timestamp()) == "automne" and P.saison(datetime(2026, 1, 10).timestamp()) == "hiver"
-   and P.saison(datetime(2026, 12, 24).timestamp()) == "hiver", "saisons selon le mois réel")
+# roulement : chaque saison dure de 2 à 7 jours, jamais deux fois la même de suite, sans lien avec le calendrier
+t, periodes = P.ROTATION_DEBUT + 1, []
+while t < P.ROTATION_DEBUT + 400 * P.JOUR:
+    sa, deb, fin = P.periode_saison(t, "graine-test")
+    periodes.append((sa, deb, fin))
+    t = fin + 1
+durees = [(f - d) / P.JOUR for _, d, f in periodes]
+ok(all(2 <= x <= 7 for x in durees) and max(durees) - min(durees) > 3, f"saisons de 2 à 7 jours, au hasard ({min(durees):.1f} à {max(durees):.1f} j)")
+ok(all(a[0] != b[0] for a, b in zip(periodes, periodes[1:])), "jamais deux fois la même saison de suite")
+ok({x[0] for x in periodes} == set(P.SAISONS) and len(P.SAISONS) == 8, "les 8 saisons de l'île reviennent toutes")
+ok(all(a[2] == b[1] for a, b in zip(periodes, periodes[1:])), "les saisons s'enchaînent sans trou")
+mois = {datetime.fromtimestamp(d).month for sa, d, _ in periodes if sa == "hiver"}
+ok(len(mois) >= 4, "la saison fraîche tombe à n'importe quel mois (pas liée au calendrier réel)")
+ok(P.periode_saison(P.ROTATION_DEBUT + 50 * P.JOUR, "graine-test") == P.periode_saison(P.ROTATION_DEBUT + 50 * P.JOUR, "graine-test"), "roulement reproductible")
+ok(any(P.saison(P.ROTATION_DEBUT + k * P.JOUR, "autre-ile") != P.saison(P.ROTATION_DEBUT + k * P.JOUR, "graine-test") for k in range(0, 60, 3)), "chaque île a son propre roulement")
 P.METEO_FORCEE = None
-debut = int(datetime(2026, 7, 1).timestamp() // (2 * H))
-ete = sum(P._ciel_brut("graine-test", b) == "pluie" for b in range(debut, debut + 360))
-debut = int(datetime(2026, 10, 1).timestamp() // (2 * H))
-pluies = sum(P._ciel_brut("graine-test", b) == "pluie" for b in range(debut, debut + 360))
-ok(pluies > ete * 2, f"saison des pluies : bien plus d'averses qu'en été ({pluies} contre {ete} sur 360 tranches de 2 h)")
+P.SAISON_FORCEE = "ete"
+ete = sum(P._ciel_brut("graine-test", b) == "pluie" for b in range(1000, 1360))
+P.SAISON_FORCEE = "tempetes"
+tempete = sum(P._ciel_brut("graine-test", b) == "pluie" for b in range(1000, 1360))
+ok(tempete > ete * 2, f"saison des tempêtes : bien plus d'averses qu'en été ({tempete} contre {ete} sur 360 tranches de 2 h)")
+P.SAISON_FORCEE = None
+p = nouveau()
+e = p.etat()
+ok(e["ciel"]["saison"] in P.SAISONS and e["ciel"]["saison_reste_s"] is not None and 0 < e["ciel"]["saison_reste_s"] <= 7 * P.JOUR, "la page sait combien de temps dure encore la saison")
 temps = {}
 for sa in ("ete", "hiver"):
     P.SAISON_FORCEE = sa
@@ -571,9 +587,77 @@ ok("fraicheur" in p.s["faits"], "fiche « Le savais-tu ? » de la saison fraîch
 p.s["saisons_vues"] = ["printemps", "ete", "automne"]
 horloge[0] += H
 p.etat()
-ok("saisons" in p.s["succes"], "succès « Les quatre saisons »")
+ok("saisons" in p.s["succes"], "succès « Quatre saisons »")
+p.s["saisons_vues"] = [k for k in P.SAISONS if k != "hiver"]
+horloge[0] += H
+p.etat()
+ok("tour_saisons" in p.s["succes"], "succès « Tour des saisons » (les 8)")
 P.SAISON_FORCEE = "printemps"
 P.METEO_FORCEE = "soleil"
+
+# ---- sieste sur le rocher chaud -----------------------------------------------------------------
+p = nouveau()
+a_heure(12)
+P.METEO_FORCEE = "soleil"
+p.etat()
+p.s["position"], p.s["j"]["energie"], p.s["j"]["chaleur"] = "plage", 14, 45
+horloge[0] += 600
+e = p.etat()
+ok(e["dort"] and e["sieste"] and e["position"] == "rocher", "fatigué en plein soleil : il fait sa sieste sur le rocher chaud")
+c0 = p.s["j"]["chaleur"]
+horloge[0] += 3 * H
+e = p.etat()
+ok(e["position"] == "rocher" and p.s["j"]["chaleur"] > c0 + 25, f"il dort sur le rocher plus de 2 h et s'y réchauffe ({round(c0)} → {round(p.s['j']['chaleur'])})")
+horloge[0] += 3 * H
+e = p.etat()
+ok(not e["sieste"] and e["position"] == "plage", "réveillé (énergie revenue), il redescend sur la plage")
+p.s["position"], p.s["j"]["energie"] = "plage", 14
+P.METEO_FORCEE = "pluie"
+horloge[0] += 600
+ok(p.etat()["position"] == "plage", "sous la pluie, il fait la sieste sur la plage (le rocher ne chauffe pas)")
+r = p.action("chauffer")
+ok(p.s["sieste"] and p.s["position"] == "rocher" and "sieste" in r["message"], "« Chauffer » pendant la sieste : posé sur le rocher sans être réveillé")
+P.METEO_FORCEE = "soleil"
+
+# ---- mutations de couleur -------------------------------------------------------------------------
+p = nouveau()
+soigner_bien(p, 1)
+p.s["stade"] = "adulte"
+ok(p.etat()["mutation"] is None and all(v < 1 for v in p.scores_mutation().values()), "pas de mutation au départ")
+p.s["stats"]["bains_mer"] = 25
+p._fin_mue(horloge[0], bain=True)
+e = p.etat()
+ok(e["mutation"] and e["mutation"]["id"] == "turquoise" and e["mutation"]["niveau"] == 3, f"beaucoup de bains de mer : Turquoise, niveau 3 ({e['mutation']})")
+ok("mutation" in p.s["succes"] and "formes" in p.s["faits"] and "turquoise" in p.carnet()["mutations_vues"], "succès, fiche et carnet de la mutation")
+p.s["stats"]["heures_froid"] = 33
+p._fin_mue(horloge[0], bain=True)
+ok(p.s["mutation"]["id"] == "turquoise", "une autre mutation un peu plus forte ne remplace pas la première (il faut la dépasser nettement)")
+p.s["stats"]["heures_froid"] = 120
+p._fin_mue(horloge[0], bain=True)
+ok(p.s["mutation"]["id"] == "melanique", "beaucoup de froid : il devient Mélanique")
+q = nouveau()
+q.s["stade"] = "adulte"
+q.s["stats"]["heures_malade"] = 40
+q._fin_mue(horloge[0], bain=False)
+ok(q.s["mutation"]["id"] == "cendre", "maladies soignées trop tard : Cendré")
+q = nouveau()
+q.s["stade"] = "adulte"
+q.s["stats"].update(repas=40, oranges=20)
+q._fin_mue(horloge[0], bain=False)
+ok(q.s["mutation"]["id"] == "orange", "beaucoup d'aliments orangés : Orangé")
+q = nouveau()
+q.s["stats"]["bains_mer"] = 30
+q._fin_mue(horloge[0], bain=False)
+ok(q.s["mutation"] is None, "un bébé ne mute pas encore (les couleurs se fixent à partir du stade juvénile)")
+q = nouveau()
+q.s["stade"] = "adulte"
+q.s["j"]["chaleur"] = 20
+for _ in range(36):
+    horloge[0] += 600
+    q.s["contact"], q.s["j"]["chaleur"] = horloge[0], 20
+    q.etat()
+ok(q.s["stats"]["heures_froid"] > 4, "les heures passées à avoir froid sont comptées")
+ok(all(k in P.MUTATIONS for k in p.catalogue()["mutations"]) and len(P.MUTATIONS) >= 8, "le catalogue décrit les mutations")
 
 # ---- course au rocher chaud ---------------------------------------------------------------------
 p = nouveau()

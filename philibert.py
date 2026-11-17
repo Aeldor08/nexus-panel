@@ -56,8 +56,9 @@ def _duree_suite(suite: list[str], tempo: float) -> float:
 SEUIL_ATTENTION = 30
 METEO_FORCEE: str | None = None  # tests : "soleil", "nuages", "pluie"
 SAISON_FORCEE: str | None = None  # tests : "printemps", "ete", "automne", "hiver"
-# Saisons de l'île (mois réels) : probabilités de pluie et de nuages, chaleur en plus ou en moins, fruit ou
-# légume de saison (1 coquillage de moins à la boutique)
+# Saisons de l'île : elles ne suivent PAS le calendrier réel. Chaque île a son propre roulement (tiré de sa graine) :
+# une saison dure de 2 à 7 jours, puis une autre (jamais la même deux fois de suite) lui succède. Pour chacune :
+# probabilités de pluie et de nuages, chaleur en plus ou en moins, produit de saison (1 coquillage de moins).
 SAISONS = {
     "printemps": {"nom": "Printemps", "pluie": .15, "nuages": .45, "chaleur": 0, "promo": "fleur_pissenlit",
                   "texte": "Les fleurs de pissenlit et d'hibiscus éclosent partout sur l'île."},
@@ -67,7 +68,17 @@ SAISONS = {
                 "texte": "Les averses sont fréquentes : pense à la lampe chauffante. Les figues sont mûres."},
     "hiver": {"nom": "Saison fraîche", "pluie": .14, "nuages": .55, "chaleur": -6, "promo": "chou_vert",
               "texte": "Les nuits sont plus fraîches : Philibert a besoin de plus de chaleur. Le chou vert est de saison."},
+    "floraison": {"nom": "Grande floraison", "pluie": .1, "nuages": .35, "chaleur": 2, "promo": "hibiscus",
+                  "texte": "Toute l'île est en fleurs : hibiscus, liserons et pissenlits. Les papillons sont partout."},
+    "tempetes": {"nom": "Saison des tempêtes", "pluie": .32, "nuages": .72, "chaleur": -4, "promo": "feuilles_murier",
+                 "texte": "Le vent souffle fort et la mer est agitée : garde-le au chaud, la lampe chauffante est précieuse."},
+    "brumes": {"nom": "Saison des brumes", "pluie": .12, "nuages": .68, "chaleur": -3, "promo": "haricots",
+               "texte": "Une brume douce enveloppe l'île : le soleil perce par moments, le rocher chauffe moins."},
+    "tortues": {"nom": "Ponte des tortues", "pluie": .1, "nuages": .3, "chaleur": 3, "promo": "courge",
+                "texte": "Les tortues marines viennent pondre la nuit : on voit leurs traces dans le sable au matin."},
 }
+SAISON_DUREE = (2, 7)            # jours, au hasard entre les deux pour chaque saison
+ROTATION_DEBUT = 1767225600.0    # 1ᵉʳ janvier 2026 : point de départ du roulement (le même pour tous)
 
 
 def maintenant() -> float:
@@ -95,16 +106,44 @@ def heure_de_dormir(t: float) -> bool:
     return h >= 21 or h < 7
 
 
-def saison(t: float) -> str:
+_ROULEMENTS: dict[str, list[tuple[float, float, str]]] = {}
+
+
+def periode_saison(t: float, graine: str = "") -> tuple[str, float, float]:
+    """(saison, début, fin) au temps t pour l'île de cette graine : roulement de saisons de 2 à 7 jours, tiré au
+    hasard (reproductible), jamais deux fois la même saison de suite."""
+    L = _ROULEMENTS.setdefault(graine, [])
+    noms = list(SAISONS)
+
+    def suivante(i: int, debut: float, avant: str | None) -> tuple[float, float, str]:
+        d = (SAISON_DUREE[0] + (SAISON_DUREE[1] - SAISON_DUREE[0]) * _alea(graine, "saison-duree", i)) * JOUR
+        choix = [n for n in noms if n != avant]
+        return (debut, debut + d, choix[int(_alea(graine, "saison", i) * len(choix)) % len(choix)])
+    if not L:
+        L.append(suivante(0, ROTATION_DEBUT, None))
+    if t < L[0][0]:
+        return L[0][2], L[0][0], L[0][1]
+    while L[-1][1] <= t:
+        L.append(suivante(len(L), L[-1][1], L[-1][2]))
+    lo, hi = 0, len(L) - 1
+    while lo < hi:                                       # recherche dichotomique de la période qui contient t
+        mid = (lo + hi) // 2
+        if L[mid][1] <= t:
+            lo = mid + 1
+        else:
+            hi = mid
+    return L[lo][2], L[lo][0], L[lo][1]
+
+
+def saison(t: float, graine: str = "") -> str:
     if SAISON_FORCEE:
         return SAISON_FORCEE
-    m = datetime.fromtimestamp(t).month
-    return "printemps" if 3 <= m <= 5 else "ete" if 6 <= m <= 8 else "automne" if 9 <= m <= 11 else "hiver"
+    return periode_saison(t, graine)[0]
 
 
 def _ciel_brut(graine: str, bloc: int) -> str:
     r = _alea(graine, "meteo", bloc)
-    sa = SAISONS[saison(bloc * 2 * H)]
+    sa = SAISONS[saison(bloc * 2 * H, graine)]
     return "pluie" if r < sa["pluie"] else "nuages" if r < sa["nuages"] else "soleil"
 
 
@@ -167,6 +206,31 @@ PIEGES = {
 # Rareté : « commun », « rare », « tres_rare », « legendaire ». Les pièces rares sont chères parce qu'elles sont rares
 # (fabriquées à la main par les artisans de l'île voisine, en un seul exemplaire) ; les soins essentiels (remède,
 # nourriture) restent toujours bon marché, et un séjour chez la vétérinaire n'est jamais bloqué faute de coquillages.
+# Mutations de couleur : à chaque fin de mue, la nouvelle peau peut prendre une teinte qui raconte sa vie (comme les
+# vraies formes de couleur des iguanes : bleues, rouges, orangées, tachetées, leucistiques…). On calcule un score par
+# mutation ; la plus forte (≥ 1) l'emporte, avec 3 niveaux d'intensité ; une autre ne la remplace que si elle la
+# dépasse nettement (× 1,25). « condition » est le texte montré dans le carnet une fois la mutation découverte.
+MUTATIONS = {
+    "emeraude": {"nom": "Émeraude", "texte": "Un vert vif et profond, signe d'une santé éclatante.",
+                 "condition": "beaucoup de verdure et une santé excellente"},
+    "orange": {"nom": "Orangé", "texte": "Des reflets orangés, comme les mâles en parade.",
+               "condition": "beaucoup d'aliments orangés (courge, mangue, papaye, fleurs de pissenlit)"},
+    "dore": {"nom": "Doré", "texte": "Une peau chaude aux reflets dorés, gorgée de soleil.",
+             "condition": "beaucoup de soleil sur le rocher et souvent bien au chaud"},
+    "turquoise": {"nom": "Turquoise", "texte": "Des écailles bleu-vert, couleur du lagon.",
+                  "condition": "beaucoup de bains de mer"},
+    "melanique": {"nom": "Mélanique", "texte": "Une peau très sombre : il a souvent eu froid et a foncé pour capter la chaleur.",
+                  "condition": "avoir souvent eu froid"},
+    "cendre": {"nom": "Cendré", "texte": "Des taches grises et pâles, souvenirs de maladies soignées trop tard.",
+               "condition": "des maladies longues ou soignées trop tard"},
+    "arlequin": {"nom": "Arlequin", "texte": "Des taches orange, crème et noires : la peau d'un iguane joueur et heureux.",
+                 "condition": "beaucoup de jeux et un grand bonheur"},
+    "lunaire": {"nom": "Lunaire", "texte": "Des reflets bleu argent, comme la lune sur la mer.",
+                "condition": "souvent réveillé la nuit"},
+    "leucique": {"nom": "Leucique", "texte": "Presque blanc, aux reflets nacrés : une mutation très rare.",
+                 "condition": "une vie parfaite… et beaucoup de chance (très rare)"},
+}
+ORANGES = ("courge", "mangue", "papaye", "fleur_pissenlit", "banane")
 RARETES = {"commun": "Commun", "rare": "Rare", "tres_rare": "Très rare", "legendaire": "Légendaire"}
 OBJETS = {
     "remede": {"nom": "Remède de l'île", "type": "soin", "prix": 8, "texte": "À donner quand il est malade (il agit mieux au chaud)."},
@@ -247,6 +311,7 @@ FAITS = {
     "refus": "Insectes, viande, croquettes : un iguane vert n'en a pas besoin, il ne mange que des plantes.",
     "eau": "Beaucoup d'iguanes aiment faire leurs besoins dans l'eau de leur bain.",
     "ponte": "Dans la nature, les femelles iguanes pondent souvent pendant la saison sèche, dans un terrier creusé dans le sable ou la terre.",
+    "formes": "Il existe de vraies « formes de couleur » chez les iguanes : bleues, rouges, orangées, tachetées, presque blanches… Et leur teinte change aussi avec la température.",
     "fraicheur": "Quand il fait plus frais, un iguane bouge moins et mange moins : il a besoin de chaleur pour être actif.",
 }
 SUCCES = {
@@ -272,7 +337,9 @@ SUCCES = {
     "decorateur": ("Décorateur", "Installer 3 décorations sur l'île", 5),
     "tresor": ("Trésor de l'île", "Avoir 100 coquillages en poche", 0),
     "coureur": ("Coureur du soleil", "Arriver au rocher chaud avec 15 rayons de soleil ou plus", 10),
-    "saisons": ("Les quatre saisons", "Vivre les quatre saisons de l'île", 15),
+    "saisons": ("Quatre saisons", "Vivre quatre saisons différentes sur l'île", 15),
+    "tour_saisons": ("Tour des saisons", "Vivre les huit saisons de l'île", 20),
+    "mutation": ("Couleurs uniques", "Voir Philibert changer de couleur à une mue", 10),
     "collection": ("Pièce de collection", "Acheter un objet légendaire", 0),
 }
 EVENEMENTS = {
@@ -307,7 +374,7 @@ class Philibert:
         self.journal = journal or (lambda *a, **k: None)          # activite.noter
         self.notifier = notifier or (lambda titre, texte: None)   # Discord (si réglé)
         self._lock = threading.Lock()
-        self._sauve_t = 0.0
+        self._sauve_t = float("-inf")         # (pas 0 : time.monotonic() peut valoir moins de 300 s juste après le démarrage de Windows)
         try:
             s = json.loads(FICHIER.read_text(encoding="utf-8"))
             if not isinstance(s, dict) or s.get("v") != VERSION:
@@ -338,7 +405,9 @@ class Philibert:
                       "soleil": 0, "jeux": 0, "caresses": 0, "nettoyages": 0, "remedes": 0, "maladies": 0, "gueris": 0,
                       "sejours_veto": 0, "mues": 0, "gronder": 0, "feliciter": 0, "nuits_eteintes": 0,
                       "coquillages_gagnes": 0, "meilleur_feuilles": 0, "meilleur_rythme": 0, "meilleur_devin": 0,
-                      "meilleur_course": 0, "courses_gagnees": 0},
+                      "meilleur_course": 0, "courses_gagnees": 0, "oranges": 0, "heures_froid": 0.0, "heures_chaud": 0.0,
+                      "heures_malade": 0.0, "nuits_reveille": 0},
+            "mutation": None, "mutations_vues": [],
             "gouts": [], "moy": {"sante": 0.0, "bonheur": 0.0, "n": 0.0}, "regime": [], "friandises_t": [],
             "carnet": [], "cartes": [], "succes": {}, "succes_vus": [], "faits": [],
             "reglages": {"visible": True, "vitesse": "normale", "sons": True, "ambiance": True, "theme": "auto", "notif_windows": False, "discord": False,
@@ -373,7 +442,7 @@ class Philibert:
             pass
 
     def _note(self, t: float, type_: str, texte: str) -> None:
-        self._sauve_t = 0.0                            # évènement marquant : enregistré à la prochaine occasion
+        self._sauve_t = float("-inf")                  # évènement marquant : enregistré à la prochaine occasion
         self.s["carnet"].append({"t": round(t), "type": type_, "texte": texte})
         del self.s["carnet"][:-300]
 
@@ -448,7 +517,7 @@ class Philibert:
             c = {"soleil": 62, "arc": 62, "nuages": 52, "pluie": 38}[ciel]
             if ph != "jour":
                 c -= 6
-        c += SAISONS[saison(t)]["chaleur"]
+        c += SAISONS[saison(t, s["graine"])]["chaleur"]
         if s["lampe"]["possede"] and s["lampe"]["allumee"]:
             c = max(c, 72 if ph == "nuit" else 76)
         return c
@@ -463,15 +532,17 @@ class Philibert:
                 self._eclore(t + dt)
             return
         s["age_s"] += dt * f
-        sa = saison(t)
+        sa = saison(t, s["graine"])
         if sa not in s["saisons_vues"]:
             s["saisons_vues"].append(sa)
-            if sa == "ete":
+            if sa in ("ete", "tortues"):
                 self._fait("ponte")
-            elif sa == "hiver":
+            elif sa in ("hiver", "brumes"):
                 self._fait("fraicheur")
             if len(s["saisons_vues"]) >= 4:
                 self._succes("saisons", t)
+            if len(s["saisons_vues"]) >= len(SAISONS):
+                self._succes("tour_saisons", t)
         nuit = heure_de_dormir(t)
         eveille = s["eveil_nuit"] > t
         absent = t - s["contact"] > ABSENCE_S
@@ -484,7 +555,7 @@ class Philibert:
             s["position"] = "plage"
         if not nuit:
             s["lumiere"] = True
-        if s["position"] == "rocher" and (j["chaleur"] >= 92 or t - (s["rocher_depuis"] or t) >= 2 * H):
+        if s["position"] == "rocher" and not s["sieste"] and (j["chaleur"] >= 92 or t - (s["rocher_depuis"] or t) >= 2 * H):
             s["position"] = "plage"
             s["bonne"] = {"t": t, "quoi": "rocher"}
         dort = (nuit and not eveille) or s["sieste"]
@@ -504,6 +575,10 @@ class Philibert:
         m = 0.5 if absent else 1.0
         froid, chaud = j["chaleur"] < 35, j["chaleur"] >= 70
         malade = s["malade"] is not None
+        st = s["stats"]
+        st["heures_froid"] = st.get("heures_froid", 0) + (hh if froid else 0)
+        st["heures_chaud"] = st.get("heures_chaud", 0) + (hh if j["chaleur"] >= 75 else 0)
+        st["heures_malade"] = st.get("heures_malade", 0) + (hh if malade else 0)
         if froid and not s["dernier_froid"]:
             self._fait("couleur")
         s["dernier_froid"] = froid
@@ -575,6 +650,9 @@ class Philibert:
         if not nuit:
             if not s["sieste"] and j["energie"] < 15:
                 s["sieste"] = True
+                # fatigué en plein soleil : il va faire sa sieste à plat ventre sur le rocher chaud (il s'y réchauffe)
+                if ph == "jour" and ciel in ("soleil", "arc") and s["position"] == "plage" and j["chaleur"] < 80:
+                    s["position"], s["rocher_depuis"] = "rocher", t
             elif s["sieste"] and j["energie"] >= 50:
                 s["sieste"] = False
         # maladie
@@ -684,6 +762,7 @@ class Philibert:
         """Une photo de chaque étape de sa vie (album illustré du carnet)."""
         s = self.s
         s["etapes"].append({"t": round(t), "stade": s["stade"], "variante": s["variante"], "portes": dict(s["portes"]),
+                            "mutation": dict(s["mutation"]) if s.get("mutation") else None,
                             "age_jours": round(s["age_s"] / JOUR, 1), "titre": self.titre()})
         del s["etapes"][:-10]
 
@@ -696,6 +775,59 @@ class Philibert:
                    else "Mue terminée toute seule (un bain tiède l'aide à aller plus vite).")
         self._fait("mue")
         self._succes("premiere_mue", t)
+        self._muter(t)
+
+    def scores_mutation(self) -> dict:
+        """Score de chaque mutation (≥ 1 : possible à la prochaine mue). Lisible pour les tests et le carnet."""
+        s, st = self.s, self.s["stats"]
+        n = max(1e-9, s["moy"]["n"])
+        sante, bonheur = s["moy"]["sante"] / n, s["moy"]["bonheur"] / n
+        repas = max(1, st["repas"])
+        g = st.get
+        return {
+            "emeraude": (st["verdure"] / repas / .75) * (sante / 85) if st["verdure"] >= 12 else 0,
+            "orange": (g("oranges", 0) / repas / .3) if g("oranges", 0) >= 6 else 0,
+            "dore": min(st["soleil"] / 15, g("heures_chaud", 0) / 40) if st["soleil"] >= 8 else 0,
+            "turquoise": st["bains_mer"] / 10,
+            "melanique": g("heures_froid", 0) / 30,
+            "cendre": max(g("heures_malade", 0) / 30, st["sejours_veto"] / 2),
+            "arlequin": min(st["jeux"] / 25, bonheur / 75) if st["jeux"] >= 10 else 0,
+            "lunaire": g("nuits_reveille", 0) / 6,
+            "leucique": 0,
+        }
+
+    def _muter(self, t: float) -> None:
+        s = self.s
+        if s["stade"] == "bebe":                                  # les couleurs se fixent à partir du stade juvénile
+            return
+        sc = self.scores_mutation()
+        n = max(1e-9, s["moy"]["n"])
+        if s["moy"]["sante"] / n >= 85 and s["moy"]["bonheur"] / n >= 85 and _alea(s["graine"], "leucique", s["stats"]["mues"]) < .03:
+            sc["leucique"] = 3.0
+        best = max(sc, key=sc.get)
+        if sc[best] < 1:
+            return
+        niveau = 3 if sc[best] >= 2.4 else 2 if sc[best] >= 1.6 else 1
+        cur = s.get("mutation")
+        if cur and cur["id"] != best and sc[best] < 1.25 * max(1, sc.get(cur["id"], 0)):
+            best, niveau = cur["id"], max(cur["niveau"], 3 if sc[cur["id"]] >= 2.4 else 2 if sc[cur["id"]] >= 1.6 else 1)
+        if cur and cur["id"] == best and cur["niveau"] >= niveau:
+            return
+        nouveau = not cur or cur["id"] != best
+        s["mutation"] = {"id": best, "niveau": niveau, "depuis": round(t)}
+        if best not in s.setdefault("mutations_vues", []):
+            s["mutations_vues"].append(best)
+        m = MUTATIONS[best]
+        self._note(t, "mutation", (f"Nouvelle peau, nouvelle couleur : Philibert devient « {m['nom']} » ! {m['texte']}" if nouveau
+                                   else f"Sa couleur « {m['nom']} » est encore plus marquée après cette mue."))
+        self._fait("formes")
+        self._succes("mutation", t)
+
+    def _mutation_vue(self) -> dict | None:
+        m = self.s.get("mutation")
+        if not m or m["id"] not in MUTATIONS:
+            return None
+        return {"id": m["id"], "niveau": m["niveau"], "nom": MUTATIONS[m["id"]]["nom"], "texte": MUTATIONS[m["id"]]["texte"]}
 
     def _guerir(self, t: float, comment: str) -> None:
         s = self.s
@@ -837,6 +969,7 @@ class Philibert:
         else:
             humeur = "calme"
         jeux = s["jeux_jour"]
+        sa_now, _, sa_fin = periode_saison(now, s["graine"]) if not SAISON_FORCEE else (SAISON_FORCEE, 0, 0)
         a = s["appel"]
         if a and a["type"] == "caprice" and j["bonheur"] > SEUIL_ATTENTION:
             s["appel"] = a = None
@@ -848,8 +981,10 @@ class Philibert:
             "niveau": niveau, "humeur": humeur, "besoins": besoins, "dort": dort, "sieste": s["sieste"] and not nuit, "grognon": grognon,
             "position": s["position"], "lumiere": s["lumiere"], "lampe": dict(s["lampe"]),
             "ciel": {"phase": phase_du_ciel(now), "meteo": meteo(now, s["graine"]), "heure": round(_heure(now), 2),
-                     "saison": saison(now), "saison_nom": SAISONS[saison(now)]["nom"], "saison_texte": SAISONS[saison(now)]["texte"]},
-            "promo": SAISONS[saison(now)]["promo"],
+                     "saison": sa_now, "saison_nom": SAISONS[sa_now]["nom"], "saison_texte": SAISONS[sa_now]["texte"],
+                     "saison_reste_s": max(0, round(sa_fin - now)) if not SAISON_FORCEE else None},
+            "promo": SAISONS[sa_now]["promo"],
+            "mutation": self._mutation_vue(),
             "crottes": s["crottes"], "mue": bool(s["mue"]),
             "malade": {"cause": s["malade"]["cause"], "texte": MALADIES[s["malade"]["cause"]], "depuis": s["malade"]["depuis"]} if s["malade"] else None,
             "veto": {"retour": s["veto"]["retour"], "reste_s": max(0, round(s["veto"]["retour"] - now)), "raisons": s["veto"]["raisons"],
@@ -882,6 +1017,7 @@ class Philibert:
             "aliments": ALIMENTS, "pieges": {k: v["nom"] for k, v in PIEGES.items()}, "objets": OBJETS,
             "succes": {k: {"nom": v[0], "texte": v[1], "gain": v[2]} for k, v in SUCCES.items()},
             "faits_total": len(FAITS), "variantes": VARIANTES, "raretes": RARETES,
+            "mutations": {k: {"nom": v["nom"], "texte": v["texte"], "condition": v["condition"]} for k, v in MUTATIONS.items()},
             "saisons": {k: {"nom": v["nom"], "texte": v["texte"], "promo": v["promo"]} for k, v in SAISONS.items()}, "stades": STADES, "jeux": JEUX,
         }
 
@@ -898,6 +1034,7 @@ class Philibert:
                 "cartes": list(reversed(s["cartes"])),
                 "faits": [{"id": f, "texte": FAITS[f]} for f in s["faits"]], "faits_total": len(FAITS),
                 "etapes": list(s["etapes"]), "album": list(reversed(s["album"])), "saisons_vues": list(s["saisons_vues"]),
+                "mutations_vues": list(s.get("mutations_vues") or []), "mutation": self._mutation_vue(),
             }
 
     # -- actions -------------------------------------------------------------------
@@ -933,6 +1070,7 @@ class Philibert:
         s = self.s
         if heure_de_dormir(now) and s["eveil_nuit"] <= now:
             s["eveil_nuit"], s["grognon"] = now + 30 * 60, now + H
+            s["stats"]["nuits_reveille"] = s["stats"].get("nuits_reveille", 0) + 1
             s["j"]["bonheur"] = _borne(s["j"]["bonheur"] - 8)
             s["position"] = "plage"
             return "Tu l'as réveillé en pleine nuit : il est un peu grognon. "
@@ -981,6 +1119,8 @@ class Philibert:
         st["repas"] += 1
         s["regime"] = (s["regime"] + [aid])[-10:]
         msg = pre
+        if aid in ORANGES:
+            st["oranges"] = st.get("oranges", 0) + 1
         if a["cat"] in ("verdure", "legume"):
             st["verdure"] += 1
             if aid not in s["gouts"]:
@@ -1026,6 +1166,11 @@ class Philibert:
 
     def _a_chauffer(self, now: float, p: dict) -> dict:
         s = self.s
+        if s["sieste"] and not heure_de_dormir(now):           # il dort : on le pose sur le rocher sans le réveiller
+            s["position"], s["rocher_depuis"] = "rocher", now
+            s["stats"]["soleil"] += 1
+            self._fin_appel("froid", "soleil")
+            return {"message": "Tu le poses tout doucement sur le rocher chaud : il continue sa sieste en se réchauffant.", "reaction": "rocher"}
         if heure_de_dormir(now):
             if s["lampe"]["possede"]:
                 s["lampe"]["allumee"] = True
@@ -1195,7 +1340,7 @@ class Philibert:
             qte = 1
         if art in ALIMENTS:
             prix, nom = ALIMENTS[art]["prix"], ALIMENTS[art]["nom"]
-            if prix and art == SAISONS[saison(now)]["promo"]:
+            if prix and art == SAISONS[saison(now, s["graine"])]["promo"]:
                 prix = max(1, prix - 1)                        # de saison : un coquillage de moins
             if not prix:
                 raise PhilibertErreur("Le trèfle pousse sur l'île : il est gratuit.")
@@ -1317,6 +1462,7 @@ class Philibert:
         album = list(o.get("album") or [])
         if o["stade"] != "oeuf":                     # un œuf qui n'a pas éclos n'entre pas dans l'album
             album.append({"titre": ancien, "stade": o["stade"], "variante": o["variante"], "portes": dict(o["portes"]),
+                          "mutation": dict(o["mutation"]) if o.get("mutation") else None,
                           "ne": round(o["ne"]), "eclos": o["eclos"] and round(o["eclos"]), "fin": round(now),
                           "age_jours": round(o["age_s"] / JOUR, 1), "succes": len(o["succes"]), "faits": len(o["faits"]),
                           "repas": o["stats"]["repas"], "jeux": o["stats"]["jeux"], "mues": o["stats"]["mues"],

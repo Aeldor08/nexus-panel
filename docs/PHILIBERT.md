@@ -45,17 +45,17 @@ Deux principes guident toutes les règles :
 - **Météo** de l'île : déterministe (même météo sur le PC et le téléphone), par tranches de 2 h : soleil, nuages,
   pluie (jamais deux tranches de pluie de suite), arc-en-ciel la tranche qui suit une pluie. Les proportions
   dépendent de la saison (ci-dessous).
-- **Saisons de l'île** (mois réels) :
-
-  | Saison | Mois | Pluie / nuages | Chaleur | De saison (−1 coquillage) | Décor |
-  |---|---|---|---|---|---|
-  | Printemps | mars–mai | 15 % / 30 % | ±0 | fleur de pissenlit | buisson d'hibiscus, fleurs sur le sable, papillons |
-  | Été | juin–août | 8 % / 22 % | +5 | mangue | étoiles de mer, mer plus vive, papillons |
-  | Saison des pluies | sept.–nov. | 26 % / 32 % | −2 | figue | noix de coco et palme tombées, flaque plus grande |
-  | Saison fraîche | déc.–févr. | 14 % / 41 % | −6 | chou vert | bois flotté, vagues plus rapides, ciel plus pâle, guirlande en décembre |
-
-  Deux fiches « Le savais-tu ? » de saison (ponte en saison sèche, moins actif quand il fait frais) et le succès
-  « Les quatre saisons ».
+- **Saisons de l'île** : elles ne suivent **pas** le calendrier réel. Chaque île a son roulement : une saison dure
+  de 2 à 7 jours (au hasard, reproductible), puis une autre lui succède (jamais la même deux fois de suite) ; huit
+  saisons (chiffres complets dans `docs/PHILIBERT-REGLES.md`) : printemps, été, saison des pluies, saison fraîche,
+  grande floraison, saison des tempêtes, saison des brumes, ponte des tortues. Chacune change la météo, la chaleur,
+  le produit de saison et le décor. Fiches « Le savais-tu ? » de saison ; succès « Quatre saisons » et « Tour des
+  saisons » (les huit). La guirlande de décembre reste liée au vrai mois de décembre.
+- **Sieste sur le rocher** : fatigué en plein soleil, il fait sa sieste à plat ventre sur le rocher chaud et s'y
+  réchauffe ; des « z z Z » montent au-dessus de sa tête dès qu'il dort (sable, rocher ou palmier).
+- **Mutations de couleur** : à chaque mue, sa peau peut changer selon sa vie (alimentation, soleil, bains, jeux,
+  froid, maladies soignées trop tard, nuits réveillées…) : Émeraude, Orangé, Doré, Turquoise, Mélanique, Cendré,
+  Arlequin, Lunaire, et le très rare Leucique ; trois intensités ; onglet « Couleurs » du carnet.
 
 ## 3. Les jauges (0 à 100)
 

@@ -88,7 +88,7 @@
     }
     return c;
   }
-  const dessin = (e, extra = {}) => D.svg({ stade: e.stade, variante: e.variante, humeur: "joyeux", portes: e.portes, label: "Philibert", uid: "j", ...extra });
+  const dessin = (e, extra = {}) => D.svg({ stade: e.stade, variante: e.variante, mutation: e.mutation, humeur: "joyeux", portes: e.portes, label: "Philibert", uid: "j", ...extra });
 
   // ---------------------------------------------------------------- 1. Pluie de feuilles
   async function feuilles(box, ctx) {
@@ -339,7 +339,7 @@
       rocher: imgSvg(`<svg viewBox="0 0 200 100">${N.rocher("jr", 16, 96, 168, 86, { lum: -1 })}</svg>`),
       palmier: imgSvg(`<svg viewBox="0 0 300 300">${N.stipe({ id: "jp", base: [170, 296], c1: [168, 230], c2: [160, 160], cime: [140, 96], w0: 16, w1: 9, lum: 1, coul: ["#5e4f40", "#8c7862", "#bca684"], clair: "#e8d6b6", anneaux: 22 })}${N.couronne([140, 96], { palmes: ["#64a640", "#438532", "#adb050", "#30652b", "#879744"], sec: ["#b89c5c", "#8a6f3e"], noix: ["#9a7344", "#5e4022", "#93a648", "#56702a"], echelle: .78 }, "jq")}</svg>`),
       nuage: imgSvg(N.nuage("jn", 7, { haut: "#ffffff", milieu: "#eef2f7", bas: "#a9b8c9" })) };
-    const pose = j => image(D.svg({ stade: e.stade, variante: e.variante, humeur: "joyeux", portes: e.portes, label: "", jambes: j, uid: "c" }));
+    const pose = j => image(D.svg({ stade: e.stade, variante: e.variante, mutation: e.mutation, humeur: "joyeux", portes: e.portes, label: "", jambes: j, uid: "c" }));
     const IMG = [pose({ av: -20, arl: -20, ar: 18, avl: 18, gar: -28, gavl: -28 }), pose({ av: 18, arl: 18, ar: -20, avl: -20, gav: -28, garl: -28 }),
       pose({ av: 24, ar: 26, avl: 24, arl: 26, gav: -40, gar: -40, gavl: -40, garl: -40 })];
     let W = 0, Hh = 0, fond = null;

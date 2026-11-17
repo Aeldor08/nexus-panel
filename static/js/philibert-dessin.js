@@ -39,9 +39,28 @@
   const FROID = { dos: "#27452a", corps: "#3d6a39", clair: "#58864c", ventre: "#93aa7a", crete: "#5d8954", fanon: "#6c945f", bande: "#18241a", joue: "#b0c096", membre: "#2f5a2e" };
   const SAGE = { dos: "#596849", corps: "#7d9166", clair: "#9fae85", ventre: "#d0d4b1", fanon: "#b2b894", bande: "#44483a", joue: "#e0dfc6", membre: "#66764f" };
 
+  // Mutations de couleur (acquises aux mues, voir philibert.py) : la palette glisse vers ces teintes selon le niveau (1 à 3)
+  const MUTATIONS = {
+    emeraude: { dos: "#1f6a32", corps: "#2fa04a", clair: "#5ccf6a", ventre: "#b8e6a0", crete: "#6ad07a", fanon: "#7cd88a", bande: "#17402a", joue: "#d6f2c8", membre: "#26843c" },
+    orange: { dos: "#8a5a1e", corps: "#d98a2e", clair: "#f0b04a", ventre: "#f6dca0", crete: "#f08a2a", fanon: "#f2a44a", bande: "#4a2a10", joue: "#f8e2b4", membre: "#b86a22" },
+    dore: { dos: "#7a6a24", corps: "#b8a03a", clair: "#dcc45a", ventre: "#efe2a8", crete: "#e0b040", fanon: "#e2c45c", bande: "#3e3414", joue: "#f4ebc4", membre: "#9a8430" },
+    turquoise: { dos: "#1c5e6a", corps: "#2a9aa2", clair: "#5ccac8", ventre: "#b4e6de", crete: "#64d0d0", fanon: "#7ad6d2", bande: "#123a44", joue: "#d2f0ec", membre: "#22808a" },
+    melanique: { dos: "#141a14", corps: "#263228", clair: "#3c4a3a", ventre: "#6a7660", crete: "#3a4a38", fanon: "#4a5a46", bande: "#0a0e0a", joue: "#8a9482", membre: "#1c241c" },
+    cendre: { dos: "#5a6058", corps: "#8a9286", clair: "#aab2a6", ventre: "#d6dad0", crete: "#a2aa9c", fanon: "#b4baae", bande: "#4a5048", joue: "#e4e6e0", membre: "#737a70" },
+    arlequin: { dos: "#6a4a22", corps: "#d08a3c", clair: "#ecc07a", ventre: "#f6e6c4", crete: "#e07a2a", fanon: "#f0b070", bande: "#2a1a0e", joue: "#f8ecd4", membre: "#b06a2a" },
+    lunaire: { dos: "#2a3a5a", corps: "#5a76a0", clair: "#8aa6cc", ventre: "#d6e2f2", crete: "#9ab4dc", fanon: "#a8c0e2", bande: "#1a2440", joue: "#e6eef8", membre: "#48628a" },
+    leucique: { dos: "#b4bcb4", corps: "#e2e8e0", clair: "#f4f6f2", ventre: "#ffffff", crete: "#eceee8", fanon: "#f2f4f0", bande: "#c4ccc4", joue: "#ffffff", membre: "#d0d6ce", iris: "blue" },
+  };
+  const FORCE_MUT = [0, .45, .72, 1];
   function couleurs(o) {
     let c = { ...(PALETTES[o.variante] || PALETTES.insulaire) };
     if (o.stade === "sage") c = { ...c, ...SAGE, crete: o.variante === "royal" ? "#d9923e" : o.variante === "nageur" ? "#8cbfb4" : "#a9b48e" };
+    const mu = o.mutation && MUTATIONS[o.mutation.id];
+    if (mu) {
+      const k = FORCE_MUT[Math.max(1, Math.min(3, o.mutation.niveau || 1))];
+      for (const [cle2, v] of Object.entries(mu)) if (cle2 !== "iris" && c[cle2]) c[cle2] = melange(c[cle2], v, k);
+      if (mu.iris) c.iris = mu.iris;
+    }
     if (o.malade) c = { ...c, ...MALADE };
     else if (o.froid) c = { ...c, ...FROID };
     c.corps = c.corps || c.clair;
@@ -70,7 +89,9 @@
       <linearGradient id="${u}-m" gradientUnits="userSpaceOnUse" x1="0" y1="41" x2="0" y2="56"><stop offset="0" stop-color="${c.clair}"/><stop offset=".42" stop-color="${c.corps}"/><stop offset="1" stop-color="${c.membre}"/></linearGradient>
       <linearGradient id="${u}-f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${teinte(c.fanon, -.12)}"/><stop offset=".55" stop-color="${c.fanon}"/><stop offset="1" stop-color="${teinte(c.fanon, .28)}"/></linearGradient>
       <radialGradient id="${u}-j" cx=".36" cy=".32" r=".8"><stop offset="0" stop-color="${teinte(c.joue, .32)}"/><stop offset=".55" stop-color="${c.joue}"/><stop offset="1" stop-color="${teinte(c.joue, -.2)}"/></radialGradient>
-      <radialGradient id="${u}-i" cx=".42" cy=".38" r=".62"><stop offset="0" stop-color="#f7d873"/><stop offset=".5" stop-color="#dc9c2c"/><stop offset=".82" stop-color="#a35d18"/><stop offset="1" stop-color="#5e330e"/></radialGradient>
+      <radialGradient id="${u}-i" cx=".42" cy=".38" r=".62">${c.iris === "blue"
+        ? `<stop offset="0" stop-color="#cfe8ff"/><stop offset=".5" stop-color="#5a9ad8"/><stop offset=".82" stop-color="#2a5a9a"/><stop offset="1" stop-color="#14305a"/>`
+        : `<stop offset="0" stop-color="#f9de80"/><stop offset=".5" stop-color="#e0a030"/><stop offset=".82" stop-color="#a35d18"/><stop offset="1" stop-color="#5e330e"/>`}</radialGradient>
       <radialGradient id="${u}-o"><stop offset="0" stop-color="#2b2112" stop-opacity=".34"/><stop offset=".6" stop-color="#2b2112" stop-opacity=".16"/><stop offset="1" stop-color="#2b2112" stop-opacity="0"/></radialGradient>
       <radialGradient id="${u}-l" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
       ${leger ? "" : `<pattern id="${u}-e" width="1.5" height="1.3" patternUnits="userSpaceOnUse">
@@ -257,8 +278,8 @@
     if (p.yeux === "monocle") yeux = `<g class="phb-acc">
       <defs>${or("mo")}</defs>
       <path d="M101.6 34 C100 38 95.6 41 90.4 41.6 C88.6 41.8 87.4 41.2 86.8 40.2" stroke="url(#${u}-mo)" stroke-width=".45" fill="none" stroke-dasharray=".7 .35" stroke-linecap="round"/>
-      <circle cx="101.5" cy="30.6" r="3.35" fill="#e8f4ff" fill-opacity=".14" stroke="url(#${u}-mo)" stroke-width=".8"/>
-      <circle cx="101.5" cy="30.6" r="3.35" fill="none" stroke="#7a4e10" stroke-width=".2"/>
+      <circle cx="101.5" cy="30.6" r="3.7" fill="#e8f4ff" fill-opacity=".14" stroke="url(#${u}-mo)" stroke-width=".8"/>
+      <circle cx="101.5" cy="30.6" r="3.7" fill="none" stroke="#7a4e10" stroke-width=".2"/>
       <path d="M99.2 28.8 q1.4 -1.2 3.2 -.9" stroke="#fff" stroke-width=".5" fill="none" opacity=".75"/>${etincelle(104.3, 28.3, .6)}</g>`;
     // ----- cou -----
     if (p.cou === "collier") cou = `<g class="phb-acc">
@@ -332,17 +353,29 @@
       <g fill="#fff8e6" opacity=".7">${GRAINS.map(([x, y], i) => i % 2 ? `<circle cx="${x + 1.6}" cy="${y - .5}" r=".3"/>` : "").join("")}</g></svg>`;
   }
 
+  // taches de couleur des mutations Arlequin (orange, crème, noir, vert) et Cendré (gris pâle), découpées dans le corps
+  function taches(o, u, corpsD) {
+    const m = o.mutation;
+    if (!m || !["arlequin", "cendre"].includes(m.id) || o.malade) return "";
+    const k = FORCE_MUT[Math.max(1, Math.min(3, m.niveau || 1))];
+    const T = m.id === "arlequin"
+      ? [[51, 37, 4.2, 3, "#1c140c"], [59.5, 42, 3.4, 2.4, "#4f9a3e"], [67, 34.6, 4, 2.8, "#f6ead0"], [74.5, 40.4, 3, 2.3, "#1c140c"], [82, 35.4, 2.8, 2.1, "#4f9a3e"], [56, 33.6, 2.2, 1.6, "#f6ead0"], [78, 44, 2.4, 1.5, "#f6ead0"]]
+      : [[50, 38, 3.8, 2.3, "#eceee6"], [62.5, 35, 4.2, 2.5, "#e2e6dc"], [71.5, 42, 3.2, 2.1, "#eceee6"], [80, 33.6, 2.8, 1.9, "#e2e6dc"], [57, 43.6, 2.4, 1.4, "#eceee6"]];
+    return `<defs><clipPath id="${u}-cp"><path d="${corpsD}"/></clipPath></defs><g clip-path="url(#${u}-cp)" opacity="${(m.id === "arlequin" ? .9 : .6) * k}">
+      ${T.map(([x, y, rx, ry, f], i) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${f}" transform="rotate(${(i * 37) % 50 - 25} ${x} ${y})"/>`).join("")}</g>`;
+  }
+
   // ---- Philibert ----
   function svg(o = {}) {
     if (o.stade === "oeuf") return oeuf(o);
     const c = couleurs(o);
-    const u = (o.uid || "x") + cle(c);
+    const u = (o.uid || "x") + cle(c) + (o.ventre ? "v" : "") + (o.mutation ? o.mutation.id[0] + (o.mutation.niveau || 1) : "");
     const h = o.humeur || "calme", leger = !!o.leger;
     const gourmand = o.variante === "gourmand" || o.ventre;
     const sage = o.stade === "sage", bebe = o.stade === "bebe";
     const J = o.jambes || {};
     const echelle = { bebe: "translate(64 57) scale(.66) translate(-64 -57)", juvenile: "translate(64 57) scale(.84) translate(-64 -57)" }[o.stade] || "";
-    const teteEch = { bebe: "translate(86 36) scale(1.16) translate(-86 -36)", juvenile: "translate(86 36) scale(1.06) translate(-86 -36)" }[o.stade] || "";
+    const teteEch = { bebe: "translate(86 36) scale(1.24) translate(-86 -36)", juvenile: "translate(86 36) scale(1.1) translate(-86 -36)" }[o.stade] || "";
     const queueEch = { bebe: "translate(45 40.4) scale(.78 1) translate(-45 -40.4)", juvenile: "translate(45 40.4) scale(.9 1) translate(-45 -40.4)" }[o.stade] || "";
     const acc = accessoires(o.portes, u, o.stade);
     const dort = h === "dort";
@@ -381,18 +414,18 @@
     // œil, paupières, arcade
     const lid = teinte(c.dos, .05);
     const yeux = dort
-      ? `<ellipse cx="101.4" cy="30.6" rx="3.3" ry="3" fill="${lid}"/>
+      ? `<ellipse cx="101.4" cy="30.6" rx="3.55" ry="3.25" fill="${lid}"/>
          <path d="M98.2 30.6 Q101.4 32.8 104.6 30.6" fill="none" stroke="${dosF}" stroke-width=".85" stroke-linecap="round"/>
          <path d="M99.2 31.5 l-.3 .8 M101.4 32.1 v.8 M103.6 31.5 l.3 .8" stroke="${dosF}" stroke-width=".4" stroke-linecap="round"/>`
-      : `<ellipse cx="101.4" cy="30.6" rx="3.5" ry="3.25" fill="${lid}"/>
-         <circle cx="101.5" cy="30.6" r="3.05" fill="none" stroke="${c.clair}" stroke-width=".5" stroke-dasharray=".55 .45" opacity=".55"/>
-         <circle cx="101.5" cy="30.6" r="2.42" fill="url(#${u}-i)"/>
-         <circle cx="101.5" cy="30.6" r="2.42" fill="none" stroke="#4a2a0a" stroke-width=".3"/>
+      : `<ellipse cx="101.4" cy="30.6" rx="3.8" ry="3.55" fill="${lid}"/>
+         <circle cx="101.5" cy="30.6" r="3.32" fill="none" stroke="${c.clair}" stroke-width=".5" stroke-dasharray=".55 .45" opacity=".55"/>
+         <circle cx="101.5" cy="30.6" r="2.74" fill="url(#${u}-i)"/>
+         <circle cx="101.5" cy="30.6" r="2.74" fill="none" stroke="#4a2a0a" stroke-width=".32"/>
          <path d="M99.6 29.4 q1.9 -1.4 3.9 0" stroke="#fff3c0" stroke-width=".25" fill="none" opacity=".5"/>
-         <circle cx="101.65" cy="30.6" r="1.02" fill="#0c0a07"/>
-         <ellipse cx="102.35" cy="29.55" rx=".62" ry=".48" fill="#fff" opacity=".92"/><circle cx="100.6" cy="31.6" r=".25" fill="#fff" opacity=".5"/>
-         ${h === "malade" || h === "froid" ? `<path d="M97.9 30.6 A3.5 3.25 0 0 1 104.9 30.6 Q101.4 31.9 97.9 30.6 Z" fill="${lid}"/><path d="M98.2 30.7 Q101.4 31.9 104.6 30.7" stroke="${dosF}" stroke-width=".45" fill="none"/>` : ""}
-         <ellipse class="phb-paupiere" cx="101.4" cy="30.6" rx="3.6" ry="3.35" fill="${lid}"/>`;
+         <circle cx="101.65" cy="30.6" r="1.14" fill="#0c0a07"/>
+         <ellipse cx="102.5" cy="29.4" rx=".82" ry=".64" fill="#fff" opacity=".95"/><circle cx="100.55" cy="31.75" r=".36" fill="#fff" opacity=".6"/>
+         ${h === "malade" || h === "froid" ? `<path d="M97.6 30.6 A3.8 3.55 0 0 1 105.2 30.6 Q101.4 32 97.6 30.6 Z" fill="${lid}"/><path d="M97.9 30.7 Q101.4 32 104.9 30.7" stroke="${dosF}" stroke-width=".45" fill="none"/>` : ""}
+         <ellipse class="phb-paupiere" cx="101.4" cy="30.6" rx="3.9" ry="3.65" fill="${lid}"/>`;
     const arcade = h === "grognon" ? `<path d="M97.2 27.5 Q101.4 27.1 105.8 29.7 Q101.4 28.9 97.2 27.5 Z" fill="${dosF}" stroke="${dosF}" stroke-width=".5" stroke-linejoin="round"/>`
       : sage ? `<path d="M97.2 28.3 Q101.2 25.6 105.6 27.9 Q101.4 27 97.2 28.3 Z" fill="#ecebdc" stroke="#c9c8b2" stroke-width=".3"/>`
         : `<path d="M97.4 28.3 Q101.2 25.9 105.4 27.9 Q101.4 27.2 97.4 28.3 Z" fill="${teinte(c.clair, .12)}" opacity=".85"/>`;
@@ -422,6 +455,7 @@
         ${leger ? "" : `<path d="${corpsD}" fill="url(#${u}-e)"/>`}
         <path d="M55.6 31.4 C54.6 36 55 41.4 56.4 46 M64.4 31 C63.6 36 64 41.6 65.2 46.4 M73.2 31.2 C72.4 36 72.8 41 74 45.6" stroke="${c.bande}" stroke-width="2.6" fill="none" opacity="${opBandes}"/>
         <path d="${ecaillesVentre}" stroke="${teinte(c.ventre, -.3)}" stroke-width=".3" opacity=".45"/>
+        ${taches(o, u, corpsD)}
         <ellipse cx="64" cy="34.6" rx="22" ry="3.4" fill="url(#${u}-l)"/>
         <path d="M47.6 33.4 C57 31 71 30.9 84.6 31.3" stroke="#fff" stroke-opacity=".22" stroke-width="1.1" fill="none" stroke-linecap="round"/>
         <path d="M86.6 33.6 C85 36.8 84.6 40.4 85.4 43.6" stroke="${dosF}" stroke-width=".5" fill="none" opacity=".35"/>

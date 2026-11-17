@@ -37,7 +37,10 @@ La **santé ne descend jamais sous 5** : Philibert ne meurt jamais.
 | **Santé** | voir § 2.2 | idem | — |
 | **Chaleur** | se rapproche de la **température de l'endroit** (§ 3) | idem | — |
 
-**Sieste de jour** : il s'endort tout seul si son énergie tombe sous 15, et se réveille à 50.
+**Sieste de jour** : il s'endort tout seul si son énergie tombe sous 15, et se réveille à 50. S'il est sur la plage
+en plein soleil (jour, soleil ou arc-en-ciel, chaleur < 80), il va faire sa sieste **sur le rocher chaud** et s'y
+réchauffe en dormant (cible 95) ; il y reste tant qu'il dort (la limite de 2 h sur le rocher ne compte qu'éveillé),
+puis redescend. *Chauffer* pendant une sieste le pose sur le rocher **sans le réveiller**.
 
 ### 2.2 Santé (par heure)
 
@@ -86,7 +89,7 @@ réchauffe vite et se refroidit lentement :
 | Dans l'eau (bain) | 40 | 40 | 40 |
 | **La nuit** (21 h–6 h) | plage 25 · palmier 28 · rocher 30 | idem | idem |
 
-Puis on ajoute la **saison** : printemps 0 · été **+5** · saison des pluies **−2** · saison fraîche **−6**.
+Puis on ajoute la **saison** : printemps 0 · été **+5** · saison des pluies **−2** · saison fraîche **−6** · grande floraison +2 · tempêtes −4 · brumes −3 · ponte des tortues +3.
 
 ### 3.2 Soleil ou lampe : qui chauffe ?
 
@@ -116,12 +119,20 @@ Puis on ajoute la **saison** : printemps 0 · été **+5** · saison des pluies 
 La météo est tirée **par tranches de 2 heures** (la même sur le PC et le téléphone). Jamais deux pluies de suite ;
 la tranche qui suit une pluie, s'il fait beau, c'est l'**arc-en-ciel**.
 
-| Saison (mois réels) | Pluie | Nuages | Soleil | Chaleur | Produit de saison (−1 coquillage) |
-|---|---|---|---|---|---|
-| Printemps (mars–mai) | 15 % | 30 % | 55 % | 0 | fleur de pissenlit |
-| Été (juin–août) | 8 % | 22 % | 70 % | +5 | mangue |
-| Saison des pluies (sept.–nov.) | 26 % | 32 % | 42 % | −2 | figue |
-| Saison fraîche (déc.–févr.) | 14 % | 41 % | 45 % | −6 | chou vert |
+**Les saisons ne suivent pas le calendrier réel.** Chaque île a son propre **roulement** (tiré de sa graine, depuis
+le 1ᵉʳ janvier 2026) : une saison dure **entre 2 et 7 jours** (au hasard), puis une autre lui succède, jamais la
+même deux fois de suite. Huit saisons possibles ; l'en-tête de l'île dit combien de temps il reste.
+
+| Saison | Pluie | Nuages | Soleil | Chaleur | Produit de saison (−1 coquillage) | Décor |
+|---|---|---|---|---|---|---|
+| Printemps | 15 % | 30 % | 55 % | 0 | fleur de pissenlit | buisson d'hibiscus, fleurs, papillons |
+| Été | 8 % | 22 % | 70 % | **+5** | mangue | étoiles de mer, mer plus vive, papillons |
+| Saison des pluies | 26 % | 32 % | 42 % | −2 | figue | noix de coco tombées, flaque plus grande |
+| Saison fraîche | 14 % | 41 % | 45 % | **−6** | chou vert | bois flotté, ciel plus pâle |
+| Grande floraison | 10 % | 25 % | 65 % | +2 | fleur d'hibiscus | tapis de fleurs sur toute la plage, papillons |
+| Saison des tempêtes | 32 % | 40 % | 28 % | −4 | feuilles de mûrier | ciel et mer sombres, palmes secouées par le vent, algues |
+| Saison des brumes | 12 % | 56 % | 32 % | −3 | haricots verts | brume douce sur l'île |
+| Ponte des tortues | 10 % | 20 % | 70 % | +3 | courge | traces de tortue et nid dans le sable, une tortue la nuit |
 
 (Les pourcentages sont ceux du tirage ; « jamais deux pluies de suite » en retire un peu au profit des nuages.)
 
@@ -191,6 +202,28 @@ pièges (évènements) — les refuser rapporte +2 coquillages, les jeter +3.
 | < 8 h | normal |
 | > 8 h | baisses **× 0,5** (faim, bonheur, énergie, propreté, pertes de santé) et **planchers** : faim, propreté, chaleur et énergie ne descendent pas sous **20**, bonheur sous **25** (une jauge déjà plus basse ne remonte pas, mais ne descend plus) |
 | > 3 jours | **pension chez la voisine** : faim ≥ 65, bonheur ≥ 60, énergie ≥ 75, propreté ≥ 80, santé ≥ 70, chaleur ≥ 70, UV ≥ 60, plus de crottes ; puis tout est en pause jusqu'au retour (s'il était malade, il passe d'abord chez la vétérinaire) |
+
+## 9 bis. Mutations de couleur
+
+À **chaque fin de mue** (à partir du stade juvénile), la nouvelle peau peut changer de couleur selon sa vie. Le
+moteur calcule un **score** par mutation ; la plus forte, si elle atteint **1**, l'emporte, avec une **intensité**
+1 (score ≥ 1), 2 (≥ 1,6) ou 3 (≥ 2,4). Une autre mutation ne remplace la sienne que si son score la dépasse de 25 %.
+
+| Mutation | Score (≥ 1 pour l'obtenir) |
+|---|---|
+| Émeraude | part de verdure dans les repas ÷ 75 % × santé moyenne ÷ 85 (au moins 12 repas de verdure) |
+| Orangé | part d'aliments orangés (courge, mangue, papaye, fleur de pissenlit, banane) ÷ 30 % (au moins 6) |
+| Doré | le plus petit de : séances au soleil ÷ 15 et heures bien au chaud (≥ 75) ÷ 40 (au moins 8 séances) |
+| Turquoise | bains de mer ÷ 10 |
+| Mélanique | heures passées à avoir froid (< 35) ÷ 30 |
+| Cendré | le plus grand de : heures malade ÷ 30 et séjours chez la vétérinaire ÷ 2 |
+| Arlequin | le plus petit de : parties jouées ÷ 25 et bonheur moyen ÷ 75 (au moins 10 parties) |
+| Lunaire | fois où on l'a réveillé la nuit ÷ 6 |
+| Leucique | 3 % de chance à une mue, si santé moyenne ≥ 85 et bonheur moyen ≥ 85 (très rare) |
+
+La couleur se voit partout (île, en haut de la page, médaillon, garde-robe, album) ; le froid et la maladie
+passent par-dessus tant qu'ils durent. Le carnet a un onglet **Couleurs** (découvertes et indices). Succès
+« Couleurs uniques » ; fiche « Le savais-tu ? » sur les formes de couleur des iguanes.
 
 ## 9. Croissance et mue
 
