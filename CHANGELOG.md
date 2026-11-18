@@ -8,6 +8,8 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+## [1.7.0] - 2026-11-18
+
 ### Modifié
 - Philibert, **« Gauche ou droite ? »** : partie courte de **5 manches avec 3 vies** (chaque erreur en coûte une), **sans aucun indice** sur le côté où il va tourner la tête ; le but est la partie parfaite (5 sur 5 sans perdre de vie), qui rapporte le plus : 15 coquillages, puis 8, 4 selon les vies perdues ; succès « Devin de l'île » et marque « Yeux rubis » liés aux parties parfaites
 
