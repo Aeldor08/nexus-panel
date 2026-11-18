@@ -253,7 +253,7 @@ une marque n'est jamais remplacée. Les marques **très rares** demandent en plu
 | Crête | Crête orangée | commune | heures bien au chaud (≥ 75) ÷ 30 |
 | Crête | Crête bicolore | rare | courses gagnées jusqu'au rocher ÷ 3 |
 | Queue | Queue annelée | commune | nuits lumière éteinte ÷ 10 |
-| Yeux | Yeux rubis | rare | meilleur score à « Gauche ou droite ? » ÷ 15 |
+| Yeux | Yeux rubis | rare | parties parfaites à « Gauche ou droite ? » ÷ 3 |
 | Yeux | Yeux azur | très rare | le plus petit de : santé moyenne ÷ 90 et bonheur moyen ÷ 85, après 2 mues (+ chance) |
 | Motif | Moucheté | commune | caresses ÷ 40 |
 | Motif | Rayé | rare | séances au soleil ÷ 30 |
@@ -290,7 +290,7 @@ Elle dure **30 h** ou se termine avec un bain ; pendant la mue, bonheur −0,5 /
 | Bien au chaud (chaleur ≥ 70) | gains × 1,25 |
 | Pluie de feuilles (3 min au plus) | **palier** + 1 toutes les 20 s (9 au plus) : vitesse de chute × (1 + 0,16 × (palier − 1)), objets par seconde × (1 + 0,14 × (palier − 1)), insectes 22 % + 3 % par palier (46 % au palier 9), fleurs 18 % ; **5 vies** (insecte attrapé, ou 6 feuilles ratées = −1 vie) ; gain min(30, score ÷ 8 + 2 × (palier − 1)) ; bonheur min(25, 5 + score ÷ 6 + palier) |
 | Course au rocher chaud (4 min au plus) | **10 étapes** de 4 000 px jusqu'au rocher ; vitesse × (1 + 0,06 × (étape − 1)) ; écart entre obstacles ÷ (1 + 0,1 × (étape − 1)), jamais moins de 250 px ; **3 vies** (un choc = −1) ; gain min(30, rayons ÷ 6 + 2 × (étape − 1) + 6 si arrivé) ; bonheur min(25, 6 + rayons ÷ 5 + étape) ; arrivé : chaleur +10 et il s'étale sur le rocher |
-| Gauche ou droite ? (20 manches) | côté tiré **avant** le choix ; un **coup d'œil** (indice) le montre, vrai 90 % du temps au palier 1 puis 86, 82, 78, 75 %, et de plus en plus bref (900, 650, 460, 330, 240 ms) ; un palier toutes les 4 manches ; **fin à la 3ᵉ erreur** ; gain min(20, bonnes réponses + 2 × (palier − 1)) ; bonheur min(25, 4 + 2 × bonnes réponses) |
+| Gauche ou droite ? (5 manches) | **3 vies**, chaque erreur en coûte une (fin à la 3ᵉ) ; **aucun indice** : côté tiré par le serveur au moment du choix (une chance sur deux) ; gain selon les vies perdues : 0 (partie parfaite) → **15**, 1 → 8, 2 → 4, les 3 → 1 par bonne réponse ; bonheur min(25, 4 + 3 × bonnes réponses, + 5 si parfaite) ; succès « Devin de l'île » à la première partie parfaite |
 | En rythme | suites de 3 à **14** gestes (petit hochement, grand hochement, fanon) à reproduire **en entier**, **nouvelle suite à chaque manche** (palier = manche), jamais 3 fois le même geste d'affilée ; vitesse de **tous** les gestes : un temps = max(0,30 s ; 0,78 s − 0,045 s × manche) ; gain min(25, 2 × (longueur − 2) + palier − 1) ; bonheur min(25, 4 + 2 × longueur) |
 | **Anti-triche** | jeton à usage unique ; Pluie de feuilles et Course : partie de moins de 10 s refusée ; score, palier, distance et rayons bornés par la **durée réelle** de la partie (nombre d'objets qui ont pu tomber, vitesse maximale, écart minimal des rayons) : un résultat impossible est **refusé** (partie close, rien gagné) ; Gauche ou droite et En rythme sont comptés par le serveur, coup par coup (réponse trop rapide refusée) |
 | Autres gains | ramasser 1 à 3 (toutes les 3 h), noix de coco +4, piège jeté +3 ou refusé +2, succès (0 à 20) |

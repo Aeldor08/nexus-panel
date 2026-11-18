@@ -43,8 +43,10 @@ FEUILLES = {"duree_max": 180, "palier_s": 20, "palier_max": 9, "vies": 5, "ratee
             "fleurs": .18, "insectes": .22, "insectes_pas": .03}
 COURSE = {"duree_max": 240, "etape_px": 4000, "etapes": 10, "vies": 3, "vitesse": [150, 105], "vitesse_pas": .06,
           "ecart": [380, 420], "ecart_pas": .1, "ecart_min": 250, "rayon_min": 170}
-DEVIN = {"manches": 20, "erreurs": 3, "palier_manches": 4, "indice_ms": [900, 650, 460, 330, 240],
-         "fiabilite": [.9, .86, .82, .78, .75]}
+# « Gauche ou droite ? » : une partie courte de 5 manches, 3 vies (chaque erreur en coûte une) ; aucun indice : le côté
+# est tiré par le serveur au moment du choix. Le but : la partie parfaite (5 sur 5, aucune vie perdue).
+DEVIN = {"manches": 5, "vies": 3}
+GAINS_DEVIN = {0: 15, 1: 8, 2: 4}           # coquillages selon les vies perdues (partie finie) ; 3 vies perdues : 1 par bonne réponse
 # « En rythme » : petit hochement, grand hochement, fanon déployé (les trois vrais signaux de l'iguane vert).
 # Chaque manche tire une NOUVELLE suite, un geste de plus, et TOUS les gestes vont de plus en plus vite.
 GESTES = {"petit": 1.0, "grand": 1.5, "fanon": 1.4}          # durée de chaque geste, en « temps »
@@ -91,9 +93,12 @@ def course_ecart(p: int) -> float:
     return 1 / (1 + COURSE["ecart_pas"] * (p - 1))
 
 
-def devin_palier(manche: int) -> int:
-    """Palier de « Gauche ou droite ? » pour la manche n (1, 2…) : un de plus toutes les 4 manches."""
-    return min(len(DEVIN["indice_ms"]), 1 + max(0, manche - 1) // DEVIN["palier_manches"])
+def recompense_devin(bonnes: int, erreurs: int) -> tuple[int, int]:
+    """(coquillages, bonheur) à « Gauche ou droite ? » : moins on perd de vies, plus on gagne ; la partie parfaite
+    (5 sur 5) rapporte le plus. Si les 3 vies sont perdues, 1 coquillage par bonne réponse."""
+    bonnes = max(0, min(DEVIN["manches"], bonnes))
+    gain = bonnes if erreurs >= DEVIN["vies"] else GAINS_DEVIN.get(max(0, erreurs), 0)
+    return gain, min(25, 4 + 3 * bonnes + (5 if erreurs == 0 and bonnes >= DEVIN["manches"] else 0))
 
 
 def recompense_jeu(jeu: str, score: int, palier: int, arrivee: bool = False) -> tuple[int, int]:
@@ -103,8 +108,8 @@ def recompense_jeu(jeu: str, score: int, palier: int, arrivee: bool = False) -> 
         return min(30, score // 8 + 2 * (p - 1)), min(25, 5 + score // 6 + p)
     if jeu == "course":
         return min(30, score // 6 + 2 * (p - 1) + (6 if arrivee else 0)), min(25, 6 + score // 5 + p)
-    if jeu == "devin":
-        return min(20, score + 2 * (p - 1)), min(25, 4 + 2 * score)
+    if jeu == "devin":                                  # pour ce jeu, « palier » = nombre de vies perdues
+        return recompense_devin(score, palier)
     return min(25, 2 * max(0, score - 2) + (p - 1)), min(25, 4 + 2 * score)
 
 
@@ -340,7 +345,7 @@ MARQUES = {
     "queue_annelee": {"cat": "queue", "rarete": "commun", "nom": "Queue annelée", "texte": "De larges anneaux noirs bien contrastés sur la queue.",
                       "condition": "dormir souvent dans le noir, lumière éteinte"},
     "yeux_rubis": {"cat": "yeux", "rarete": "rare", "nom": "Yeux rubis", "texte": "Un iris rouge-orangé, comme un rubis.",
-                   "condition": "deviner souvent juste à « Gauche ou droite ? »"},
+                   "condition": "réussir plusieurs parties parfaites à « Gauche ou droite ? »"},
     "yeux_azur": {"cat": "yeux", "rarete": "tres_rare", "nom": "Yeux azur", "texte": "Un iris bleu clair : une rareté.",
                   "condition": "une santé et un bonheur excellents… et beaucoup de chance"},
     "motif_taches": {"cat": "motif", "rarete": "commun", "nom": "Moucheté", "texte": "De petites taches sombres semées sur le corps.",
@@ -446,7 +451,7 @@ SUCCES = {
     "comme_neuf": ("Comme neuf", "Le voir revenir de chez la tortue vétérinaire", 5),
     "gueri": ("Remis sur pattes", "Le soigner à la maison", 8),
     "feuilles": ("Attrape-feuilles", "Atteindre le palier 5 à « Pluie de feuilles »", 10),
-    "devin": ("Devin de l'île", "10 bonnes réponses dans une partie de « Gauche ou droite ? »", 10),
+    "devin": ("Devin de l'île", "Une partie parfaite à « Gauche ou droite ? » (5 sur 5, aucune vie perdue)", 10),
     "rythme": ("Dans le rythme", "Répéter une suite de 8 gestes à « En rythme »", 10),
     "juvenile": ("Ça pousse !", "Devenir juvénile", 5),
     "adulte": ("Grand iguane", "Devenir adulte", 10),
@@ -585,7 +590,7 @@ class Philibert:
             "gourmet": len(s["gouts"]) >= 6, "fleurs": st["fleurs"] >= 5, "bronzage": st["soleil"] >= 10,
             "nageur": st["bains_mer"] >= 10, "premiere_mue": st["mues"] >= 1, "bonne_nuit": st["nuits_eteintes"] >= 5,
             "refus": st["refus"] >= 1, "comme_neuf": st["sejours_veto"] >= 1, "gueri": st["gueris"] >= 1,
-            "feuilles": st.get("palier_feuilles", 0) >= 5, "devin": st["meilleur_devin"] >= 10, "rythme": st["meilleur_rythme"] >= 8,
+            "feuilles": st.get("palier_feuilles", 0) >= 5, "devin": st["meilleur_devin"] >= DEVIN["manches"], "rythme": st["meilleur_rythme"] >= 8,
             "semaine": s["age_s"] >= 7 * JOUR, "coquet": len(s["accessoires"]) >= 3, "decorateur": len(s["deco"]) >= 3,
             "tresor": s["coquillages"] >= 100,
             "collection": any(OBJETS[x]["rarete"] == "legendaire" for x in s["accessoires"] + s["deco"] if x in OBJETS),
@@ -964,7 +969,7 @@ class Philibert:
             "crete_orange": g("heures_chaud", 0) / 30,
             "crete_annelee": st["courses_gagnees"] / 3,
             "queue_annelee": st["nuits_eteintes"] / 10,
-            "yeux_rubis": st["meilleur_devin"] / 15,
+            "yeux_rubis": st.get("devin_parfaits", 0) / 3,
             "yeux_azur": min(sante / 90, bonheur / 85) if st["mues"] >= 2 else 0,
             "motif_taches": st["caresses"] / 40,
             "motif_rayures": st["soleil"] / 30,
@@ -1692,7 +1697,8 @@ class Philibert:
             elif jeu == "course":
                 out.update(duree=COURSE["duree_max"], regles=COURSE)
             elif jeu == "devin":
-                out.update(manches=DEVIN["manches"], erreurs=DEVIN["erreurs"], **self._devin_manche(s["jeu"], now))
+                s["jeu"].update(montre=now, erreurs=0)
+                out.update(manches=DEVIN["manches"], vies=DEVIN["vies"])
             else:
                 s["jeu"].update(suite=_suite_hochements(3), montre=now, tempo=tempo_rythme(0))
                 out.update(suite=list(s["jeu"]["suite"]), tempo=s["jeu"]["tempo"], palier=1, max=RYTHME_MAX)
@@ -1700,16 +1706,6 @@ class Philibert:
             s["contact"] = now
             self._sauver(force=True)
             return out
-
-    @staticmethod
-    def _devin_manche(g: dict, now: float) -> dict:
-        """Tire le côté de la manche suivante (avant le choix) et l'indice : un coup d'œil de Philibert, vrai le plus
-        souvent, de plus en plus bref et un peu moins fiable à chaque palier."""
-        p = devin_palier(g["manche"] + 1)
-        cote = secrets.choice(("gauche", "droite"))
-        vrai = secrets.randbelow(1000) < DEVIN["fiabilite"][p - 1] * 1000
-        g.update(cote=cote, montre=now)
-        return {"palier": p, "indice": cote if vrai else ("droite" if cote == "gauche" else "gauche"), "indice_ms": DEVIN["indice_ms"][p - 1]}
 
     def _jeu_courant(self, jeton: str, now: float) -> dict:
         g = self.s["jeu"]
@@ -1730,18 +1726,16 @@ class Philibert:
                 if choix not in ("gauche", "droite"):
                     raise PhilibertErreur("Choisis gauche ou droite.")
                 if now - g.get("montre", 0) < .25:
-                    raise PhilibertErreur("Trop rapide : regarde d'abord Philibert.")
-                cote = g.get("cote") or secrets.choice(("gauche", "droite"))
+                    raise PhilibertErreur("Doucement : attends que Philibert soit prêt.")
+                cote = secrets.choice(("gauche", "droite"))            # tiré au moment du choix : aucun indice possible
                 g["manche"] += 1
                 bon = cote == choix
                 g["score"] += bon
                 g["erreurs"] = g.get("erreurs", 0) + (not bon)
-                g["fini"] = g["manche"] >= DEVIN["manches"] or g["erreurs"] >= DEVIN["erreurs"]
-                out = {"cote": cote, "bon": bon, "manche": g["manche"], "score": g["score"], "erreurs": g["erreurs"],
-                       "palier": devin_palier(g["manche"]), "fini": g["fini"]}
-                if not g["fini"]:
-                    out["suivante"] = self._devin_manche(g, now)
-                return out
+                g["montre"] = now
+                g["fini"] = g["manche"] >= DEVIN["manches"] or g["erreurs"] >= DEVIN["vies"]
+                return {"cote": cote, "bon": bon, "manche": g["manche"], "score": g["score"], "erreurs": g["erreurs"],
+                        "vies": DEVIN["vies"] - g["erreurs"], "fini": g["fini"]}
             if g["jeu"] == "rythme":
                 if not isinstance(reponse, list) or len(reponse) > RYTHME_MAX + 2:
                     raise PhilibertErreur("Réponse invalide.")
@@ -1826,10 +1820,16 @@ class Philibert:
                     self._fait("refus")
                 txt = f"palier {pal}, {sc} point{'s' if sc > 1 else ''}"
             elif g["jeu"] == "devin":
-                sc, pal = g["score"], devin_palier(max(1, g["manche"]))
-                gain, bonheur = recompense_jeu("devin", sc, pal)
-                s["stats"]["meilleur_devin"] = max(s["stats"]["meilleur_devin"], sc)
-                txt = f"{sc} bonne{'s' if sc > 1 else ''} réponse{'s' if sc > 1 else ''} sur {max(g['manche'], 1)}, palier {pal}"
+                sc, err = g["score"], g.get("erreurs", 0)
+                pal = DEVIN["vies"] - min(err, DEVIN["vies"])                 # vies restantes (affichées comme « palier »)
+                gain, bonheur = recompense_devin(sc, err)
+                parfait = err == 0 and sc >= DEVIN["manches"]
+                s["stats"]["meilleur_devin"] = max(s["stats"]["meilleur_devin"], sc if err == 0 else min(sc, DEVIN["manches"] - 1))
+                if parfait:
+                    s["stats"]["devin_parfaits"] = s["stats"].get("devin_parfaits", 0) + 1
+                txt = ("partie parfaite, 5 sur 5 sans perdre de vie" if parfait else
+                       f"{sc} bonne{'s' if sc > 1 else ''} réponse{'s' if sc > 1 else ''} sur {max(g['manche'], 1)}, "
+                       + (f"{err} vie{'s' if err > 1 else ''} perdue{'s' if err > 1 else ''}" if err < DEVIN["vies"] else "plus de vies"))
             else:
                 sc, pal = g["score"], min(g["manche"] + 1, RYTHME_MAX - 2)   # palier = manche jouée (12 au plus)
                 gain, bonheur = recompense_jeu("rythme", sc, pal)

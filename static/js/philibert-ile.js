@@ -1110,7 +1110,7 @@
   function feuilleJouer() {
     const J = [["feuilles", "nourrir", "#3a9e4a", "Attrape les feuilles et les fleurs, évite les insectes : un palier de plus toutes les 20 s (9 paliers, 3 min au plus)"],
       ["course", "drapeau", "#e8731a", "Cours jusqu'au rocher chaud en 10 étapes, de plus en plus vite : saute les crabes, attrape les rayons de soleil"],
-      ["devin", "loupe", "#7356cf", "Devine de quel côté il va tourner la tête : guette son coup d'œil (20 manches, 3 erreurs)"],
+      ["devin", "loupe", "#7356cf", "Devine de quel côté il va tourner la tête : 5 manches, 3 vies, vise la partie parfaite"],
       ["rythme", "coeur", "#e0507a", "Reproduis ses hochements de tête ET son fanon, de plus en plus vite (3 à 14 gestes)"]];
     return `${titre("de", "Jouer avec Philibert")}<div class="phb-grille phb-grille-2">${J.map(([id, ic, c, t]) => `<button class="phb-carte phb-carte-jeu" data-phb="jeu" data-jeu="${id}">
       <span class="phb-ic phb-ic-ico" style="--c:${c}">${ico(ic)}</span><span>${esc(cat.jeux[id] || id)}</span><small>${esc(t)}</small></button>`).join("")}</div>

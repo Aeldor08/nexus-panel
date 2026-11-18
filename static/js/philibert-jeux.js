@@ -5,7 +5,7 @@
    son palier, et finit tout seul en cas d'échec (vies, erreurs) ; une bonne partie dure 2 à 3 minutes.
    1. Pluie de feuilles (3 min au plus) : déplacer Philibert (souris, doigt, flèches) pour attraper feuilles et
       fleurs ; un palier toutes les 20 s (plus vite, plus d'objets, plus d'insectes) ; 5 vies.
-   2. Gauche ou droite ? (20 manches, 3 erreurs) : un coup d'œil le trahit souvent… de plus en plus bref.
+   2. Gauche ou droite ? (5 manches, 3 vies, aucun indice) : viser la partie parfaite.
    3. En rythme : répéter ses suites de hochements de tête ET de fanon déployé ; une nouvelle suite à chaque
       manche, plus longue (3 à 14 gestes), et tous les gestes de plus en plus rapides.
    4. Course au rocher chaud (10 étapes, 3 vies) : sauter (Espace, ↑, clic ou doigt) par-dessus les crabes et les
@@ -253,37 +253,22 @@
   }
 
   // ---------------------------------------------------------------- 2. Gauche ou droite ?
+  // Partie courte : 5 manches, 3 vies, aucun indice (le serveur tire le côté au moment du choix). Le but : la partie
+  // parfaite, 5 sur 5 sans perdre de vie, qui rapporte le plus de coquillages.
   async function devin(box, ctx) {
     const e = ctx.etat();
-    const zone = entete(box, "Gauche ou droite ?", "De quel côté Philibert va-t-il tourner la tête ? Observe-le : juste avant, il jette souvent un coup d'œil du bon côté… pas toujours ! À chaque palier (toutes les 4 manches), ce coup d'œil est plus bref. 20 manches, la partie s'arrête à la 3ᵉ erreur. Flèches ← → au clavier.");
+    const zone = entete(box, "Gauche ou droite ?", "De quel côté Philibert va-t-il tourner la tête ? 5 manches et 3 vies : chaque erreur coûte une vie. Aucun indice, à toi de deviner ! Le but : la partie parfaite (5 sur 5 sans perdre de vie), celle qui rapporte le plus de coquillages. Flèches ← → au clavier.");
     let partie;
     try { partie = await api2("debut", { jeu: "devin" }); } catch (x) { zone.innerHTML = `<p class="phb-dit">${esc(x.message)}</p>`; return; }
     ouverte(partie, ctx, box);
-    const MAXM = partie.manches || 20, MAXE = partie.erreurs || 3;
-    zone.innerHTML = `<div class="phb-jeu-infos"><span>Manche <b data-m>1</b> / ${MAXM}</span><span>Palier <b data-p>1</b></span><span>Score : <b data-s>0</b></span><span data-vies>${vies(MAXE, MAXE)}</span></div>
+    const MAXM = partie.manches || 5, MAXV = partie.vies || 3;
+    zone.innerHTML = `<div class="phb-jeu-infos"><span>Manche <b data-m>1</b> / ${MAXM}</span><span>Bonnes réponses : <b data-s>0</b></span><span data-vies>${vies(MAXV, MAXV)}</span></div>
       <div class="phb-devin"><div class="phb-devin-perso phb-anim">${dessin(e, { humeur: "calme" })}</div></div>
-      <p class="phb-dit" data-r aria-live="polite">Regarde-le bien…</p>
-      <div class="phb-ligne phb-centre"><button class="phb-b phb-prim" data-d="gauche" disabled>◀ Gauche</button><button class="phb-b phb-prim" data-d="droite" disabled>Droite ▶</button></div>`;
-    let occupe = true, fini = false, timers = [];
+      <p class="phb-dit" data-r aria-live="polite">Gauche ou droite ?</p>
+      <div class="phb-ligne phb-centre"><button class="phb-b phb-prim" data-d="gauche">◀ Gauche</button><button class="phb-b phb-prim" data-d="droite">Droite ▶</button></div>`;
+    let occupe = false, fini = false, timers = [];
     const perso = zone.querySelector(".phb-devin-perso");
     const boutons = on => zone.querySelectorAll("[data-d]").forEach(b => { b.disabled = !on; });
-    // le coup d'œil : la tête se penche une fraction de seconde vers un côté (l'indice du serveur, vrai le plus souvent)
-    function indice(m) {
-      occupe = true; boutons(false);
-      perso.classList.remove("gauche", "lorgne-gauche", "lorgne-droite");
-      zone.querySelector("[data-p]").textContent = m.palier;
-      zone.querySelector("[data-r]").textContent = "Regarde-le bien…";
-      timers.push(setTimeout(() => {
-        if (fini) return;
-        perso.classList.add("lorgne-" + m.indice);
-        timers.push(setTimeout(() => {
-          perso.classList.remove("lorgne-gauche", "lorgne-droite");
-          if (fini) return;
-          occupe = false; boutons(true);
-          zone.querySelector("[data-r]").textContent = "À toi : gauche ou droite ?";
-        }, m.indice_ms));
-      }, 700 + Math.random() * 500));
-    }
     async function choisir(c) {
       if (occupe || fini) return;
       occupe = true; boutons(false);
@@ -292,27 +277,32 @@
       perso.classList.toggle("gauche", r.cote === "gauche");
       perso.classList.add("hoche");
       timers.push(setTimeout(() => perso.classList.remove("hoche"), 700));
-      zone.querySelector("[data-r]").textContent = (r.bon ? "Bien vu ! " : "Raté… ") + `Il a tourné la tête à ${r.cote}.`;
+      zone.querySelector("[data-r]").textContent = (r.bon ? "Bien vu ! " : "Raté, une vie en moins… ") + `Il a tourné la tête à ${r.cote}.`;
       son(r.bon ? "ding" : "non");
       zone.querySelector("[data-s]").textContent = r.score;
-      zone.querySelector("[data-vies]").innerHTML = vies(MAXE - r.erreurs, MAXE);
+      zone.querySelector("[data-vies]").innerHTML = vies(r.vies, MAXV);
       if (r.fini) {
         fini = true;
+        if (r.erreurs === 0) { zone.querySelector("[data-r]").textContent = "Partie parfaite : 5 sur 5 sans perdre une seule vie !"; son("joie"); }
+        else if (r.vies <= 0) zone.querySelector("[data-r]").textContent = "Plus de vies ! Il a tourné la tête à " + r.cote + ".";
         let f = null;
         terminee();
         try { f = await api2("fin", { jeton: partie.jeton }); } catch (x) { f = { message: x.message }; }
         finir(f, ctx, zone);
       } else {
         zone.querySelector("[data-m]").textContent = r.manche + 1;
-        if (r.suivante.palier > r.palier || (r.manche % 4 === 0)) son("pop");
-        timers.push(setTimeout(() => { if (!fini) indice(r.suivante); }, 1000));
+        timers.push(setTimeout(() => {                                    // il revient face à toi, et on rejoue
+          if (fini) return;
+          perso.classList.remove("gauche");
+          zone.querySelector("[data-r]").textContent = "Et maintenant : gauche ou droite ?";
+          occupe = false; boutons(true);
+        }, 1100));
       }
     }
     zone.addEventListener("click", ev => { const b = ev.target.closest("[data-d]"); if (b && !b.disabled) choisir(b.dataset.d); });
     const kd = ev => { if (ev.key === "ArrowLeft") { ev.preventDefault(); choisir("gauche"); } if (ev.key === "ArrowRight") { ev.preventDefault(); choisir("droite"); } };
     document.addEventListener("keydown", kd);
     actif = { arreter() { fini = true; timers.forEach(clearTimeout); document.removeEventListener("keydown", kd); } };
-    indice(partie);
     zone.querySelector("[data-d]").focus();
   }
 

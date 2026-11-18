@@ -456,39 +456,47 @@ ok(all(a < b for a, b in zip(vit, vit[1:])) and all(a < b for a, b in zip(cad, c
 R = P.FEUILLES
 ok(R["insectes"] + R["insectes_pas"] * (R["palier_max"] - 1) < .5 and R["fleurs"] + R["insectes"] + R["insectes_pas"] * 8 < .75, "même au dernier palier, il tombe plus de feuilles et de fleurs que d'insectes")
 ok(R["vies"] == 5 and R["ratees_par_vie"] == 6, "fin naturelle : 5 vies (insecte mangé, ou 6 feuilles ratées = une vie)")
-# Gauche ou droite ? : le côté est tiré AVANT le choix ; un coup d'œil (indice) le trahit le plus souvent
+# Gauche ou droite ? : partie courte (5 manches, 3 vies), aucun indice, côté tiré au moment du choix
 p.s["j"]["energie"] = 100
 g = p.jeu_debut("devin")
-ok(g["manches"] == 20 and g["erreurs"] == 3 and g["palier"] == 1 and g["indice"] in ("gauche", "droite") and g["indice_ms"] == P.DEVIN["indice_ms"][0], "Gauche ou droite ? : 20 manches, 3 erreurs permises, indice au palier 1")
-ok(erreur(p.jeu_coup, g["jeton"], "gauche") is not None, "répondre avant d'avoir vu Philibert : refusé")
-ind, paliers, ms = g["indice"], [g["palier"]], [g["indice_ms"]]
+ok(g["manches"] == 5 and g["vies"] == 3 and not any(k in g for k in ("indice", "indice_ms", "cote")), "Gauche ou droite ? : 5 manches, 3 vies, aucun indice envoyé à la page")
+ok(erreur(p.jeu_coup, g["jeton"], "gauche") is not None, "répondre à toute vitesse : refusé")
 while True:
     horloge[0] += 2
-    r = p.jeu_coup(g["jeton"], ind)
+    r = p.jeu_coup(g["jeton"], "gauche")
+    ok("indice" not in r and "suivante" not in r, "(aucun indice pour la manche suivante)") if r["manche"] == 1 else None
     if r["fini"]:
         break
-    ind = r["suivante"]["indice"]
-    paliers.append(r["suivante"]["palier"])
-    ms.append(r["suivante"]["indice_ms"])
-ok(r["manche"] == 20 or r["erreurs"] == 3, f"fin naturelle : 20 manches ou 3 erreurs ({r['manche']} manches, {r['erreurs']} erreurs)")
-ok(paliers == sorted(paliers) and ms == sorted(ms, reverse=True), "les paliers montent et l'indice est de plus en plus bref")
+ok((r["manche"] == 5 and r["erreurs"] < 3) or r["erreurs"] == 3, f"fin : 5 manches, ou 3 vies perdues ({r['manche']} manches, {r['erreurs']} erreurs)")
+ok(r["vies"] == 3 - r["erreurs"] and r["score"] + r["erreurs"] == r["manche"], "chaque erreur coûte une vie")
 ok(erreur(p.jeu_coup, g["jeton"], "triche") is None, "(partie finie : plus de coup compté)")
 r2 = p.jeu_fin(g["jeton"])
-ok(r2["gain"] in gain_attendu("devin", r["score"], P.devin_palier(r["manche"])), "récompense de Gauche ou droite (bonnes réponses + palier)")
-bons = tous = 0
-for _ in range(25):
+ok(r2["gain"] in gain_attendu("devin", r["score"], r["erreurs"]), f"récompense selon les vies perdues ({r['score']} bonnes, {r['erreurs']} erreurs : +{r2['gain']})")
+# récompense : la partie parfaite rapporte le plus, chaque vie perdue en coûte ; 3 vies perdues : presque rien
+G = {e: P.recompense_devin(5 - e, e)[0] for e in range(3)}
+ok(G[0] > G[1] > G[2] > P.recompense_devin(2, 3)[0] and G[0] == 15, f"partie parfaite : {G[0]} ; 1 vie perdue : {G[1]} ; 2 : {G[2]} ; perdu : {P.recompense_devin(2, 3)[0]}")
+ok(P.recompense_devin(5, 0)[1] > P.recompense_devin(4, 1)[1], "partie parfaite : plus de bonheur aussi")
+# le côté est vraiment au hasard (environ une chance sur deux) : on ne peut pas tricher en répondant toujours pareil
+bons = tous = parfaits = fins = 0
+for _ in range(120):
     p.s["j"]["energie"] = 100
     g = p.jeu_debut("devin")
-    ind = g["indice"]
-    for _m in range(20):
+    while True:
         horloge[0] += 1
-        r = p.jeu_coup(g["jeton"], ind)
+        r = p.jeu_coup(g["jeton"], "droite")
         bons, tous = bons + r["bon"], tous + 1
         if r["fini"]:
             break
-        ind = r["suivante"]["indice"]
+    parfaits += r["erreurs"] == 0
+    fins += r["erreurs"] == 3
     p.jeu_fin(g["jeton"])
-ok(.7 < bons / tous < .95, f"suivre l'indice aide sans tout donner ({bons}/{tous} bonnes réponses)")
+ok(.4 < bons / tous < .6 and parfaits < 15 and fins > 20, f"pur hasard : {bons}/{tous} bonnes réponses, {parfaits} parties parfaites et {fins} parties perdues sur 120")
+p.s["stats"]["meilleur_devin"], p.s["succes"] = 0, {k: v for k, v in p.s["succes"].items() if k != "devin"}
+p.s["j"]["energie"] = 100
+g = p.jeu_debut("devin")
+p.s["jeu"]["score"], p.s["jeu"]["manche"], p.s["jeu"]["erreurs"], p.s["jeu"]["fini"] = 5, 5, 0, True
+r = p.jeu_fin(g["jeton"])
+ok("parfaite" in r["message"] and "devin" in p.s["succes"] and p.s["stats"]["devin_parfaits"] >= 1, "partie parfaite : message, succès « Devin de l'île » et compteur")
 p.s["jeux_jour"] = {"jour": P._jour(horloge[0]), "gagnes": 0}
 # En rythme
 p.s["j"]["energie"] = 100
@@ -530,7 +538,7 @@ ok(r["bon"] and r["score"] == P.RYTHME_MAX, "En rythme : partie parfaite jusqu'�
 r = p.jeu_fin(g["jeton"])
 ok(r["gain"] in gain_attendu("rythme", 14, 12) and r["palier"] == 12 and r["gain"] >= 25, f"partie parfaite : grosse récompense (+{r['gain']})")
 # récompenses : elles grandissent avec le palier (donc la durée), avec des plafonds par partie
-for jeu, sc in (("feuilles", 60), ("course", 40), ("devin", 6), ("rythme", 6)):
+for jeu, sc in (("feuilles", 60), ("course", 40), ("rythme", 6)):
     ok(P.recompense_jeu(jeu, sc, 4)[0] > P.recompense_jeu(jeu, sc, 1)[0], f"{P.JEUX[jeu]} : à score égal, un palier plus haut rapporte plus")
 ok(max(P.recompense_jeu(j, 999, 99, True)[0] for j in P.JEUX) <= 30 and max(P.recompense_jeu(j, 999, 99, True)[1] for j in P.JEUX) <= 25, "plafond par partie : 30 coquillages et +25 de bonheur au plus")
 p.s["jeux_jour"] = {"jour": P._jour(horloge[0]), "gagnes": P.GAINS_JEUX_JOUR - 2}
@@ -820,7 +828,7 @@ q._fin_mue(horloge[0], bain=True)
 ok(q.s["mutation"]["id"] == "turquoise" and q.s["marques"]["fanon"] == "fanon_orange", "la couleur du corps et les marques se combinent (Turquoise + fanon orangé)")
 v = q.etat()
 ok(set(v["marques"]) >= {"queue_annelee", "motif_taches", "crete_orange", "fanon_orange"} and all(d["nom"] for d in v["marques_detail"]), "les marques sont envoyées à la page (dessin)")
-q.s["stats"].update(meilleur_devin=16)
+q.s["stats"].update(devin_parfaits=3)
 q._fin_mue(horloge[0], bain=False)
 ok(q.s["marques"]["yeux"] == "yeux_rubis" and "marques" in q.s["succes"], "une marque sur chaque partie du corps : succès « Un iguane unique »")
 q._etape(horloge[0])

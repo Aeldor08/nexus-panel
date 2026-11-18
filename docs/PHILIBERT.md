@@ -210,9 +210,9 @@ palier atteint (donc la durée) et le score. Les règles des paliers viennent du
    vite, plus dru, avec plus d'insectes. **5 vies** : attraper un insecte, ou rater 6 feuilles, coûte une vie.
    Pendant la partie, la souris reste dans le cadre (verrouillage du pointeur du navigateur ; Échap, Alt+Tab ou la
    touche Windows la libèrent). Si le navigateur le refuse, la souris reste libre et un message le dit.
-2. **Gauche ou droite ?** (20 manches, fin à la 3ᵉ erreur) : deviner de quel côté il va tourner la tête. Le côté
-   est tiré par le serveur avant le choix ; juste avant, Philibert jette un **coup d'œil** qui le trahit le plus
-   souvent (90 % au début, 75 % à la fin), de plus en plus bref à chaque palier (toutes les 4 manches).
+2. **Gauche ou droite ?** (partie courte : **5 manches, 3 vies**) : deviner de quel côté il va tourner la tête.
+   **Aucun indice** : le serveur tire le côté au moment du choix. Chaque erreur coûte une vie ; à la 3ᵉ, la partie
+   s'arrête. Le but : la **partie parfaite** (5 sur 5 sans perdre de vie), qui rapporte le plus de coquillages.
 3. **En rythme** (jeu de mémoire et de rythme) : Philibert « parle » avec trois gestes, ceux d'un vrai iguane vert
    — petit hochement, grand hochement, fanon déployé ; il faut reproduire **toute** sa suite, hochements de tête et
    fanon (boutons, ← → ↓ ou 1 2 3). À chaque réussite (un palier de plus), le serveur tire **une nouvelle suite au
@@ -232,7 +232,7 @@ palier atteint (donc la durée) et le score. Les règles des paliers viennent du
 |---|---|---|---|---|
 | Pluie de feuilles | score ÷ 8 + 2 × (palier − 1) | 30 | palier 2, 28 points → 5 | palier 8, 140 points → 30 |
 | Course au rocher chaud | rayons ÷ 6 + 2 × (étape − 1) + 6 si arrivé | 30 | étape 2, 8 rayons → 3 | arrivé, 80 rayons → 30 |
-| Gauche ou droite ? | bonnes réponses + 2 × (palier − 1) | 20 | 6 manches, 3 bonnes (3 erreurs) → 5 | 20 manches, 18 bonnes → 20 |
+| Gauche ou droite ? | selon les vies perdues : 0 → 15, 1 → 8, 2 → 4 ; les 3 perdues : 1 par bonne réponse | 15 | perdue (2 bonnes) → 2 | parfaite (5 sur 5) → 15 |
 | En rythme | 2 × (longueur − 2) + (palier − 1) | 25 | suite de 4, puis erreur → 6 | suite de 14 → 25 |
 
 **Anti-triche** : partie ouverte par le serveur (jeton à usage unique), durée minimale (10 s) vérifiée, score,

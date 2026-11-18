@@ -529,9 +529,6 @@ button.phb-carte:hover:not(:disabled) { transform: translateY(-2px); box-shadow:
 .phb-devin-perso { width: min(280px, 70%); aspect-ratio: 2 / 1; }
 .phb-devin-perso svg { width: 100%; height: 100%; display: block; transition: transform .25s; }
 .phb-devin-perso.gauche svg { transform: scaleX(-1); }
-/* « Gauche ou droite ? » : le coup d'œil (indice) — il se penche une fraction de seconde vers un côté */
-.phb-devin-perso.lorgne-gauche svg { transform: translateX(-6%) rotate(-6deg); transition-duration: .08s; }
-.phb-devin-perso.lorgne-droite svg { transform: translateX(6%) rotate(6deg); transition-duration: .08s; }
 .phb-vies { color: #e0507a; letter-spacing: 1px; white-space: nowrap; }
 .phb-vies i { font-style: normal; color: color-mix(in srgb, var(--bord) 85%, transparent); }
 .phb-sous-titre { margin: 18px 0 4px; font-size: 16px; }
