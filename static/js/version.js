@@ -64,6 +64,7 @@
         <div><small>Dernière vérification</small><b>${quand(v.derniere)}</b></div>
         <div><small>Vérification automatique</small><b>${r.actif ? `toutes les ${r.intervalle_heures} h` : "désactivée"}</b></div>
         <div><small>Jeton (dépôt privé)</small><b>${maj.jeton.enregistre ? ({ windows: "enregistré (Windows)", config: "enregistré (config.json)", environnement: "variable d'environnement" }[maj.jeton.ou] || "enregistré") : "aucun"}</b></div>
+        <div><small>Signature de l'installeur</small><b>${r.signature === "requise" ? "requise" : r.signature === "ignoree" ? "ignorée" : "vérifiée si présente"}</b></div>
       </div>
       <p class="maj-msg">${etat}</p>
       <div class="form-row"><button class="btn" data-maj="verifier">⟳ Vérifier maintenant</button>
@@ -72,16 +73,17 @@
       ${d ? `
         <section class="maj-dispo">
           <div class="ver-line"><b>Version ${esc(d.version)} disponible</b>
-            <small>${dateFr(d.date)}${d.archive && d.archive.taille ? " · " + fmtBytes(d.archive.taille) : ""}</small></div>
+            <small>${dateFr(d.date)}${d.taille ? " · " + fmtBytes(d.taille) : ""}</small></div>
           <div class="maj-notes">${notesHtml(d.notes)}</div>
-          <div class="form-row maj-actions">
+          ${maj.portable ? `<p class="t-warn">Version portable : la mise à jour automatique par installeur est désactivée.
+            Télécharge l'installeur depuis la page Releases.</p>` : `<div class="form-row maj-actions">
             <input class="in" type="password" id="maj-mdp" autocomplete="current-password" placeholder="Mot de passe du panel" aria-label="Mot de passe du panel">
             <button class="btn on" data-maj="installer">⬇ Installer la version ${esc(d.version)}</button>
             <button class="btn" data-maj="plus-tard">Plus tard</button>
           </div>
-          <small class="muted">Rien ne s'installe sans ton mot de passe et ta validation, à chaque mise à jour. Avant d'installer : vérification de
-            l'archive (SHA256), sauvegarde du code, de tes données et de ta configuration ; en cas de problème au
-            redémarrage, la version actuelle est restaurée automatiquement.</small>
+          <small class="muted">Rien ne s'installe sans ton mot de passe et ta validation, à chaque mise à jour. Avant d'installer :
+            vérification du fichier (SHA256${maj.natif ? " et signature Windows" : ""}), sauvegarde de l'installation
+            actuelle ; en cas de problème au redémarrage, la version actuelle est restaurée automatiquement.</small>`}
         </section>` : ""}`;
   }
 
@@ -153,9 +155,9 @@
         const d = maj.disponible, zone = dlg.querySelector(".maj-actions");
         zone.innerHTML = `<div class="maj-valider" role="alertdialog" aria-label="Valider la mise à jour">
             <b>Valider la mise à jour vers la version ${esc(d.version)} ?</b>
-            <ul><li>De la version ${esc(maj.version)} vers ${esc(d.version)}${d.archive && d.archive.taille ? ` · ${fmtBytes(d.archive.taille)} à télécharger` : ""}</li>
-              <li>Archive vérifiée (SHA256) puis sauvegarde de ton code, de tes données et de ta configuration</li>
-              <li>NEXUS redémarre (environ 30 s) ; en cas de problème, l'ancienne version revient toute seule</li></ul>
+            <ul><li>De la version ${esc(maj.version)} vers ${esc(d.version)}${d.taille ? ` · ${fmtBytes(d.taille)} à télécharger` : ""}</li>
+              <li>${maj.natif ? "Installeur vérifié (SHA256 et signature Windows)" : "Archive vérifiée (SHA256)"} puis sauvegarde de l'installation actuelle</li>
+              <li>NEXUS redémarre (${maj.natif ? "environ 1 min" : "environ 30 s"}) ; en cas de problème, l'ancienne version revient toute seule</li></ul>
             <div class="form-row"><button class="btn on" data-maj="valider">✔ Valider la mise à jour</button>
               <button class="btn" data-maj="annuler">Annuler</button></div></div>`;
         zone.dataset.mdp = mdp;
@@ -189,7 +191,7 @@
   // Rien ne s'installe sans le mot de passe et la validation dans la fenêtre Version.
   const texteNotif = d => `<span class="nx-maj-ico" aria-hidden="true">🆕</span>
       <span class="nx-maj-msg"><b>NEXUS ${esc(d.version)} est disponible</b>
-        <small>Tu as la version ${esc(maj.version)}${d.archive && d.archive.taille ? ` · ${fmtBytes(d.archive.taille)}` : ""}</small></span>
+        <small>Tu as la version ${esc(maj.version)}${d.taille ? ` · ${fmtBytes(d.taille)}` : ""}</small></span>
       <span class="nx-maj-btns"><button class="btn on" data-notif="installer">⬇ Mettre à jour</button>
         <button class="btn" data-notif="plus-tard">Plus tard</button></span>`;
   let notifGarde = null;
@@ -241,7 +243,7 @@
       ban.innerHTML = `<span>${res.ok ? "✔" : "⚠"} ${esc(res.message)}</span><button class="btn" data-ban="vu">OK</button>`;
     } else if (d && !maj.rappel_repousse && !(notifVisible && surGardeOuSommaire())) {
       ban.hidden = false; ban.className = "nx-maj-ban";
-      ban.innerHTML = `<span>🆕 NEXUS ${esc(d.version)} est disponible${d.archive && d.archive.taille ? ` (${fmtBytes(d.archive.taille)})` : ""}.</span>
+      ban.innerHTML = `<span>🆕 NEXUS ${esc(d.version)} est disponible${d.taille ? ` (${fmtBytes(d.taille)})` : ""}.</span>
         <button class="btn on" data-ban="voir">Voir</button><button class="btn" data-ban="plus-tard">Plus tard</button>`;
     } else ban.hidden = true;
   }
@@ -265,8 +267,12 @@
         <div class="nx-maj-etape" id="nx-maj-etape">Préparation…</div>
       </div>`;
     document.body.appendChild(ov);
-    const ETAPES = { telechargement: "Téléchargement de l'archive…", verification: "Vérification de l'empreinte SHA256…",
-      sauvegarde: "Sauvegarde du code, de tes données et de ta configuration…", redemarrage: "Redémarrage du panel…" };
+    const natif = !!(maj && maj.natif);
+    const ETAPES = { telechargement: natif ? "Téléchargement de l'installeur…" : "Téléchargement de l'archive…",
+      verification: "Vérification de l'empreinte SHA256…",
+      signature: "Vérification de la signature Windows…",
+      sauvegarde: natif ? "Sauvegarde de l'installation actuelle…" : "Sauvegarde du code, de tes données et de ta configuration…",
+      redemarrage: natif ? "Installation et redémarrage…" : "Redémarrage du panel…" };
     let vuArret = false, t0 = Date.now();
     const fill = p => { $("nx-maj-fill").style.width = Math.max(4, Math.min(100, p)) + "%"; };
     const tour = async () => {
@@ -283,12 +289,16 @@
           return;
         }
         $("nx-maj-etape").textContent = ETAPES[tr.etape] || "Préparation…";
-        fill(tr.etape === "telechargement" ? 10 + (tr.progres || 0) * .5 : tr.etape === "verification" ? 65 : tr.etape === "sauvegarde" ? 78 : 88);
+        fill(tr.etape === "telechargement" ? 10 + (tr.progres || 0) * .5
+          : tr.etape === "verification" ? 65 : tr.etape === "signature" ? 72 : tr.etape === "sauvegarde" ? 80 : 88);
       } else {
         $("nx-maj-etape").textContent = "Redémarrage du panel et test de la nouvelle version…";
         fill(88 + Math.min(11, (Date.now() - t0) / 3000));
       }
-      if (Date.now() - t0 > 6 * 60 * 1000) { $("nx-maj-etape").textContent = "Le panel tarde à revenir : regarde sa fenêtre noire."; return; }
+      if (Date.now() - t0 > 10 * 60 * 1000) {
+        $("nx-maj-etape").textContent = "NEXUS tarde à revenir : regarde le journal logs\\nexus.log (ou relance l'installeur).";
+        return;
+      }
       setTimeout(tour, 700);
     };
     tour();

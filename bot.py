@@ -169,11 +169,13 @@ class DiscordBot:
         self._loop = None
         self._client = None
         self._channel = None
+        self._stop = threading.Event()
 
     def _set(self, state: str, detail: str = "", **extra) -> None:
         self.status.update(state=state, detail=detail, **extra)
 
     def start(self) -> None:
+        self._stop.clear()
         if os.environ.get("NEXUS_NO_BOT"):
             self._set("disabled", "désactivé (NEXUS_NO_BOT)")
             return
@@ -205,7 +207,7 @@ class DiscordBot:
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
         delay = 30
-        while True:
+        while not self._stop.is_set():
             self._set("connecting", "connexion à Discord…")
             client = self._build_client()
             self._client = client
@@ -225,8 +227,19 @@ class DiscordBot:
                     self._loop.run_until_complete(client.close())
                 except Exception:
                     pass
-            time.sleep(delay)
+            if self._stop.wait(delay):
+                return
             delay = min(delay * 2, 600)
+
+    def stop(self) -> None:
+        """Ferme la connexion Discord (appelé à l'arrêt propre de l'application)."""
+        self._stop.set()
+        client, loop = self._client, self._loop
+        if client is not None and loop is not None:
+            try:
+                asyncio.run_coroutine_threadsafe(client.close(), loop)
+            except Exception:
+                pass
 
     def _build_client(self):
         intents = discord.Intents.none()

@@ -15,7 +15,9 @@ Ces fichiers et dossiers sont créés sur **ton** PC et contiennent tes secrets 
 | `data\philibert.json` | Philibert, ton iguane : ses jauges, son carnet, ses coquillages, ses réglages |
 | `data\souvenirs\` | Tes **photos** (et leurs miniatures) |
 | `jeux.json` | Ta liste de jeux et d'applis suivis (seul `jeux.example.json` est partagé) |
-| `logs\` | Journal des boutons du deck (heure, adresse IP de l'appareil) |
+| `logs\` | Journal des boutons du deck et journal général `logs\nexus.log` (heure, adresse IP de l'appareil, erreurs) |
+| `runtime.json` | Port et jeton local du serveur en cours (éphémère, jamais à partager) |
+| `data\webview\` | Profil WebView2 de la fenêtre native (cache, cookies de session locale ; jamais à partager) |
 | `versions\` | Sauvegardes automatiques du code (peuvent contenir d'anciens fichiers) |
 | `actions\` (sauf `exemple.bat`) | Tes scripts personnels pour le deck |
 | `LibreHardwareMonitor\` | Logiciel tiers : chacun le télécharge lui-même (voir README) |

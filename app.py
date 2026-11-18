@@ -10,8 +10,10 @@ from __future__ import annotations
 import asyncio
 import base64
 import datetime as dt
+import hmac
 import os
 import socket
+import sys
 import threading
 import time
 from pathlib import Path
@@ -22,7 +24,14 @@ from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Red
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 
+import paths
+
+# Avant d'importer les modules qui instancient Deck/Launcher au chargement : prépare le
+# dossier de données et migre une ancienne installation portable (mode gelé).
+paths.prepare()
+
 import activite
+import logs
 import agenda as agenda_mod
 import audio as audio_mod
 import bot as bot_mod
@@ -48,12 +57,16 @@ import maj as maj_mod
 import version as version_mod
 
 HOST = "127.0.0.1"
-# (NEXUS_PORT : tests uniquement — une copie de test dans un autre dossier, sans gêner le panel en service)
+# (NEXUS_PORT : tests, mode portable et lanceur natif — 0 = port choisi par uvicorn)
 PORT = int(os.environ.get("NEXUS_PORT") or 8000)
+# NEXUS_TOKEN : jeton local exigé pour les requêtes loopback (mode installé / fenêtre native).
+# Vide = comportement historique (uniquement le PC, sans jeton).
+TOKEN = os.environ.get("NEXUS_TOKEN", "").strip()
+LOCAL_COOKIE = "nexus_local"
 # Identifiant de ce démarrage du serveur : une alerte ignorée revient au prochain démarrage (ou mise à jour)
 DEMARRAGE = f"{os.getpid()}-{int(dt.datetime.now().timestamp())}"
-BASE_DIR = Path(__file__).resolve().parent
-STATIC_DIR = BASE_DIR / "static"
+BASE_DIR = paths.APP_DIR
+STATIC_DIR = paths.STATIC_DIR
 
 
 # --------------------------------------------------------------------------- #
@@ -69,11 +82,45 @@ pinger = lan.PingMonitor()
 scanner = lan.LanScanner(lambda: pinger.gateway, paused=lambda: game_mode.active)
 # NEXUS_DECK_DRYRUN=1 : mode simulation pour les tests (aucune action réelle n'est exécutée)
 deck = deck_mod.Deck(executor=(lambda b: f"(simulation) {b['type']}") if os.environ.get("NEXUS_DECK_DRYRUN") else deck_mod.execute)
-discord_bot = bot_mod.DiscordBot(sensors, deck)     # démarré dans __main__ (voir en bas du fichier)
+discord_bot = bot_mod.DiscordBot(sensors, deck)     # démarré dans start_services()
 profile_lib = profiles_mod.ProfileLibrary()
-reminder_svc = reminders_mod.ReminderService(notifier=discord_bot.notify)   # démarré dans __main__
-# Mises à jour : vérification en tâche de fond (démarrée dans __main__) ; le bot peut seulement PRÉVENIR
-updater = maj_mod.Updater(notifier=discord_bot.notify)
+
+# Notifications : le lanceur natif installe un notifier Windows (toast) ; en navigateur,
+# NATIVE_NOTIFIER reste vide et ce sont les notifications du navigateur qui prennent le relais.
+NATIVE_NOTIFIER = None
+ACTIVATE_CALLBACK = None
+
+
+def set_native_notifier(fn) -> None:
+    """Installe le notifier natif (winotify/windows-toasts) utilisé par les rappels et alertes."""
+    global NATIVE_NOTIFIER
+    NATIVE_NOTIFIER = fn
+
+
+def set_activate_callback(fn) -> None:
+    """Callback appelé par /api/activate : le lanceur natif y branche window.show()."""
+    global ACTIVATE_CALLBACK
+    ACTIVATE_CALLBACK = fn
+
+
+def _notify_all(titre: str, texte: str):
+    """Notifie sur le PC (toast natif si présent) et sur Discord si configuré."""
+    ok = False
+    if NATIVE_NOTIFIER:
+        try:
+            ok = bool(NATIVE_NOTIFIER(titre, texte))
+        except Exception as exc:
+            print(f"[Notifications] {exc}")
+    try:
+        envoye = discord_bot.notify(titre, texte)
+    except Exception:
+        envoye = False
+    return ok or envoye
+
+
+reminder_svc = reminders_mod.ReminderService(notifier=_notify_all)   # démarré dans start_services()
+# Mises à jour : vérification en tâche de fond (démarrée dans start_services) ; le bot peut seulement PRÉVENIR
+updater = maj_mod.Updater(notifier=_notify_all)
 
 
 def _gpu_load():
@@ -89,7 +136,7 @@ focus_svc = focus_mod.Focus(journal=activite.noter)
 # Philibert, l'iguane de NEXUS (docs/PHILIBERT.md) : Discord seulement si l'option est cochée dans ses réglages,
 # envoyé dans un fil à part (le bot peut mettre jusqu'à 15 s à répondre)
 def _philibert_discord(titre: str, texte: str) -> None:
-    threading.Thread(target=lambda: discord_bot.notify(titre, texte), name="philibert-discord", daemon=True).start()
+    threading.Thread(target=lambda: _notify_all(titre, texte), name="philibert-notif", daemon=True).start()
 
 
 philibert_svc = philibert_mod.Philibert(journal=activite.noter, notifier=_philibert_discord)
@@ -134,7 +181,20 @@ async def _guard(request: Request, call_next):
         return PlainTextResponse("Hôte non autorisé", status_code=421)
     ip = request.client.host if request.client else ""
     if remote_mod.is_loopback(ip):
-        return await call_next(request)          # le PC lui-même : tout est permis
+        # Le PC lui-même. En mode installé, un jeton local empêche un autre compte Windows
+        # (ou un programme local non autorisé) de lire les données privées via 127.0.0.1.
+        if not TOKEN:
+            return await call_next(request)
+        supplied = (request.cookies.get(LOCAL_COOKIE)
+                    or request.headers.get("x-nexus-token")
+                    or request.query_params.get("token")
+                    or "")
+        if not hmac.compare_digest(str(supplied), TOKEN):
+            return JSONResponse({"error": "jeton local requis"}, status_code=403)
+        response = await call_next(request)
+        if request.query_params.get("token") == TOKEN:          # 1re page : pose le cookie
+            response.set_cookie(LOCAL_COOKIE, TOKEN, httponly=True, samesite="strict", path="/")
+        return response
     # --- requête venant du réseau ---
     if not remote_svc.enabled or not remote_mod.is_private(ip):
         activite.noter("appareil", "accès refusé (réseau non autorisé)", "refusé", "", ip, unique_s=600)
@@ -160,6 +220,10 @@ async def _no_stale_pages(request: Request, call_next):
     response = await call_next(request)
     if request.url.path == "/" or request.url.path.startswith("/static/"):
         response.headers["Cache-Control"] = "no-cache"
+    # Défense en profondeur (la page n'a pas de CSP stricte à cause de ses scripts inline).
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
     return response
 psutil.cpu_percent(percpu=True)   # amorce : le 1er appel renvoie toujours 0
 
@@ -191,11 +255,16 @@ async def _bad_request(_: Request, exc: BadRequest) -> JSONResponse:
     return JSONResponse({"error": exc.message}, status_code=exc.status)
 
 
-async def json_body(request: Request) -> dict:
+MAX_JSON_BODY = 2 * 1024 * 1024
+
+
+async def json_body(request: Request, max_bytes: int = MAX_JSON_BODY) -> dict:
     """Corps JSON obligatoire : un autre site web ne peut pas envoyer ce type de requête
     vers 127.0.0.1 sans autorisation CORS (que ce serveur ne donne pas)."""
     if not request.headers.get("content-type", "").startswith("application/json"):
         raise BadRequest("JSON attendu", 415)
+    if int(request.headers.get("content-length") or 0) > max_bytes:
+        raise BadRequest("corps trop volumineux", 413)
     try:
         body = await request.json()
     except ValueError:
@@ -926,10 +995,14 @@ async def api_deck_save(request: Request) -> JSONResponse:
 # ---- Mises à jour (PC uniquement : voir _guard) ---------------------------
 def _redemarrer_pour_maj() -> None:
     """Arrêt du serveur pour mettre la mise à jour en place. Avec lancer.bat (NEXUS_LANCEUR=1) : code 3, il relance
-    maj_demarrage.py puis app.py. Sans lui (lancement direct) : on relance soi-même maj_demarrage.py --puis-lancer."""
+    maj_demarrage.py puis app.py. Sans lui (lancement direct) : on relance soi-même maj_demarrage.py --puis-lancer.
+    En version installée, le helper PowerShell attend la fin de ce processus avant de lancer l'installeur."""
+    if paths.FROZEN:
+        print("[MAJ] Arrêt de NEXUS pour l'installeur natif.", flush=True)
+        threading.Timer(.4, lambda: os._exit(RESTART_CODE)).start()
+        return
     if os.environ.get("NEXUS_LANCEUR") != "1":
         import subprocess
-        import sys
         flags = getattr(subprocess, "CREATE_NEW_CONSOLE", 0)
         subprocess.Popen([sys.executable, str(BASE_DIR / "maj_demarrage.py"), "--puis-lancer"], cwd=BASE_DIR,
                          creationflags=flags, env={**os.environ, "NEXUS_OPEN_BROWSER": "0"})
@@ -942,7 +1015,8 @@ def _maj_mot_de_passe(request: Request, body: dict, action: str = "mise à jour"
     if not deck.rate_ok(_ip(request), "maj", 5):
         raise BadRequest("trop d'essais : attends une minute", 429)
     if not deck_mod.Deck.password_set(config.get("deck")):
-        raise BadRequest("aucun mot de passe défini pour le panel : lance configurer.bat, puis réessaie", 403)
+        raise BadRequest("aucun mot de passe défini pour le panel : lance configurer.bat ou "
+                         "NEXUS.exe --configure, puis réessaie", 403)
     if not _verify_panel_password(body.get("mot_de_passe")):
         activite.noter("maj", action, "refusé", "mauvais mot de passe", _ip(request))
         raise BadRequest("mot de passe incorrect", 403)
@@ -1018,7 +1092,7 @@ async def api_maj_installer(request: Request) -> JSONResponse:
 @app.post("/api/maj/revenir")
 async def api_maj_revenir(request: Request) -> JSONResponse:
     body = await json_body(request)
-    sauv = updater.sauvegardes()
+    sauv = updater.retours()
     if not sauv or str(body.get("validation") or "") != sauv[0]["version"]:
         raise BadRequest("validation requise : confirme le retour à la version précédente", 400)
     _maj_mot_de_passe(request, body, "retour à la version précédente")
@@ -1065,7 +1139,7 @@ def _sante_elements(now: float) -> list[dict]:
     md = media.state()
     v = updater.etat
     try:
-        libre = psutil.disk_usage(str(BASE_DIR)).free
+        libre = psutil.disk_usage(str(paths.USER_ROOT)).free
     except OSError:
         libre = None
     src = getattr(sensors.gpu, "last_source", None)
@@ -1217,6 +1291,18 @@ def api_version() -> JSONResponse:
     return JSONResponse(version_mod.info(), headers={"Cache-Control": "no-store"})
 
 
+@app.post("/api/activate")
+def api_activate() -> JSONResponse:
+    """Ramène la fenêtre native au premier plan (utilisé par le deuxième lancement)."""
+    if ACTIVATE_CALLBACK is None:
+        return JSONResponse({"ok": False, "error": "aucune fenêtre native"}, status_code=404)
+    try:
+        ACTIVATE_CALLBACK()
+        return JSONResponse({"ok": True})
+    except Exception as exc:
+        return JSONResponse({"ok": False, "error": str(exc)}, status_code=500)
+
+
 # ---- Mode jeu -------------------------------------------------------------
 @app.get("/api/gamemode")
 def api_gamemode() -> JSONResponse:
@@ -1316,7 +1402,7 @@ def api_profile_export(pid: str) -> Response:
 async def api_profile_import(request: Request) -> JSONResponse:
     if int(request.headers.get("content-length") or 0) > MAX_IMPORT_BODY:
         raise BadRequest(f"fichier trop gros (maximum {profiles_mod.MAX_TOTAL // 1048576} Mo)", 413)
-    body = await json_body(request)
+    body = await json_body(request, MAX_IMPORT_BODY)
     on_conflict = body.get("si_existe") if body.get("si_existe") in ("replace", "keep") else None
     try:
         if body.get("zip_base64"):
@@ -1356,17 +1442,18 @@ def index() -> FileResponse:
 
 
 def _journaliser_resultat_maj() -> None:
-    """Résultat d'une installation / d'un retour (écrit par maj_demarrage.py) : une seule fois dans le journal."""
+    """Résultat d'une installation / d'un retour (maj_demarrage.py ou helper natif) : une seule fois dans le journal."""
     import json as _json
     f = maj_mod.MAJ_DIR / "resultat.json"
     try:
-        r = _json.loads(f.read_text(encoding="utf-8"))
+        r = _json.loads(f.read_text(encoding="utf-8-sig"))
     except (OSError, ValueError):
         return
     if r.get("journalise"):
         return
-    activite.noter("maj", "retour effectué" if r.get("type") == "retour" else "installation terminée",
-                   "ok" if r.get("ok") else "erreur", str(r.get("message") or ""), "", "panel")
+    action = {"retour": "retour effectué", "rollback": "retour automatique"}.get(
+        r.get("type"), "installation terminée")
+    activite.noter("maj", action, "ok" if r.get("ok") else "erreur", str(r.get("message") or ""), "", "panel")
     r["journalise"] = True
     try:
         f.write_text(_json.dumps(r, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -1374,13 +1461,121 @@ def _journaliser_resultat_maj() -> None:
         pass
 
 
+_MUTEX_HANDLE = None
+_services_started = False
+_native_alert_stop = threading.Event()
+_native_alert_thread = None
+_native_alert_tracker = bot_mod.AlertTracker()
+
+
+def _native_alerts_loop() -> None:
+    """Alertes CPU/RAM/disque en toast natif, même sans page ouverte ni bot Discord."""
+    while not _native_alert_stop.is_set():
+        try:
+            s = sensors.core()
+            for e in _native_alert_tracker.evaluate(s, config.get("alerts")):
+                titre, texte, _ = bot_mod.alert_text(e)
+                if NATIVE_NOTIFIER:
+                    try:
+                        NATIVE_NOTIFIER(titre, texte)
+                    except Exception as exc:
+                        print(f"[Alertes] notification impossible : {exc}")
+        except Exception as exc:
+            print(f"[Alertes] vérification impossible : {exc}")
+        try:
+            delai = max(10.0, float(config.get("alerts", {}).get("check_seconds", 30)))
+        except (TypeError, ValueError):
+            delai = 30.0
+        _native_alert_stop.wait(delai)
+
+
+def start_services() -> None:
+    """Démarre les services d'arrière-plan (appelé par app.py et par le lanceur natif)."""
+    global _services_started, _native_alert_thread
+    if _services_started:
+        return
+    _services_started = True
+    # Diagnostic matériel en arrière-plan : il ne retarde pas le démarrage du serveur
+    threading.Thread(target=lambda: [print(l, flush=True) for l in sensors.hardware_report()],
+                     daemon=True, name="materiel").start()
+    discord_bot.start()     # thread séparé ; un jeton absent ou invalide n'empêche pas NEXUS de démarrer
+    try:
+        agenda_mod.load()   # migre l'agenda au format 2 si besoin (avec sauvegarde) avant les rappels
+    except Exception as exc:
+        print(f"[Agenda] AVERTISSEMENT : {exc}")
+    reminder_svc.start()
+    updater.demarrer()      # vérification des mises à jour : 20 s après le démarrage, puis toutes les N heures
+    try:
+        db_mod.migrate()    # base locale des souvenirs, statistiques et journal (créée vide sur une installation neuve)
+        tracker.start()     # mesures légères toutes les 10 s ; une erreur n'arrête jamais le serveur
+    except Exception as exc:
+        print(f"[Données perso] AVERTISSEMENT : {exc} — souvenirs, statistiques et journal indisponibles")
+    if NATIVE_NOTIFIER and (_native_alert_thread is None or not _native_alert_thread.is_alive()):
+        _native_alert_stop.clear()
+        _native_alert_thread = threading.Thread(target=_native_alerts_loop, daemon=True, name="alertes-natives")
+        _native_alert_thread.start()
+    if paths.FROZEN:
+        try:
+            import maj_natif
+            maj_natif.marquer_demarrage_ok()      # confirme au helper que la nouvelle version répond
+        except Exception:
+            pass
+
+
+def stop_services() -> None:
+    """Arrêt propre des services qui ont une boucle (les autres sont des threads daemon)."""
+    _native_alert_stop.set()
+    for arret in (reminder_svc.stop, updater.arreter, tracker.stop, discord_bot.stop):
+        try:
+            arret()
+        except Exception:
+            pass
+
+
+def _single_instance_guard() -> bool:
+    """Empêche deux NEXUS dans la même session Windows (mode installé ou NEXUS_SINGLE_INSTANCE=1).
+
+    Le second lancement lit runtime.json et ouvre l'instance existante (navigateur pour
+    l'instant ; la fenêtre native sera activée en Phase 1).
+    """
+    global _MUTEX_HANDLE
+    if sys.platform != "win32" or not (paths.FROZEN or os.environ.get("NEXUS_SINGLE_INSTANCE") == "1"):
+        return True
+    import ctypes
+
+    user = (os.environ.get("USERNAME") or "utilisateur").replace("\\", "_")
+    suffixe = ""
+    if os.environ.get("NEXUS_PORTABLE") == "1":
+        import hashlib
+        suffixe = "-" + hashlib.sha1(str(paths.USER_ROOT).lower().encode("utf-8")).hexdigest()[:10]
+    kernel32 = ctypes.windll.kernel32
+    kernel32.CreateMutexW.restype = ctypes.c_void_p
+    kernel32.CreateMutexW.argtypes = [ctypes.c_void_p, ctypes.c_bool, ctypes.c_wchar_p]
+    _MUTEX_HANDLE = kernel32.CreateMutexW(None, False, f"Local\\NEXUS-{user}{suffixe}")
+    if not _MUTEX_HANDLE:
+        return True                                   # impossible de créer le mutex : on ne bloque pas
+    if ctypes.windll.kernel32.GetLastError() != 183:  # ERROR_ALREADY_EXISTS
+        return True
+    runtime = paths.read_runtime()
+    port, token = runtime.get("port"), runtime.get("token") or ""
+    if port:
+        url = f"http://{HOST}:{port}" + (f"/?token={token}" if token else "")
+        print(f"NEXUS tourne déjà : {url}")
+        if os.environ.get("NEXUS_OPEN_BROWSER") == "1":
+            import webbrowser
+            webbrowser.open(url)
+    else:
+        print("NEXUS tourne déjà dans cette session.")
+    return False
+
+
 def _test_demarrage(attendue: str) -> int:
     """Lancé par maj_demarrage.py après une mise à jour : migrations, serveur sur un port libre, /api/version doit
     répondre la version attendue. Code 0 = la nouvelle version démarre ; sinon la mise à jour est annulée."""
     import json as _json
-    import sys
     import urllib.request
     import uvicorn
+    paths.prepare()
     config.migrer()
     config.load(force=True)
     agenda_mod.load()
@@ -1408,10 +1603,9 @@ def _test_demarrage(attendue: str) -> int:
 
 
 if __name__ == "__main__":
-    import sys
-
     import uvicorn
 
+    paths.prepare()
     if "--test-demarrage" in sys.argv:
         i = sys.argv.index("--test-demarrage")
         try:
@@ -1419,6 +1613,9 @@ if __name__ == "__main__":
         except Exception as exc:
             print(f"{type(exc).__name__}: {exc}", file=sys.stderr, flush=True)
             os._exit(1)
+    if not _single_instance_guard():
+        raise SystemExit(0)
+    logs.install()                       # journal fichier (utile sans console)
     sante_mod.install()                  # dernières erreurs gardées pour la fenêtre « Santé de NEXUS »
     _journaliser_resultat_maj()
     try:
@@ -1437,6 +1634,15 @@ if __name__ == "__main__":
     # Accès téléphone activé : écoute aussi sur le réseau local (la garde exige un appareil appairé)
     host = "0.0.0.0" if remote_svc.enabled else HOST
     remote_svc.active = remote_svc.enabled
+    # Port 0 : le lanceur natif demande un port libre ; on le choisit maintenant pour que
+    # l'URL, le QR code et runtime.json soient cohérents.
+    if PORT == 0:
+        probe0 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            probe0.bind((host, 0))
+            PORT = probe0.getsockname()[1]
+        finally:
+            probe0.close()
     print(f"NEXUS v{version_mod.current()} : http://{HOST}:{PORT}  (Ctrl+C pour arrêter)")
     if remote_svc.enabled:
         print(f"Accès téléphone ACTIVÉ : {lan_url() or 'réseau local introuvable'}  (appareils appairés uniquement)")
@@ -1444,7 +1650,8 @@ if __name__ == "__main__":
     for w in config.warnings:
         print(f"[Config] AVERTISSEMENT : {w}")
     if not deck.password_set(config.get("deck")):
-        print("[Deck] AVERTISSEMENT : aucun mot de passe : stream deck inaccessible (lance configurer.bat)")
+        print("[Deck] AVERTISSEMENT : aucun mot de passe : stream deck inaccessible "
+              "(lance configurer.bat ou NEXUS.exe --configure)")
     # Port déjà pris (autre programme, ou NEXUS déjà ouvert) : message clair au lieu d'un plantage
     probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):    # Windows : échoue aussi si le port est pris sur une autre adresse
@@ -1459,8 +1666,8 @@ if __name__ == "__main__":
     finally:
         probe.close()
 
-    # Diagnostic matériel en arrière-plan : il ne retarde pas le démarrage du serveur
-    threading.Thread(target=lambda: [print(l, flush=True) for l in sensors.hardware_report()], daemon=True).start()
+    # Fichier d'exécution : port + jeton local, pour l'instance unique et l'ouverture de la fenêtre.
+    paths.write_runtime(PORT, TOKEN)
 
     # Ouvre le navigateur seulement quand le serveur répond vraiment (lancer.bat met NEXUS_OPEN_BROWSER=1)
     def _open_when_ready() -> None:
@@ -1474,21 +1681,15 @@ if __name__ == "__main__":
         else:
             print("[ERREUR] NEXUS ne répond pas : regarde le message d'erreur au-dessus dans cette fenêtre.")
             return
+        url = f"http://{HOST}:{PORT}" + (f"/?token={TOKEN}" if TOKEN else "")
         print(f"NEXUS est prêt : ouverture de http://{HOST}:{PORT}", flush=True)
-        webbrowser.open(f"http://{HOST}:{PORT}")
+        webbrowser.open(url)
     if os.environ.get("NEXUS_OPEN_BROWSER") == "1":
         threading.Thread(target=_open_when_ready, daemon=True).start()
 
-    discord_bot.start()     # thread séparé ; un jeton absent ou invalide n'empêche pas NEXUS de démarrer
+    start_services()
     try:
-        agenda_mod.load()   # migre l'agenda au format 2 si besoin (avec sauvegarde) avant les rappels
-    except Exception as exc:
-        print(f"[Agenda] AVERTISSEMENT : {exc}")
-    reminder_svc.start()
-    updater.demarrer()      # vérification des mises à jour : 20 s après le démarrage, puis toutes les N heures
-    try:
-        db_mod.migrate()    # base locale des souvenirs, statistiques et journal (créée vide sur une installation neuve)
-        tracker.start()     # mesures légères toutes les 10 s ; une erreur n'arrête jamais le serveur
-    except Exception as exc:
-        print(f"[Données perso] AVERTISSEMENT : {exc} — souvenirs, statistiques et journal indisponibles")
-    uvicorn.run(app, host=host, port=PORT, log_level="warning")
+        uvicorn.run(app, host=host, port=PORT, log_level="warning")
+    finally:
+        stop_services()
+        paths.clear_runtime()

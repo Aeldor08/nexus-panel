@@ -28,12 +28,13 @@ import time
 from pathlib import Path
 from urllib.parse import urlparse
 
-BASE = Path(__file__).resolve().parent
-DECK_FILE = BASE / "deck.json"
-EXAMPLE_FILE = BASE / "deck.example.json"
-ACTIONS_DIR = BASE / "actions"
-LOG_FILE = BASE / "logs" / "deck.log"
-SESSIONS_FILE = BASE / "data" / "deck_sessions.json"
+import paths
+
+DECK_FILE = paths.DECK_FILE
+EXAMPLE_FILE = paths.DECK_EXAMPLE
+ACTIONS_DIR = paths.ACTIONS_DIR
+LOG_FILE = paths.LOG_DIR / "deck.log"
+SESSIONS_FILE = paths.DATA_DIR / "deck_sessions.json"
 SESSION_COOKIE = "deck_session"
 SESSION_DAYS = 30
 MAX_BUTTONS = 60
@@ -202,9 +203,19 @@ def execute(b: dict) -> str:
     if t == "script":
         path = script_path(p["name"])
         ext = path.suffix.lower()
-        cmd = (["cmd", "/c", str(path)] if ext in (".bat", ".cmd")
-               else ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(path)] if ext == ".ps1"
-               else [sys.executable, str(path)])
+        if ext in (".bat", ".cmd"):
+            cmd = ["cmd", "/c", str(path)]
+        elif ext == ".ps1":
+            cmd = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(path)]
+        else:
+            # En version installée, sys.executable est NEXUS.exe : le lancer avec un .py
+            # relancerait NEXUS. On cherche un Python séparé ; sinon on explique la limite.
+            python = sys.executable if not paths.FROZEN else (shutil.which("python") or shutil.which("py"))
+            if paths.FROZEN and not python:
+                raise DeckError("script .py non pris en charge dans la version installée : "
+                                "utilisez un .bat, .cmd ou .ps1 (ou installez Python)")
+            cmd = [python, str(path)] if not (paths.FROZEN and python and Path(python).name.lower() == "py.exe") \
+                else [python, "-3", str(path)]
         subprocess.Popen(cmd, cwd=str(ACTIONS_DIR), creationflags=CREATE_NO_WINDOW, close_fds=True)
         return f"script {path.name} lancé"
     if t == "power":
@@ -234,8 +245,9 @@ class Deck:
         self.buttons: list[dict] = []
         self._sessions: dict[str, float] = {}      # hash du jeton -> expiration
         self._hits: dict[tuple[str, str], list[float]] = {}
-        ACTIONS_DIR.mkdir(exist_ok=True)
+        ACTIONS_DIR.mkdir(parents=True, exist_ok=True)
         if not DECK_FILE.exists() and EXAMPLE_FILE.exists():
+            DECK_FILE.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(EXAMPLE_FILE, DECK_FILE)
         self.load()
         self._load_sessions()
@@ -316,7 +328,7 @@ class Deck:
         return True, msg
 
     def _log(self, source, ip, bid, label, result, detail) -> None:
-        LOG_FILE.parent.mkdir(exist_ok=True)
+        LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
         line = f"{time.strftime('%Y-%m-%d %H:%M:%S')} | {source:<7} | {ip or '-':<15} | {bid} | {label} | {result} | {detail}\n"
         with self._lock, open(LOG_FILE, "a", encoding="utf-8") as f:
             f.write(line)
@@ -381,8 +393,10 @@ class Deck:
             self._sessions = {}
 
     def _save_sessions(self) -> None:
-        SESSIONS_FILE.parent.mkdir(exist_ok=True)
-        SESSIONS_FILE.write_text(json.dumps(self._sessions), encoding="utf-8")
+        SESSIONS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = SESSIONS_FILE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(self._sessions), encoding="utf-8")
+        tmp.replace(SESSIONS_FILE)
 
     def rate_ok(self, ip: str, bucket: str, per_minute: int) -> bool:
         now = time.time()

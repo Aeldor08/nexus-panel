@@ -23,4 +23,5 @@ SOFTWARE.
 ---------------------------------------------------------------------------
 Logiciels tiers (non inclus dans ce dossier, chacun sous sa propre licence) :
 - LibreHardwareMonitor (MPL-2.0), à télécharger séparément — voir README.
-- Les bibliothèques Python listées dans requirements.txt, installées par installer.bat.
+- Les bibliothèques Python listées dans requirements.txt, installées par installer.bat (version source)
+  ou incluses dans NEXUS.exe (version installée) ; voir THIRD_PARTY.md.

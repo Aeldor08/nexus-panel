@@ -32,6 +32,7 @@ ALLOW = [re.compile(p) for p in (
     r"noreply@anthropic\.com", r"@users\.noreply\.github\.com", r"example\.(com|org)", r"exemple\.(com|fr)",
     r"git@github\.com", r"192\.168\.1\.(?:1|10|42|50|100|254)\b", r"10\.0\.0\.\d+", r"COLLE_ICI", r"TON_ID",
     r"00:11:22:33:44:55", r"AA:BB:CC:DD:EE:FF", r"(?i)ff[:-]ff[:-]ff[:-]ff[:-]ff[:-]ff",   # diffusion réseau (code)
+    r"\+@app\.",                                            # lignes ajoutées d'un patch de code (@app.post)
 )]
 BINARY = {".png", ".jpg", ".jpeg", ".webp", ".ico", ".woff2", ".woff", ".ttf", ".zip", ".gif", ".exe", ".dll", ".db",
           ".mp3", ".ogg", ".oga", ".opus", ".wav", ".flac", ".m4a", ".webm"}   # sons : des octets peuvent ressembler à une adresse

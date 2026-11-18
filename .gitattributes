@@ -1,0 +1,3 @@
+# Les patches de référence doivent rester en LF : un passage en CRLF les rend
+# fragiles à appliquer avec git apply sur une copie de la version upstream.
+*.patch -text

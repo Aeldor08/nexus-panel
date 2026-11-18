@@ -18,11 +18,12 @@ import re
 import secrets
 import shutil
 import sys
-from pathlib import Path
 
-BASE = Path(__file__).resolve().parent
-CONFIG_FILE = BASE / "config.json"
-DECK_FILE, DECK_EXAMPLE = BASE / "deck.json", BASE / "deck.example.json"
+import paths
+
+BASE = paths.APP_DIR
+CONFIG_FILE = paths.CONFIG_FILE
+DECK_FILE, DECK_EXAMPLE = paths.DECK_FILE, paths.DECK_EXAMPLE
 
 sys.path.insert(0, str(BASE))
 from config import DEFAULTS          # noqa: E402  (valeurs par défaut : seuils d'alerte…)
@@ -131,8 +132,8 @@ def step_updates(previous: dict | None) -> str:
     """Dépôt GitHub dont les releases sont surveillées (proposé : celui d'où vient cette copie, fichier DEPOT)."""
     title("3/3  MISES À JOUR (FACULTATIF)")
     actuel = str(((previous or {}).get("mises_a_jour") or {}).get("depot") or "")
-    if not actuel and (BASE / "DEPOT").is_file():
-        actuel = (BASE / "DEPOT").read_text(encoding="utf-8").strip()
+    if not actuel and paths.DEPOT_FILE.is_file():
+        actuel = paths.DEPOT_FILE.read_text(encoding="utf-8").strip()
     print("NEXUS peut vérifier tout seul si une nouvelle version est publiée sur GitHub (rien ne s'installe sans toi).")
     print("Dépôt privé : il faudra aussi un jeton en lecture seule (voir docs\\JETON_GITHUB.md, dans les Réglages).")
     while True:
@@ -171,6 +172,7 @@ def write_config(cfg: dict) -> None:
 
 
 def main() -> int:
+    paths.prepare()
     print("\nNEXUS — assistant de configuration")
     print("Tout reste sur ce PC : tes réponses ne sont envoyées nulle part.")
     previous = None
@@ -186,7 +188,17 @@ def main() -> int:
     password = step_password()
     discord = step_discord()
     depot = step_updates(previous)
-    write_config(build_config(password, discord, previous, depot))
+    cfg = build_config(password, discord, previous, depot)
+    write_config(cfg)
+    # Un mot de passe (ou une empreinte) différent doit invalider les anciennes sessions du deck.
+    ancien = str(((previous or {}).get("deck") or {}).get("password_hash") or "")
+    nouveau = str((cfg.get("deck") or {}).get("password_hash") or "")
+    if ancien != nouveau:
+        try:
+            (paths.DATA_DIR / "deck_sessions.json").unlink(missing_ok=True)
+            print("\nSessions du stream deck révoquées (le mot de passe a changé).")
+        except OSError:
+            pass
 
     if not DECK_FILE.exists() and DECK_EXAMPLE.exists():
         shutil.copyfile(DECK_EXAMPLE, DECK_FILE)

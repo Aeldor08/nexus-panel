@@ -1,0 +1,97 @@
+name: Build Windows native
+
+# Construit NEXUS.exe, l'installeur Inno Setup et les empreintes SHA256.
+# Aucune release GitHub n'est publiée ici : les fichiers sont disponibles dans
+# les artefacts du workflow. La publication reste une décision manuelle.
+#
+# Déclenchement : push d'un tag v* (ex. v1.5.0) ou lancement manuel.
+# Signature : ajoute les secrets WINDOWS_CERT_PFX_BASE64 et
+# WINDOWS_CERT_PFX_PASSWORD pour signer l'exe et l'installeur.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Dépendances
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt -r requirements-native.txt
+
+      - name: Lint
+        run: python -m ruff check .
+
+      - name: Tests
+        run: python outils/tests/run_all.py
+
+      - name: Inno Setup
+        shell: pwsh
+        run: |
+          $iscc = Get-Command iscc -ErrorAction SilentlyContinue
+          if (-not $iscc -and -not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            Write-Host "Inno Setup absent : installation via Chocolatey"
+            choco install innosetup --no-progress -y
+          }
+
+      - name: Construire l'exe et l'installeur
+        shell: pwsh
+        env:
+          PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
+          PFX_PASSWORD: ${{ secrets.WINDOWS_CERT_PFX_PASSWORD }}
+        run: |
+          $params = @("outils/build_native.py", "--skip-tests", "--installer", "--portable")
+          if ($env:PFX_BASE64) {
+            $pfx = Join-Path $env:RUNNER_TEMP "nexus.pfx"
+            [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:PFX_BASE64))
+            $params += @("--pfx", $pfx, "--pfx-password", $env:PFX_PASSWORD)
+            Write-Host "Signature Authenticode activée."
+          } else {
+            Write-Host "::warning::Aucun certificat configuré : exe et installeur non signés."
+          }
+          python @params
+
+      - name: Vérifier les empreintes
+        shell: pwsh
+        run: |
+          Get-ChildItem dist -Filter "NEXUS*" -File | Sort-Object Name |
+            Select-Object Name, Length, @{n = "SHA256"; e = { (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower() } } |
+            Format-Table -AutoSize
+          Get-Content dist/SHA256SUMS.txt
+
+      - name: Artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-native-${{ github.ref_name }}
+          path: |
+            dist/NEXUS/
+            dist/NEXUS-*-Setup.exe
+            dist/NEXUS-*-Setup.exe.sha256
+            dist/NEXUS-Portable-*.zip
+            dist/NEXUS-Portable-*.zip.sha256
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30

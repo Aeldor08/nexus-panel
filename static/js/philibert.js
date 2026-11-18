@@ -179,7 +179,7 @@
 
   // Notification Windows (via le navigateur) : quand il tombe malade ou part chez le vétérinaire, une fois
   function notifier() {
-    if (!e.reglages.notif_windows || gm() || !("Notification" in window) || Notification.permission !== "granted") return;
+    if (window.NEXUS_NATIVE || !e.reglages.notif_windows || gm() || !("Notification" in window) || Notification.permission !== "granted") return;
     const cle = e.veto ? "v" + e.veto.depart : e.malade ? "m" + e.malade.depuis : null;
     if (!cle) return;
     let vu = null;

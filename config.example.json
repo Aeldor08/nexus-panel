@@ -29,6 +29,8 @@
     "depot": "proprietaire/nexus-panel",
     "actif": true,
     "intervalle_heures": 6,
-    "discord": false
+    "discord": false,
+    "signature": "auto",
+    "certificat": ""
   }
 }

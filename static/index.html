@@ -4,6 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NEXUS</title>
+<script>/* mode natif : le lanceur ouvre la page avec ?native=1 ; les notifications sont alors
+   gérées par les toasts Windows du serveur, pas par le navigateur (évite les doublons). */
+try {
+  const q = new URLSearchParams(location.search);
+  if (q.get("native") === "1") localStorage.setItem("nexus-native", "1");
+  if (q.get("native") === "0") localStorage.removeItem("nexus-native");
+  window.NEXUS_NATIVE = localStorage.getItem("nexus-native") === "1";
+} catch (e) { window.NEXUS_NATIVE = false; }
+</script>
 <script>/* thème choisi (avant l'affichage, pour éviter un flash de l'autre thème) */
 try { const t = localStorage.getItem("nexus-theme"); if (t === "sentinelle") document.documentElement.dataset.theme = t; } catch (e) {}
 /* changement de thème en cours : écran noir jusqu'à la 2de moitié de l'animation (js/theme.js) */
@@ -733,7 +742,7 @@ function fmtGhz(mhz) { return mhz == null ? "–" : (mhz / 1000).toFixed(2) + " 
 const notified = new Map();          // id -> horodatage de la dernière notification
 const NOTIF_COOLDOWN = 10 * 60 * 1000;
 let notifOn = false;
-try { notifOn = localStorage.getItem("notif") === "1" && "Notification" in window && Notification.permission === "granted"; } catch (e) {}
+try { notifOn = !window.NEXUS_NATIVE && localStorage.getItem("notif") === "1" && "Notification" in window && Notification.permission === "granted"; } catch (e) {}
 function updNotifBtn() {
   const b = $("btn-notif");
   b.textContent = "Notifications : " + (notifOn ? "on" : "off");
@@ -751,7 +760,12 @@ $("btn-notif").addEventListener("click", async () => {
   try { localStorage.setItem("notif", notifOn ? "1" : "0"); } catch (e) {}
   updNotifBtn();
 });
-updNotifBtn();
+if (window.NEXUS_NATIVE) {
+  const b = $("btn-notif");
+  if (b) b.hidden = true;                    // toasts Windows gérés par le serveur
+} else {
+  updNotifBtn();
+}
 
 // État des alertes lisible par les profils visuels (CSS seulement, voir profils/FORMAT.md § 4.6) :
 //   body[data-alerte="aucune|normale|critique"] en continu ;

@@ -28,8 +28,9 @@ import uuid
 import zipfile
 from pathlib import Path, PurePosixPath
 
-BASE = Path(__file__).resolve().parent
-PROFILES_DIR = BASE / "profils"
+import paths
+
+PROFILES_DIR = paths.PROFILES_DIR
 
 FORMAT_VERSION = 1
 MODES = ("terminal", "sentinelle")
@@ -581,7 +582,7 @@ class ProfileLibrary:
         return self.import_zip(buf.getvalue(), on_conflict)
 
     def _install(self, files: dict[str, bytes], on_conflict: str | None) -> dict:
-        self.root.mkdir(exist_ok=True)
+        self.root.mkdir(parents=True, exist_ok=True)
         tmp = self.root / f".import-{uuid.uuid4().hex[:8]}"
         try:
             for rel, content in files.items():

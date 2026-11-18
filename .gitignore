@@ -30,6 +30,9 @@ data/
 # --- Journaux, sessions, sauvegardes, références, mises à jour en cours
 logs/
 *.log
+runtime.json
+.layout-v2
+webview/
 versions/
 partage/
 reference/
@@ -43,6 +46,7 @@ backups/
 
 # --- Artefacts de release (fabriqués par outils/release.py)
 dist/
+build/
 *.sha256
 
 # --- Scripts personnels du stream deck (seul l'exemple est partagé)
@@ -54,6 +58,7 @@ LibreHardwareMonitor/
 
 # --- Environnement Python et fichiers générés
 .venv/
+.venv-build/
 venv/
 runtime/
 runtime.neuf/

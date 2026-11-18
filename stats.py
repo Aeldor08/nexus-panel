@@ -21,10 +21,10 @@ import sys
 import threading
 import time
 import urllib.request
-from pathlib import Path
 
 import psutil
 
+import paths
 import winproc
 
 # 127.0.0.1 plutôt que "localhost" : sous Windows, "localhost" peut d'abord essayer
@@ -43,9 +43,8 @@ ALERTS = {
     "disk_free_gb": 10,          # critique sous ce nombre de Go libres
 }
 
-BASE_DIR = Path(__file__).resolve().parent
-FAN_NAMES_FILE = BASE_DIR / "data" / "fan_names.json"   # noms personnalisés des ventilateurs (données perso)
-_OLD_FAN_NAMES_FILE = BASE_DIR / "fan_names.json"        # ancien emplacement, encore lu s'il existe
+FAN_NAMES_FILE = paths.FAN_NAMES_FILE                    # noms personnalisés des ventilateurs (données perso)
+_OLD_FAN_NAMES_FILE = paths.LEGACY_DIR / "fan_names.json"  # ancien emplacement, encore lu s'il existe
 
 
 # --------------------------------------------------------------------------- #
@@ -923,7 +922,7 @@ def save_fan_name(fan_id: str, label: str) -> dict[str, str]:
             names[fan_id] = label
         else:
             names.pop(fan_id, None)
-        FAN_NAMES_FILE.parent.mkdir(exist_ok=True)
+        FAN_NAMES_FILE.parent.mkdir(parents=True, exist_ok=True)
         tmp = FAN_NAMES_FILE.with_suffix(".tmp")
         tmp.write_text(json.dumps(names, ensure_ascii=False, indent=2), encoding="utf-8")
         tmp.replace(FAN_NAMES_FILE)
@@ -1019,7 +1018,7 @@ class Sensors:
         else:
             lines.append(f"[Matériel] INFO : carte graphique non lue ({self.gpu.error or 'aucune détectée'}). "
                          "La partie GPU affichera « indisponible », tout le reste fonctionne.")
-        exe = BASE_DIR / "LibreHardwareMonitor" / "LibreHardwareMonitor.exe"
+        exe = paths.INSTALL_DIR / "LibreHardwareMonitor" / "LibreHardwareMonitor.exe"
         if lhm["available"]:
             lines.append("[Matériel] LibreHardwareMonitor connecté : températures CPU, disques et ventilateurs disponibles")
         elif not exe.exists():

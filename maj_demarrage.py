@@ -14,6 +14,7 @@ Le résultat est écrit dans maj/resultat.json : le panel l'affiche (réussite, 
 from __future__ import annotations
 
 import filecmp
+import hashlib
 import json
 import os
 import shutil
@@ -22,12 +23,14 @@ import sys
 import time
 from pathlib import Path
 
-BASE = Path(__file__).resolve().parent
-MAJ_DIR = BASE / "maj"
+import paths
+
+BASE = paths.APP_DIR
+MAJ_DIR = paths.MAJ_DIR
 EN_COURS = MAJ_DIR / "en_cours.json"
 RESULTAT = MAJ_DIR / "resultat.json"
-PROTEGES = {"data", "config.json", "deck.json", "jeux.json", "fan_names.json", ".env", ".venv", "venv", "runtime", "runtime.neuf", "runtime.tmp",
-            "logs",
+PROTEGES = {"data", "config.json", "deck.json", "jeux.json", "fan_names.json", "runtime.json", ".env",
+            ".venv", ".venv-build", "venv", "runtime", "runtime.neuf", "runtime.tmp", "logs",
             "versions", "partage", "maj", "sauvegardes-maj", "LibreHardwareMonitor", "actions", ".git",
             "dist", ".ruff_cache", ".pytest_cache", "sauvegardes", "backups", "reference", "references"}
 TEST_TIMEOUT = 150
@@ -89,29 +92,39 @@ def restaurer(sauvegarde: Path, code_seulement: bool) -> None:
     copier_code(code)
     if not code_seulement:
         if (sauvegarde / "data").is_dir():
-            if (BASE / "data").exists():
-                shutil.rmtree(BASE / "data")
-            shutil.copytree(sauvegarde / "data", BASE / "data")
+            if paths.DATA_DIR.exists():
+                shutil.rmtree(paths.DATA_DIR)
+            shutil.copytree(sauvegarde / "data", paths.DATA_DIR)
         for f in (sauvegarde / "config").glob("*"):
-            shutil.copy2(f, BASE / f.name)
+            shutil.copy2(f, paths.USER_ROOT / f.name)
 
 
 def _pip_si_besoin(sauvegarde: Path) -> None:
+    if paths.FROZEN:                                  # dépendances embarquées dans l'exécutable
+        return
     ancien, nouveau = sauvegarde / "code" / "requirements.txt", BASE / "requirements.txt"
     if nouveau.exists() and (not ancien.exists() or not filecmp.cmp(ancien, nouveau, shallow=False)):
         _dire("nouvelles dépendances : installation (Internet nécessaire)…")
         subprocess.run([sys.executable, "-m", "pip", "install", "--disable-pip-version-check", "-q", "-r", str(nouveau)],
                        cwd=BASE, timeout=900, check=True)
-        try:
+        try:                                      # Python privé (runtime\) : marque à côté de l'interpréteur
             shutil.copyfile(nouveau, Path(sys.prefix) / "requirements.installe")
+        except OSError:
+            pass
+        try:                                      # mode source avec .venv : évite une réinstallation inutile
+            marque = BASE / ".venv" / ".requirements.sha256"
+            if marque.parent.is_dir():
+                marque.write_text(hashlib.sha256(nouveau.read_bytes()).hexdigest(), encoding="utf-8")
         except OSError:
             pass
 
 
 def tester_demarrage(attendue: str) -> tuple[bool, str]:
     """Démarre la version installée dans un processus séparé et vérifie qu'elle répond la bonne version."""
+    cmd = ([sys.executable, "--test-demarrage", attendue] if paths.FROZEN
+           else [sys.executable, str(BASE / "app.py"), "--test-demarrage", attendue])
     try:
-        p = subprocess.run([sys.executable, str(BASE / "app.py"), "--test-demarrage", attendue], cwd=BASE,
+        p = subprocess.run(cmd, cwd=BASE,
                            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=TEST_TIMEOUT,
                            env={**os.environ, "NEXUS_OPEN_BROWSER": "0", "NEXUS_NO_BOT": "1"})
     except subprocess.TimeoutExpired:
@@ -123,6 +136,7 @@ def tester_demarrage(attendue: str) -> tuple[bool, str]:
 
 
 def main() -> int:
+    paths.prepare()
     travail = _lire(EN_COURS)
     if not travail:
         return 0
@@ -180,6 +194,6 @@ def main() -> int:
 
 if __name__ == "__main__":
     code = main()
-    if "--puis-lancer" in sys.argv:                       # redémarrage sans lancer.bat (repli)
+    if "--puis-lancer" in sys.argv and not paths.FROZEN:  # redémarrage sans lancer.bat (repli)
         os.execv(sys.executable, [sys.executable, str(BASE / "app.py")])
     sys.exit(code)

@@ -20,6 +20,15 @@ sys.coinit_flags = 0  # COINIT_MULTITHREADED
 
 try:
     import comtypes
+    import comtypes.client
+    import paths
+
+    # comtypes génère ses modules au premier usage : dans un exe installé, le dossier du
+    # programme est en lecture seule. On les écrit dans les données utilisateur.
+    _gen = paths.DATA_DIR / "comtypes"
+    _gen.mkdir(parents=True, exist_ok=True)
+    comtypes.client.gen_dir = str(_gen)
+
     from comtypes import CLSCTX_ALL
     from pycaw.pycaw import AudioUtilities, IAudioMeterInformation
     AVAILABLE, IMPORT_ERROR = True, None

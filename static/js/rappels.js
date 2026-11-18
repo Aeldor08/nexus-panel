@@ -47,7 +47,7 @@
     el.querySelector("button").addEventListener("click", () => el.remove());
     box.appendChild(el);
     if (window.reminderSound.on) beep();
-    if (typeof notifOn !== "undefined" && notifOn) {
+    if (!window.NEXUS_NATIVE && typeof notifOn !== "undefined" && notifOn) {
       try { new Notification(r.titre, { body: r.texte, tag: "rappel-" + r.id }); } catch (e) {}
     }
   }
