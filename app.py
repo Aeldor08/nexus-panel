@@ -825,8 +825,17 @@ def lan_url() -> str | None:
     return f"http://{local[0]}:{PORT}" if local else None
 
 
+# Fenêtre native (nexus_launcher.py) : relance le serveur web DANS le processus (nouvelle adresse d'écoute)
+# au lieu de quitter. Sans ce crochet, os._exit fermait NEXUS.exe, que rien ne relance (pas de lancer.bat).
+RESTART_HOOK = None
+
+
 def schedule_restart() -> None:
-    """Le serveur s'arrête avec RESTART_CODE ; lancer.bat le relance aussitôt (nouvelle écoute réseau)."""
+    """Le serveur s'arrête avec RESTART_CODE ; lancer.bat le relance aussitôt (nouvelle écoute réseau).
+    En fenêtre native, le lanceur relance seulement le serveur web : la fenêtre reste ouverte."""
+    if RESTART_HOOK is not None:
+        threading.Timer(1.2, RESTART_HOOK).start()
+        return
     threading.Timer(1.2, lambda: os._exit(RESTART_CODE)).start()
 
 
@@ -851,12 +860,61 @@ async def api_pair_claim(request: Request) -> JSONResponse:
     return resp
 
 
+# Pare-feu Windows (version exe / portable) : NEXUS.exe n'est pas python.exe, l'ancienne règle « Python » ne
+# s'applique pas. Règle par PORT (et non par programme) : elle reste valable si le dossier portable est déplacé.
+PARE_FEU_REGLE = "NEXUS (telephone, portable)"
+_pare_feu_cache = {"t": 0.0, "ok": None}
+
+
+def _pare_feu_ok() -> bool | None:
+    """True/False en version exe sous Windows ; None ailleurs (mode source : Windows demande pour Python)."""
+    if not paths.FROZEN or os.name != "nt":
+        return None
+    if time.time() - _pare_feu_cache["t"] < 5:
+        return _pare_feu_cache["ok"]
+    import subprocess
+    try:
+        p = subprocess.run(["netsh", "advfirewall", "firewall", "show", "rule", f"name={PARE_FEU_REGLE}"],
+                           capture_output=True, text=True, timeout=10, errors="replace",
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        sortie = p.stdout or ""
+        ok = p.returncode == 0 and any(ligne.strip().endswith(str(PORT)) for ligne in sortie.splitlines()
+                                       if "LocalPort" in ligne)
+    except (OSError, subprocess.TimeoutExpired):
+        ok = None
+    _pare_feu_cache.update(t=time.time(), ok=ok)
+    return ok
+
+
 @app.get("/api/remote")
 def api_remote() -> JSONResponse:
     p = remote_svc.pairing()
     return JSONResponse({**remote_svc.state(), "url": lan_url(), "port": PORT,
+                         "pare_feu": _pare_feu_ok(),
                          "pairing": {"code": p["code"], "expires": p["expires"]} if p else None},
                         headers={"Cache-Control": "no-store"})
+
+
+@app.post("/api/remote/pare-feu")
+def api_remote_pare_feu() -> JSONResponse:
+    """Crée (ou met à jour) la règle entrante du pare-feu pour le port de NEXUS. Windows affiche la demande
+    d'autorisation administrateur (UAC) : rien n'est modifié sans l'accord de l'utilisateur."""
+    if not paths.FROZEN or os.name != "nt":
+        raise BadRequest("seulement pour la version exe sous Windows", 409)
+    import subprocess
+    regle = f'name="{PARE_FEU_REGLE}"'
+    args = (f'/c netsh advfirewall firewall delete rule {regle} & '
+            f'netsh advfirewall firewall add rule {regle} dir=in action=allow protocol=TCP '
+            f'localport={int(PORT)} remoteip=localsubnet profile=private')
+    script = f"Start-Process -FilePath cmd.exe -ArgumentList '{args}' -Verb RunAs -WindowStyle Hidden -Wait"
+    try:
+        subprocess.Popen(["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
+                         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    except OSError as exc:
+        raise BadRequest(f"impossible d'ouvrir la demande d'autorisation ({exc})", 500) from exc
+    _pare_feu_cache["t"] = 0.0
+    activite.noter("appareil", "règle pare-feu demandée", "ok", f"port {PORT}", "")
+    return JSONResponse({"ok": True})
 
 
 @app.post("/api/remote/config")

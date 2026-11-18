@@ -587,6 +587,31 @@ def _run_server(host: str, port: int) -> None:
     _SERVER.run()
 
 
+def _restart_server(port: int) -> None:
+    """Accès téléphone activé ou coupé : relance le serveur web sur la nouvelle adresse (0.0.0.0 ou 127.0.0.1)
+    sans quitter NEXUS. La fenêtre garde son jeton et retrouve le serveur sur le même port."""
+    global _SERVER, _SERVER_THREAD
+    import app
+    if _QUITTING:
+        return
+    ancien, fil = _SERVER, _SERVER_THREAD
+    if ancien is not None:
+        ancien.should_exit = True
+    if fil is not None:
+        fil.join(10)
+    app.remote_svc.active = app.remote_svc.enabled
+    host = "0.0.0.0" if app.remote_svc.enabled else "127.0.0.1"
+    for _essai in range(20):                  # le port peut rester occupé un court instant
+        _SERVER = None                        # sinon _server_ready verrait l'ancien serveur « started »
+        _SERVER_THREAD = threading.Thread(target=_run_server, args=(host, port), daemon=True, name="serveur")
+        _SERVER_THREAD.start()
+        if _server_ready(10):
+            print(f"[Serveur] relancé sur {host}:{port} (accès téléphone {'activé' if app.remote_svc.active else 'désactivé'})")
+            return
+        time.sleep(.5)
+    print("[Serveur] ERREUR : relance impossible, redémarre NEXUS")
+
+
 def _server_ready(timeout: float = 30.0) -> bool:
     fin = time.time() + timeout
     while time.time() < fin:
@@ -712,6 +737,7 @@ def main() -> int:
     app.set_activate_callback(_show_window)
     app.remote_svc.active = app.remote_svc.enabled
     host = "0.0.0.0" if app.remote_svc.enabled else "127.0.0.1"
+    app.RESTART_HOOK = lambda: _restart_server(port)
 
     _SERVER_THREAD = threading.Thread(target=_run_server, args=(host, port), daemon=True, name="serveur")
     _SERVER_THREAD.start()

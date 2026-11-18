@@ -1,0 +1,49 @@
+/* Demi-écran : fenêtre posée sur la moitié gauche ou droite de l'écran (Win + ← / →).
+   Environ 950 px sur un écran 1920, 1270 px sur un écran 2560. Entre le téléphone (mobile.css, ≤ 760 px)
+   et le plein écran, les grilles à 3 colonnes deviennent trop étroites : on passe à 2 colonnes.
+   Chargée en dernier ; ne s'applique qu'à la disposition d'origine (un bloc déplacé à la main garde sa place). */
+
+@media (min-width: 761px) and (max-width: 1400px) {
+
+  /* ---- PC : cases 2 par 2 -------------------------------------------------------------------
+     CPU | RAM
+     GPU | Températures
+     Réseau | Disques
+     Processus | Ventilation & énergie
+     Mode jeu (toute la largeur) */
+  #tab-pc { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-content: start; }
+  #tab-pc > * { grid-column: 1 / -1; min-width: 0; }
+  #tab-pc > section.grid { display: contents; }
+  #tab-pc > section.grid > .card { grid-column: auto; margin: 0; }
+  #tab-pc > section.grid > .c-gm { grid-column: 1 / -1; }      /* Mode jeu : toute la largeur */
+  #tab-pc > .row3 + .row3, #tab-pc > .row-wide { margin-top: 0; }
+  #tab-pc .error-banner:empty, #tab-pc .error-banner:not(.show) { margin: 0; }
+
+  /* Jauge + chiffres côte à côte tant que la case le permet */
+  #tab-pc .gauge-row { gap: 14px; }
+  #tab-pc .facts { flex-basis: 170px; }
+  /* Processus : Top CPU / Top RAM l'un sous l'autre si la case est étroite */
+  #tab-pc .c-proc .proc-cols { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+
+  /* ---- En-tête plus compact : plus de place pour les cases ---------------------------------- */
+  header { padding-bottom: 10px; }
+  :root header h1 .sub.sub-sent, :root header h1 .sub.sub-term,
+  :root[data-theme] header h1 .sub.sub-sent, :root[data-theme] header h1 .sub.sub-term { display: none; }
+  .status { gap: 8px; row-gap: 6px; flex-wrap: wrap; }
+  .status .btn { padding-left: 9px; padding-right: 9px; }
+
+  /* Onglets sur une seule ligne, défilement horizontal si besoin */
+  .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; padding-bottom: 4px; }
+  .tabs > * { flex: none; }
+
+  /* ---- Autres onglets ----------------------------------------------------------------------- */
+  .row2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Demi-écran d'un écran 1920 (≈ 950 px) : les cases à deux colonnes internes s'empilent */
+@media (min-width: 761px) and (max-width: 1000px) {
+  .row2 { grid-template-columns: 1fr; }
+  .gm-grid { grid-template-columns: 1fr; }
+  .ping-cards { grid-template-columns: 1fr 1fr; }
+}

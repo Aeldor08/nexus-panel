@@ -21,6 +21,13 @@
         <label class="gm-toggle ph-toggle"><input type="checkbox" id="ph-on" ${i.enabled ? "checked" : ""}>
           <span>Autoriser l'accès depuis mon téléphone <small>(réseau Wi-Fi de la maison uniquement)</small></span></label>
         <p class="ph-status">${statusHtml}</p>
+        ${i.active && i.pare_feu === false ? `
+          <div class="ph-fw">
+            <b class="t-warn">⚠ Le pare-feu Windows bloque le téléphone.</b>
+            Il faut autoriser le port <code>${esc(String(i.port))}</code> de NEXUS sur les réseaux privés.
+            <button class="btn" id="ph-fw">🛡 Autoriser dans le pare-feu</button>
+            <small class="muted">Windows va demander une confirmation administrateur.</small>
+          </div>` : ""}
         ${i.active ? `
           <div class="section-title">Appairer un téléphone</div>
           <div id="ph-pair">${i.pairing ? "" : `<button class="btn big" id="ph-start">Afficher le QR code</button>`}</div>` : ""}
@@ -33,8 +40,11 @@
           : `<div class="empty">Aucun appareil pour l'instant.</div>`}</div>
         <p class="hint">
           • Seuls les appareils appairés ici peuvent ouvrir NEXUS ; les adresses Internet sont toujours refusées.<br>
-          • Au premier démarrage avec l'accès activé, <b>Windows demande d'autoriser Python</b> : coche « Réseaux privés » puis Autoriser.
-            Si tu as refusé : Pare-feu Windows → « Autoriser une application » → Python → Privé.<br>
+          ${i.pare_feu == null ? `• Au premier démarrage avec l'accès activé, <b>Windows demande d'autoriser Python</b> : coche « Réseaux privés » puis Autoriser.
+            Si tu as refusé : Pare-feu Windows → « Autoriser une application » → Python → Privé.<br>`
+          : `• Le pare-feu doit laisser passer le port <code>${esc(String(i.port))}</code> (bouton ci-dessus s'il est bloqué).<br>`}
+          • Une ancienne adresse enregistrée sur le téléphone (autre port, ex. <code>:8000</code>) ne marche plus :
+            appaire-le à nouveau avec le QR code.<br>
           • Sur le téléphone, menu du navigateur → <b>« Ajouter à l'écran d'accueil »</b> pour avoir l'icône NEXUS.<br>
           • Hors de chez toi (4G), ça ne marche pas : c'est voulu (rien n'est ouvert sur Internet).
         </p>
@@ -53,6 +63,14 @@
     };
     const start = $("ph-start");
     if (start) start.onclick = startPairing;
+    const fw = $("ph-fw");
+    if (fw) fw.onclick = async () => {
+      try {
+        await api("/api/remote/pare-feu", {});
+        fw.disabled = true;
+        fw.textContent = "Confirme dans la fenêtre Windows…";
+      } catch (e) { toast(e.message, true); }
+    };
     if (i.pairing) showPairing(i.pairing);
     dlg.querySelectorAll("[data-rev]").forEach(b => b.onclick = async () => {
       const d = info.devices.find(x => x.id === b.dataset.rev);
