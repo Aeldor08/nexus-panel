@@ -26,7 +26,8 @@ BASE = Path(__file__).resolve().parent
 MAJ_DIR = BASE / "maj"
 EN_COURS = MAJ_DIR / "en_cours.json"
 RESULTAT = MAJ_DIR / "resultat.json"
-PROTEGES = {"data", "config.json", "deck.json", "jeux.json", "fan_names.json", ".env", ".venv", "venv", "logs",
+PROTEGES = {"data", "config.json", "deck.json", "jeux.json", "fan_names.json", ".env", ".venv", "venv", "runtime", "runtime.neuf", "runtime.tmp",
+            "logs",
             "versions", "partage", "maj", "sauvegardes-maj", "LibreHardwareMonitor", "actions", ".git",
             "dist", ".ruff_cache", ".pytest_cache", "sauvegardes", "backups", "reference", "references"}
 TEST_TIMEOUT = 150
@@ -101,6 +102,10 @@ def _pip_si_besoin(sauvegarde: Path) -> None:
         _dire("nouvelles dépendances : installation (Internet nécessaire)…")
         subprocess.run([sys.executable, "-m", "pip", "install", "--disable-pip-version-check", "-q", "-r", str(nouveau)],
                        cwd=BASE, timeout=900, check=True)
+        try:
+            shutil.copyfile(nouveau, Path(sys.prefix) / "requirements.installe")
+        except OSError:
+            pass
 
 
 def tester_demarrage(attendue: str) -> tuple[bool, str]:

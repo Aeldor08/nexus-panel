@@ -55,6 +55,9 @@ LibreHardwareMonitor/
 # --- Environnement Python et fichiers générés
 .venv/
 venv/
+runtime/
+runtime.neuf/
+runtime.tmp/
 __pycache__/
 *.py[cod]
 .ruff_cache/

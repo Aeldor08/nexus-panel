@@ -3,67 +3,61 @@ setlocal
 chcp 65001 >nul
 cd /d "%~dp0"
 title NEXUS
+rem  lancer.bat          : NEXUS demarre en arriere-plan, avec son icone pres de l'horloge (pas de fenetre noire)
+rem  lancer.bat console  : l'ancienne fenetre noire (depannage : messages du serveur en direct)
+rem  NEXUS utilise son propre Python (dossier runtime\) : il ne depend pas du Python installe sur Windows.
+set "PYTHONNOUSERSITE=1"
+set "PYTHONPATH="
+set "PYTHONHOME="
+rem L'icone vient de demander l'installation du Python prive : on la laisse se fermer d'abord
+if "%NEXUS_ATTENDRE%"=="1" ping -n 3 127.0.0.1 >nul
+set "NEXUS_ATTENDRE="
 
-rem --- Pas encore installe ? On lance l'installation (environnement Python + configuration) ---
-if not exist ".venv\Scripts\python.exe" (
+call :trouver
+if not defined NX_PY (
     echo NEXUS n'est pas encore installe : lancement de installer.bat...
     call installer.bat
-    if not exist ".venv\Scripts\python.exe" exit /b 1
+    call :trouver
+    if not defined NX_PY exit /b 1
 )
 
-rem --- Trouver Python : py, python, puis les dossiers d'installation habituels ---
-set "PY="
-py -3 -c "import sys" >nul 2>&1 && set "PY=py -3"
-if not defined PY python -c "import sys" >nul 2>&1 && set "PY=python"
-if not defined PY for /d %%D in ("%LOCALAPPDATA%\Programs\Python\Python3*") do if exist "%%D\python.exe" set "PY="%%D\python.exe""
-if not defined PY for /d %%D in ("%ProgramFiles%\Python3*") do if exist "%%D\python.exe" set "PY="%%D\python.exe""
-if not defined PY (
-    echo [ERREUR] Python 3 est introuvable.
-    echo Installez-le depuis https://www.python.org/downloads/ en cochant "Add python.exe to PATH".
-    pause
-    exit /b 1
-)
-echo Python utilise : %PY%
+rem --- Python prive de NEXUS : installe une fois (telechargement verifie), refait seulement si sa version change ---
+call :python_prive
+call :trouver
 
-rem --- Environnement virtuel local, cree au premier lancement ---
-if not exist ".venv\Scripts\python.exe" (
-    echo Creation de l'environnement virtuel...
-    %PY% -m venv .venv
-    if errorlevel 1 (
-        echo [ERREUR] Impossible de creer .venv
-        pause
-        exit /b 1
-    )
-)
-
-echo Installation / verification des dependances...
-".venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q -r requirements.txt
+rem --- Dependances : seulement si requirements.txt a change depuis la derniere installation ---
+call :dependances
 if errorlevel 1 (
-    echo [ERREUR] L'installation des dependances a echoue.
     pause
     exit /b 1
 )
 
 rem --- Premiere configuration (mot de passe du deck, Discord) si elle n'a pas encore ete faite ---
-if not exist "config.json" ".venv\Scripts\python.exe" configurer.py
+if not exist "config.json" "%NX_PY%" configurer.py
 
-rem --- LibreHardwareMonitor (temperatures CPU / disques), demarre en administrateur ---
-set "LHM=%~dp0LibreHardwareMonitor\LibreHardwareMonitor.exe"
-if exist "%LHM%" if not exist "%~dp0LibreHardwareMonitor\LibreHardwareMonitor.config" copy /y "%~dp0outils\LibreHardwareMonitor.config" "%~dp0LibreHardwareMonitor\" >nul
-if exist "%LHM%" (
-    tasklist /fi "imagename eq LibreHardwareMonitor.exe" 2>nul | find /i "LibreHardwareMonitor.exe" >nul
-    if errorlevel 1 (
-        echo Demarrage de LibreHardwareMonitor : acceptez la fenetre administrateur de Windows...
-        powershell -NoProfile -Command "try { Start-Process -FilePath $env:LHM -WorkingDirectory (Split-Path $env:LHM) -Verb RunAs -ErrorAction Stop } catch { Write-Host '[AVERTISSEMENT] LibreHardwareMonitor non demarre : temperatures CPU indisponibles.' }"
-    ) else (
-        echo LibreHardwareMonitor tourne deja.
-    )
-) else (
-    echo [INFO] LibreHardwareMonitor absent : temperatures CPU indisponibles. Voir README.md
-)
+if /i "%~1"=="console" goto console
+if not exist "%NX_PYW%" goto console
+rem --- NEXUS en arriere-plan : l'icone pres de l'horloge fait le reste (mises a jour, redemarrages, journal) ---
+set "NEXUS_DEPUIS_LANCEUR=1"
+start "" "%NX_PYW%" nexus.pyw
+echo NEXUS demarre : son icone apparait pres de l'horloge, le navigateur s'ouvrira tout seul.
+exit /b 0
 
-rem --- Serveur ; NEXUS ouvre lui-meme le navigateur des qu'il est pret (une seule fois) ---
-rem --- Il redemarre tout seul s'il s'arrete de facon inattendue (5 fois max) ---
+rem ##CALAGE## Ne pas deplacer : quand une mise a jour remplace ce fichier pendant qu'une ancienne fenetre
+rem NEXUS l'execute, cmd.exe continue de lire a l'octet ou il en etait (3480, juste apres la ligne
+rem maj_demarrage.py). La ligne 'call :app' doit donc commencer a l'octet 3480 : ces lignes servent de cale
+rem (verifie par outils\tests\test_superviseur.py).
+rem ----------------------------------------------------------------------------------------------
+rem ----------------------------------------------------------------------------------------------
+rem ----------------------------------------------------------------------------------------------
+rem ----------------------------------------------------------------------------------------------
+rem ----------------------------------------------------------------------------------------------
+rem ----------------------------------------------------------------------------------------------
+rem ----------------------------------------------------------------------------------------------
+rem --------------------
+rem ===================== Mode console (ancienne fenetre noire) =====================
+:console
+call :lhm
 echo.
 echo Demarrage de NEXUS... le navigateur s'ouvrira tout seul quand il sera pret.
 echo Garde cette fenetre ouverte : la fermer arrete NEXUS.
@@ -73,9 +67,11 @@ rem NEXUS_LANCEUR : app.py sait que ce script le relance (mises a jour, acces te
 set "NEXUS_LANCEUR=1"
 set /a RESTARTS=0
 :serveur
+rem (ce repere sert aussi a une ancienne fenetre NEXUS qui redemarre apres une mise a jour : rien avant ne compte)
+call :trouver
 rem Mise a jour preparee depuis le panel : mise en place, test de demarrage, restauration auto si echec
-if exist "maj\en_cours.json" ".venv\Scripts\python.exe" maj_demarrage.py
-".venv\Scripts\python.exe" app.py
+if exist "maj\en_cours.json" "%NX_PY%" maj_demarrage.py
+call :app
 set "RC=%errorlevel%"
 set "NEXUS_OPEN_BROWSER=0"
 if %RC% EQU 0 goto fin
@@ -102,3 +98,70 @@ echo (fais une capture d'ecran de cette fenetre pour demander de l'aide).
 echo.
 echo Le serveur s'est arrete.
 pause
+exit /b 0
+
+rem ===================== Sous-programmes =====================
+:trouver
+rem Le Python de NEXUS : runtime\ (Python prive), sinon l'ancienne installation .venv\
+set "NX_PY="
+set "NX_PYW="
+set "NX_ENV="
+if exist "runtime\python.exe" (
+    set "NX_PY=runtime\python.exe"
+    set "NX_PYW=runtime\pythonw.exe"
+    set "NX_ENV=runtime"
+    exit /b 0
+)
+if exist ".venv\Scripts\python.exe" (
+    set "NX_PY=.venv\Scripts\python.exe"
+    set "NX_PYW=.venv\Scripts\pythonw.exe"
+    set "NX_ENV=.venv"
+)
+exit /b 0
+
+:app
+call :trouver
+"%NX_PY%" app.py
+exit /b %errorlevel%
+
+:python_prive
+powershell -NoProfile -ExecutionPolicy Bypass -File "outils\installer_python.ps1" -SiBesoin
+if not errorlevel 1 exit /b 0
+echo.
+echo [AVERTISSEMENT] Le Python prive de NEXUS n'a pas pu etre installe (message au-dessus).
+if exist "runtime\python.exe" (
+    echo NEXUS continue avec son Python actuel ; nouvel essai au prochain lancement.
+) else (
+    echo NEXUS continue avec l'ancienne installation ^(.venv^) ; nouvel essai au prochain lancement.
+)
+ping -n 6 127.0.0.1 >nul
+exit /b 0
+
+:dependances
+fc /b requirements.txt "%NX_ENV%\requirements.installe" >nul 2>&1
+if not errorlevel 1 exit /b 0
+echo Installation / verification des dependances...
+"%NX_PY%" -m pip install --disable-pip-version-check --no-warn-script-location -q -r requirements.txt
+if errorlevel 1 (
+    echo [ERREUR] L'installation des dependances a echoue ^(connexion Internet ?^).
+    exit /b 1
+)
+copy /y requirements.txt "%NX_ENV%\requirements.installe" >nul
+exit /b 0
+
+:lhm
+rem LibreHardwareMonitor (temperatures CPU / disques), demarre en administrateur
+set "LHM=%~dp0LibreHardwareMonitor\LibreHardwareMonitor.exe"
+if exist "%LHM%" if not exist "%~dp0LibreHardwareMonitor\LibreHardwareMonitor.config" copy /y "%~dp0outils\LibreHardwareMonitor.config" "%~dp0LibreHardwareMonitor\" >nul
+if not exist "%LHM%" (
+    echo [INFO] LibreHardwareMonitor absent : temperatures CPU indisponibles. Voir README.md
+    exit /b 0
+)
+tasklist /fi "imagename eq LibreHardwareMonitor.exe" 2>nul | find /i "LibreHardwareMonitor.exe" >nul
+if not errorlevel 1 (
+    echo LibreHardwareMonitor tourne deja.
+    exit /b 0
+)
+echo Demarrage de LibreHardwareMonitor : acceptez la fenetre administrateur de Windows...
+powershell -NoProfile -Command "try { Start-Process -FilePath $env:LHM -WorkingDirectory (Split-Path $env:LHM) -Verb RunAs -ErrorAction Stop } catch { Write-Host '[AVERTISSEMENT] LibreHardwareMonitor non demarre : temperatures CPU indisponibles.' }"
+exit /b 0

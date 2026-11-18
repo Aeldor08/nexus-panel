@@ -14,7 +14,7 @@ VERSIONS_DIR = BASE / "versions"
 # (config.json et deck.json, personnels, ne sont jamais inclus : seuls les modèles *.example.json le sont)
 CODE_GLOBS = ["*.py", "*.bat", "*.md", "*.txt", "*.ico", "*.example.json", ".gitignore", "VERSION", "LICENSE",
               "static/**/*", "outils/*", "profils/**/*", "actions/*.bat", "actions/*.cmd", "actions/*.ps1", "actions/*.py"]
-EXCLUDE_PARTS = {".venv", "data", "versions", "__pycache__", "LibreHardwareMonitor", "partage", "maj", "sauvegardes-maj", "dist"}
+EXCLUDE_PARTS = {".venv", "runtime", "runtime.neuf", "runtime.tmp", "data", "versions", "__pycache__", "LibreHardwareMonitor", "partage", "maj", "sauvegardes-maj", "dist"}
 
 
 def current() -> str:

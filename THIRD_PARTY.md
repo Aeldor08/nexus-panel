@@ -28,6 +28,7 @@ Les illustrations, sprites et SVG des profils sont des créations originales pou
 | discord.py | bot Discord facultatif | MIT |
 | Pillow | miniatures des souvenirs, icônes | MIT-CMU (HPND) |
 | keyring | rangement du jeton GitHub dans le gestionnaire d'identifiants de Windows | MIT |
+| pystray | icône de NEXUS près de l'horloge | LGPL-3.0 (bibliothèque installée par pip, non modifiée) |
 
 Outils de développement seulement (`requirements-dev.txt`, non nécessaires pour utiliser NEXUS) : ruff (MIT), httpx / httpx2 (BSD-3-Clause), gitleaks (MIT).
 
@@ -36,6 +37,7 @@ Outils de développement seulement (`requirements-dev.txt`, non nécessaires pou
 | Logiciel | Usage | Licence |
 |---|---|---|
 | LibreHardwareMonitor | températures et ventilateurs (facultatif) | MPL-2.0 |
+| Python 3.12 (paquet `python` de la Python Software Foundation sur nuget.org) | Python privé de NEXUS (`runtime\`), téléchargé par `installer.bat` avec vérification SHA256 | PSF License 2.0 |
 
 LibreHardwareMonitor n'est **pas** inclus dans le dépôt ni dans les releases : chacun le télécharge depuis
 son site officiel (voir README).

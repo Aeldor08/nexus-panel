@@ -14,7 +14,9 @@ vérification des mises à jour auprès de `api.github.com` (désactivable), plu
 
 ## Installation pas à pas (aucune connaissance en Python nécessaire)
 
-Compte environ 10 minutes.
+Compte environ 10 minutes. **Rien à installer sur Windows** : NEXUS apporte son propre Python (dossier
+`runtime\`), indépendant du Python éventuellement installé sur le PC ; une mise à jour ou une désinstallation
+de ce dernier ne le dérange jamais.
 
 ### Étape 1 — Dézipper NEXUS
 
@@ -25,23 +27,18 @@ le zip qu'on t'a envoyé.
 2. Déplace le dossier obtenu à un endroit où tu le garderas, par exemple dans **Documents**.
    (Évite le Bureau synchronisé par OneDrive et les dossiers « Programmes ».)
 
-### Étape 2 — Installer Python (une seule fois)
+### Étape 2 — (plus rien à faire : NEXUS a son propre Python)
 
-Python est le langage dans lequel NEXUS est écrit ; il faut l'installer comme un logiciel normal.
-
-1. Va sur <https://www.python.org/downloads/> et clique sur le gros bouton jaune **Download Python 3.x**.
-2. Ouvre le fichier téléchargé.
-3. **Important :** en bas de la première fenêtre, coche **« Add python.exe to PATH »**.
-4. Clique sur **Install Now**, attends la fin, puis **Close**.
-
-> Tu as déjà Python ? Il faut la version 3.10 ou plus récente. L'installateur de NEXUS le vérifie.
+Les anciennes versions de NEXUS demandaient d'installer Python soi-même : ce n'est plus le cas, passe à l'étape 3.
 
 ### Étape 3 — Lancer l'installation de NEXUS
 
 1. Dans le dossier de NEXUS, double-clique sur **`installer.bat`**.
    - Si Windows affiche « Windows a protégé votre ordinateur » : clique sur **Informations
      complémentaires** puis **Exécuter quand même** (c'est normal pour un script téléchargé).
-2. Une fenêtre noire s'ouvre et installe tout ce qu'il faut (1 à 3 minutes, il faut Internet).
+2. Une fenêtre noire s'ouvre et installe tout ce qu'il faut (1 à 3 minutes, il faut Internet) : le Python
+   privé de NEXUS (14 Mo, paquet officiel de la Python Software Foundation sur nuget.org, empreinte SHA256
+   vérifiée) dans `runtime\`, puis ses bibliothèques.
 3. Elle affiche ensuite ce qu'elle a trouvé sur ton PC, par exemple :
    - `Carte graphique détectée : …` (NVIDIA, AMD ou Intel), puis la façon dont elle sera lue. Avec une
      carte **AMD ou Intel**, installe LibreHardwareMonitor (étape 5) pour avoir aussi sa température ;
@@ -103,9 +100,15 @@ et `/command` qui les liste toutes.
 ## Utilisation au quotidien
 
 - **Ouvrir NEXUS :** double-clic sur le raccourci **NEXUS** du Bureau (ou sur `lancer.bat`).
-  Le navigateur s'ouvre tout seul sur `http://127.0.0.1:8000`. Clique sur **NEXUS** pour entrer.
-- **Fermer NEXUS :** ferme la fenêtre noire.
-- **Changer le mot de passe ou Discord :** `configurer.bat`, puis relance NEXUS.
+  NEXUS tourne en arrière-plan, **sans fenêtre noire** : son **icône** apparaît près de l'horloge et le
+  navigateur s'ouvre tout seul sur `http://127.0.0.1:8000`. Clique sur **NEXUS** pour entrer.
+- **L'icône près de l'horloge** (si elle est cachée : la petite flèche ^) : clic = ouvrir NEXUS ; clic droit
+  = **Redémarrer NEXUS**, **Ouvrir le journal** (les messages du serveur, `logs\nexus.log`), **Quitter NEXUS**.
+  Survole-la pour voir son état (en marche, mise à jour en cours…). Si le serveur plante, elle le relance
+  toute seule (5 fois d'affilée au plus, puis une notification).
+- **Fermer NEXUS :** clic droit sur l'icône → **Quitter NEXUS**.
+- **Dépanner avec l'ancienne fenêtre noire :** `lancer.bat console` (messages du serveur en direct).
+- **Changer le mot de passe ou Discord :** `configurer.bat`, puis clic droit sur l'icône → Redémarrer NEXUS.
 - **Changer de mode :** bouton **◐** en haut (Terminal rouge / Sentinelle orange et bleu).
 - **Changer de profil visuel :** bouton **🎨** en haut (voir « Profils visuels » ci-dessous).
 - **Mettre à jour :** remplace les fichiers par ceux d'une version plus récente **sans toucher** à
@@ -115,12 +118,12 @@ et `/command` qui les liste toutes.
 
 | Problème | Solution |
 |---|---|
-| La fenêtre noire se ferme tout de suite | Lance `installer.bat` ; s'il signale « Python introuvable », refais l'étape 2 en cochant bien *Add python.exe to PATH*. |
-| « Ce site est inaccessible » / `ERR_CONNECTION_REFUSED` | NEXUS ne tourne pas. Lance-le (raccourci NEXUS ou `lancer.bat`) et **garde la fenêtre noire ouverte** : le navigateur s'ouvre tout seul dès que NEXUS est prêt. Si la fenêtre noire affiche une erreur (texte rouge, « [ERREUR] », « Traceback »), fais-en une capture d'écran pour demander de l'aide. |
-| « Le port 8000 est déjà utilisé » | NEXUS est déjà ouvert dans une autre fenêtre noire (regarde la barre des tâches), ou un autre programme utilise ce port : redémarre le PC. |
+| L'installation signale « Python prive de NEXUS n'a pas pu etre installe » | Vérifie la connexion Internet (NEXUS télécharge son Python une seule fois) et que le dossier n'est pas en lecture seule, puis relance `installer.bat`. |
+| « Ce site est inaccessible » / `ERR_CONNECTION_REFUSED` | NEXUS ne tourne pas. Lance-le (raccourci NEXUS ou `lancer.bat`) : son icône apparaît près de l'horloge et le navigateur s'ouvre tout seul dès qu'il est prêt. S'il ne démarre pas : clic droit sur l'icône → **Ouvrir le journal**, ou lance `lancer.bat console` pour voir les messages en direct, et fais une capture d'écran de l'erreur (« [ERREUR] », « Traceback ») pour demander de l'aide. |
+| « Le port 8000 est déjà utilisé » | NEXUS est déjà ouvert (regarde les icônes près de l'horloge, ou une ancienne fenêtre noire NEXUS), ou un autre programme utilise ce port : redémarre le PC. |
 | Températures CPU « indisponibles » | Voir l'étape 5. LibreHardwareMonitor doit tourner (icône près de l'horloge Windows) et avoir été autorisé en administrateur. Test : <http://127.0.0.1:8085/data.json> doit afficher du texte. |
 | GPU « indisponible » ou incomplet | NEXUS détecte tout seul la carte graphique (NVIDIA, AMD ou Intel) et l'affiche dans la même carte « GPU ». Les cartes **NVIDIA** sont lues entièrement par leur pilote. Les cartes **AMD et Intel** sont lues entièrement par LibreHardwareMonitor (étape 5) ; sans lui, NEXUS affiche quand même la charge et la mémoire vidéo (via Windows), mais pas la température. La ligne « lu par … » sous la carte indique la source utilisée. Si rien n'apparaît, mets à jour le pilote de la carte graphique. |
-| Le bot Discord ne répond pas | Lis le message `[Discord]` dans la fenêtre noire ; relance `configurer.bat` et vérifie le jeton et les deux ID. |
+| Le bot Discord ne répond pas | Lis le message `[Discord]` dans le journal (clic droit sur l'icône → Ouvrir le journal) ; relance `configurer.bat` et vérifie le jeton et les deux ID. |
 | La page a un affichage bizarre après une mise à jour | Ctrl+F5 dans le navigateur. |
 
 ---
@@ -410,7 +413,7 @@ profil invalide n'est pas proposé : il apparaît en bas du menu dans « profil(
 de ses erreurs. Pour le vérifier :
 
 ```bash
-.venv\Scripts\python.exe valider_profil.py profils\nom-du-profil
+runtime\python.exe valider_profil.py profils\nom-du-profil
 ```
 
 **Le créer avec Claude Code :** ouvre Claude Code dans le dossier de NEXUS et demande par exemple :
@@ -545,8 +548,10 @@ cartes postales, fiches « Le savais-tu ? »).
 
 | Fichier | Rôle |
 |---|---|
-| `installer.bat` | Installe NEXUS : environnement Python `.venv`, dépendances, configuration, raccourci |
-| `lancer.bat` | Démarre NEXUS (et LibreHardwareMonitor) ; redémarre le serveur s'il plante |
+| `installer.bat` | Installe NEXUS : Python privé `runtime\`, dépendances, configuration, raccourci |
+| `lancer.bat` | Démarre NEXUS en arrière-plan (icône près de l'horloge) ; `lancer.bat console` : ancienne fenêtre noire |
+| `nexus.pyw` / `superviseur.py` | L'icône près de l'horloge : démarre et relance le serveur, mises à jour, LibreHardwareMonitor, journal `logs\nexus.log` |
+| `outils\installer_python.ps1` / `outils\python-prive.json` | Installe (ou refait) le Python privé : version, adresse nuget.org et empreinte SHA256 |
 | `configurer.bat` / `configurer.py` | Assistant de configuration (crée `config.json`) |
 | `preparer_partage.bat` / `outils\preparer_partage.py` | Prépare une copie propre à partager |
 | `restaurer_version.bat` | Revient à une version précédente (sauvegardes dans `versions\`) |
@@ -604,7 +609,8 @@ chaque exécution est notée dans `logs\deck.log`.
 ### Accès depuis le téléphone
 
 Désactivé par défaut. Bouton **📱 Téléphone** sur le PC → autoriser → scanner le QR code avec le
-téléphone (même Wi-Fi). Windows demande d'autoriser Python sur les **réseaux privés** : accepte.
+téléphone (même Wi-Fi). Windows demande d'autoriser Python sur les **réseaux privés** : accepte (une fois de plus après le passage au
+Python privé de NEXUS : c'est un autre `python.exe`, celui de `runtime\`).
 Seuls les appareils appairés passent ; les adresses Internet sont toujours refusées.
 
 ### Autres réglages

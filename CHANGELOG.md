@@ -8,6 +8,28 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Ajouté
+- **NEXUS autonome sur Windows** : il apporte son propre Python (dossier `runtime\`, Python 3.12 officiel de la
+  Python Software Foundation, téléchargé une seule fois depuis nuget.org avec vérification de l'empreinte SHA256)
+  et ne dépend plus du Python installé sur le PC : une mise à jour, un changement de version ou une désinstallation
+  de ce dernier ne casse plus NEXUS. Plus besoin d'installer Python avant NEXUS. Le Python privé est isolé (ni
+  paquets « utilisateur », ni `PYTHONPATH` de Windows) ; un nouveau Python privé n'est installé qu'une fois prêt et
+  testé, et l'ancienne installation `.venv` reste utilisable en secours
+- **Icône près de l'horloge, sans fenêtre noire** : NEXUS tourne en arrière-plan ; clic = ouvrir NEXUS, clic droit
+  = Redémarrer NEXUS, Ouvrir le journal (`logs\nexus.log`), Quitter NEXUS ; état au survol (en marche, mise à jour
+  en cours…) ; notification si le serveur ne peut pas démarrer (port déjà pris, 5 plantages d'affilée) ; une seule
+  icône à la fois (un 2ᵉ lancement ouvre simplement le panel). Elle fait tout ce que faisait la fenêtre noire :
+  première configuration, dépendances (seulement quand `requirements.txt` change : démarrage plus rapide),
+  LibreHardwareMonitor, mises à jour préparées depuis le panel, relance après un plantage
+- `lancer.bat console` : l'ancienne fenêtre noire, pour dépanner
+
+### Modifié
+- Installations existantes : au premier lancement après la mise à jour, `lancer.bat` installe le Python privé (une
+  fenêtre s'ouvre, 1 à 3 minutes, Internet nécessaire), puis NEXUS démarre avec son icône. Le raccourci du Bureau
+  créé par `installer.bat` ouvre désormais l'icône directement. Avec l'accès téléphone, Windows redemande une fois
+  l'autorisation « réseaux privés » (nouveau `python.exe`)
+- Une mise à jour appliquée depuis une ancienne fenêtre noire continue sans accroc avec le nouveau `lancer.bat`
+
 ### Modifié
 - Profil **Dés du destin 3.0** : visuels entièrement refaits, plus riches et plus nets (tous rendus une fois, dessins originaux, rendu 3D procédural)
   - **Table du Maître du donjon** en 4K : chêne veiné à la lueur d'une bougie, carte de donjon dessinée à l'encre sur parchemin, sceau de cire, pièces d'or en relief et vrais dés polyédriques (d4, d6, d8, d10, d12, d20) en **résine rubis translucide** aux chiffres d'or gravés, faces opposées justes (n + 1) ; image allégée sur téléphone

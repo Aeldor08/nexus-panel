@@ -101,7 +101,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # ---- Accès téléphone : garde réseau --------------------------------------
 remote_svc = remote_mod.Remote()
-RESTART_CODE = 3            # code de sortie qui demande à lancer.bat de relancer le serveur
+RESTART_CODE = 3            # code de sortie qui demande au lanceur (icône ou lancer.bat) de relancer le serveur
 # Accessibles sans appairage depuis le réseau : la page d'appairage et ce qu'elle affiche
 PUBLIC_REMOTE_PATHS = {"/pair", "/api/pair/claim", "/static/nexus-logo.svg", "/favicon.ico", "/static/favicon.ico",
                        "/static/manifest.webmanifest", "/static/icons/icon-192.png", "/static/icons/icon-512.png"}
@@ -1453,7 +1453,7 @@ if __name__ == "__main__":
         probe.bind((host, PORT))
     except OSError:
         print(f"\n[ERREUR] Le port {PORT} est déjà utilisé sur ce PC.")
-        print("  - NEXUS est peut-être déjà ouvert : cherche une autre fenêtre noire NEXUS (barre des tâches).")
+        print("  - NEXUS est peut-être déjà ouvert : son icône près de l'horloge, ou une autre fenêtre noire NEXUS.")
         print(f"  - Sinon, un autre programme utilise le port {PORT} : redémarre le PC, ou change PORT en haut de app.py.")
         raise SystemExit(4)
     finally:

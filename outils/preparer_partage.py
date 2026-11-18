@@ -32,7 +32,8 @@ EXTRA = ["actions/exemple.bat"]
 # Jamais copiés, même s'ils correspondent à la liste autorisée
 NEVER_NAMES = {"config.json", "deck.json", ".env", "fan_names.json", "jeux.json", "nexus.db", "rappels.json"}
 # data\ contient tout le personnel : souvenirs (photos), statistiques, journal (nexus.db), agenda, sauvegardes…
-NEVER_DIRS = {"data", "souvenirs", "backups", "logs", "versions", ".venv", "__pycache__", "LibreHardwareMonitor",
+NEVER_DIRS = {"data", "souvenirs", "backups", "logs", "versions", ".venv", "runtime", "runtime.neuf",
+              "runtime.tmp", "__pycache__", "LibreHardwareMonitor",
               "partage", ".git", "maj", "sauvegardes-maj", "dist"}
 NEVER_SUFFIXES = {".log", ".lnk", ".tmp", ".pyc", ".zip", ".db", ".db-wal", ".db-shm", ".sqlite"}
 

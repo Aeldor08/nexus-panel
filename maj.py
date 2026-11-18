@@ -48,7 +48,8 @@ HOTES_FICHIERS = {"objects.githubusercontent.com", "github-releases.githubuserco
                   "release-assets.githubusercontent.com", "codeload.github.com"}
 MAX_ARCHIVE = 300 * 1024 * 1024
 # Jamais remplacés par une mise à jour (données, configuration, environnement, sauvegardes)
-PROTEGES = {"data", "config.json", "deck.json", "jeux.json", "fan_names.json", ".env", ".venv", "venv", "logs",
+PROTEGES = {"data", "config.json", "deck.json", "jeux.json", "fan_names.json", ".env", ".venv", "venv", "runtime", "runtime.neuf", "runtime.tmp",
+            "logs",
             "versions", "partage", "maj", "sauvegardes-maj", "LibreHardwareMonitor", "actions", ".git",
             "dist", ".ruff_cache", ".pytest_cache", "sauvegardes", "backups", "reference", "references"}
 SEMVER = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$")

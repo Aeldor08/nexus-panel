@@ -29,7 +29,7 @@ DIST = BASE / "dist"
 SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 # Jamais dans une archive, même s'ils étaient suivis par erreur
 INTERDITS = re.compile(r"(^|/)(data|logs|versions|partage|maj|sauvegardes-maj|sauvegardes|backups|reference|references|"
-                       r"\.venv|venv|dist|__pycache__|LibreHardwareMonitor)(/|$)|(^|/)(config|deck|jeux|fan_names)\.json$|"
+                       r"\.venv|venv|runtime|runtime\.neuf|runtime\.tmp|dist|__pycache__|LibreHardwareMonitor)(/|$)|(^|/)(config|deck|jeux|fan_names)\.json$|"
                        r"(^|/)\.env|\.(db|sqlite3?|log|bak|pem|key|pfx|p12|lnk)$", re.I)
 HORS_ARCHIVE = (".github/",)               # utile au dépôt seulement
 
@@ -167,7 +167,8 @@ def verifier_archive(archive: Path, ver: str) -> None:
             rel = n[len(racine):]
             if INTERDITS.search(rel) and not rel.endswith(".example.json"):
                 raise Arret(f"archive : fichier interdit {rel}")
-        for indispensable in ("VERSION", "app.py", "maj_demarrage.py", "requirements.txt", "lancer.bat", "installer.bat"):
+        for indispensable in ("VERSION", "app.py", "maj_demarrage.py", "requirements.txt", "lancer.bat", "installer.bat",
+                            "nexus.pyw", "superviseur.py", "outils/installer_python.ps1", "outils/python-prive.json"):
             if racine + indispensable not in noms:
                 raise Arret(f"archive : {indispensable} manquant")
         if z.read(racine + "VERSION").decode().strip() != ver:
