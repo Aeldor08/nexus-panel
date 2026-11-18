@@ -72,3 +72,6 @@ __pycache__/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Dépôt surveillé, écrit le temps du build natif (outils/build_native.py)
+/DEPOT

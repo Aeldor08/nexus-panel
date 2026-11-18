@@ -9,7 +9,9 @@ Usage (depuis le dossier de NEXUS) :
 (gitleaks sur les fichiers ET l'historique, outils/scan_perso.py) → nouvelle VERSION → section datée du CHANGELOG
 → commit + tag vX.Y.Z → archive dist/NEXUS-X.Y.Z.zip (fichiers suivis par Git seulement : ni data/, ni
 configuration réelle, ni sessions, journaux, sauvegardes ou références) + .sha256 → vérification de l'archive →
-push → gh release create. Rien n'est poussé si une étape échoue.
+push → gh release create. Avec .venv-build et Inno Setup 6 (sinon --sans-natif) : l'installeur
+NEXUS-X.Y.Z-Setup.exe (+ .sha256, mises à jour automatiques des versions installées) va dans la même release, et
+NEXUS-Portable-X.Y.Z.zip dans une pré-release « portable-X.Y.Z » à part. Rien n'est poussé si une étape échoue.
 """
 from __future__ import annotations
 
@@ -103,20 +105,32 @@ def titre_release(ver: str, titre: str = "") -> str:
     return f"NEXUS {ver} — {titre}" if titre else f"NEXUS {ver}"
 
 
-def notes_release(notes: str, ver: str, depot: str, taille_mo: float) -> str:
+def notes_release(notes: str, ver: str, depot: str, taille_mo: float, installeur_mo: float = 0.0,
+                  portable: bool = False) -> str:
     """Notes de la release GitHub : d'abord un encadré « Télécharger » (lien direct vers l'archive et installation en
     trois lignes, pour qui arrive sur la page), puis le CHANGELOG de la version, puis la vérification SHA256."""
     nom = f"NEXUS-{ver}.zip"
     lien = f"https://github.com/{depot}/releases/download/v{ver}/{nom}"
+    quoi = "version source " if installeur_mo else "c'est le seul fichier à prendre "
     tete = (f"## ⬇️ Télécharger NEXUS {ver}\n\n"
-            f"**[{nom}]({lien})** ({taille_mo:.1f} Mo, Windows 10/11) : c'est le seul fichier à prendre "
+            f"**[{nom}]({lien})** ({taille_mo:.1f} Mo, Windows 10/11) : {quoi}"
             "(pas « Source code »).\n\n"
             "1. Clic droit sur le zip → **Extraire tout…**, puis range le dossier (par exemple dans Documents).\n"
             "2. Double-clique sur **`installer.bat`** : rien d'autre à installer, NEXUS apporte son propre Python "
             "(il faut Internet la première fois).\n"
             "3. Ouvre NEXUS avec le raccourci du Bureau : son icône apparaît près de l'horloge.\n\n"
             "Déjà installé ? Pas besoin de retélécharger : NEXUS propose la mise à jour tout seul "
-            "(**⚙ Réglages → Version et mises à jour**).\n\n---\n\n")
+            "(**⚙ Réglages → Version et mises à jour**).\n\n")
+    if installeur_mo:
+        setup = f"NEXUS-{ver}-Setup.exe"
+        tete += (f"**Application Windows** : **[{setup}](https://github.com/{depot}/releases/download/v{ver}/{setup})** "
+                 f"({installeur_mo:.1f} Mo) — installation en un clic (sans droits administrateur), fenêtre native, "
+                 "**mises à jour automatiques**. Non signé : si Windows SmartScreen s'affiche, "
+                 "*Informations complémentaires → Exécuter quand même*.\n\n")
+    if portable:
+        tete += (f"**Version portable** (sans installation) : [NEXUS-Portable-{ver}.zip]"
+                 f"(https://github.com/{depot}/releases/tag/portable-{ver}) — décompresse et lance `NEXUS.exe`.\n\n")
+    tete += "---\n\n"
     return (tete + notes + f"\n\nVérifier l'archive : `certutil -hashfile {nom} SHA256` doit donner "
             "le contenu du fichier `.sha256`.\n")
 
@@ -238,6 +252,8 @@ def main() -> int:
     ap.add_argument("--depot", default="", help="propriétaire/nom écrit dans l'archive (par défaut : origin)")
     ap.add_argument("--titre", default="", help="titre de la version (ex. « Philibert arrive ! ») : dans l'en-tête du "
                                                 "CHANGELOG (« ## [X.Y.Z] - date - titre ») et comme titre de la release GitHub")
+    ap.add_argument("--sans-natif", action="store_true",
+                    help="ne pas construire l'installeur Windows ni la version portable (.venv-build + Inno Setup 6)")
     ap.add_argument("--branche", action="store_true",
                     help="publier depuis une branche de release (ex. sans une fonction pas encore prête) : "
                          "seul le tag est poussé, main n'est pas touchée")
@@ -270,6 +286,16 @@ def main() -> int:
             raise Arret("aucun dépôt « origin » GitHub")
         _cmd(gh, "auth", "status")
 
+    build_py = BASE / ".venv-build" / "Scripts" / "python.exe"
+    if not a.sans_natif:
+        if not build_py.is_file():
+            raise Arret("environnement de build absent (.venv-build) : lance une fois Creer-NEXUS-Portable.bat, "
+                        "ou publie avec --sans-natif")
+        sys.path.insert(0, str(BASE / "outils"))
+        import build_native
+        if not build_native.find_iscc():
+            raise Arret("Inno Setup 6 introuvable (winget install JRSoftware.InnoSetup), ou publie avec --sans-natif")
+
     controles(git)
 
     actuelle = version_actuelle()
@@ -292,6 +318,18 @@ def main() -> int:
         archive, somme = construire_archive(ver, depot, fichiers_suivis(git))
         verifier_archive(archive, ver)
         nettoyer_dist(ver)
+        setup = setup_sha = portable = portable_sha = None
+        if not a.sans_natif:
+            etape("Installeur Windows et version portable")
+            r = subprocess.run([str(build_py), str(BASE / "outils" / "build_native.py"), "--installer", "--portable",
+                                "--skip-tests", "--depot", depot], cwd=BASE)
+            if r.returncode != 0:
+                raise Arret("construction de l'installeur / du portable impossible (voir ci-dessus)")
+            setup, portable = DIST / f"NEXUS-{ver}-Setup.exe", DIST / f"NEXUS-Portable-{ver}.zip"
+            setup_sha, portable_sha = Path(str(setup) + ".sha256"), Path(str(portable) + ".sha256")
+            for f in (setup, setup_sha, portable, portable_sha):
+                if not f.is_file():
+                    raise Arret(f"fichier natif manquant : {f.name}")
     except Arret:
         _cmd(git, "tag", "-d", tag, check=False)           # pas de tag local orphelin
         raise
@@ -304,15 +342,39 @@ def main() -> int:
         _cmd(git, "push", "origin", "main")
     _cmd(git, "push", "origin", tag)                       # (avec --branche : seul le tag part, pas la branche)
     notes_f = DIST / f"notes-{ver}.md"
-    notes_f.write_text(notes_release(notes, ver, depot, archive.stat().st_size / 1e6), encoding="utf-8")
+    notes_f.write_text(notes_release(notes, ver, depot, archive.stat().st_size / 1e6,
+                                     setup.stat().st_size / 1e6 if setup else 0.0, bool(portable)), encoding="utf-8")
+    # Release vX.Y.Z : archive source + installeur. JAMAIS le ZIP portable ici : les versions source prennent
+    # le dernier .zip de la release pour se mettre à jour.
+    fichiers = [str(archive), str(somme)] + ([str(setup), str(setup_sha)] if setup else [])
     existe = subprocess.run([gh, "release", "view", tag, "--repo", depot], cwd=BASE, capture_output=True).returncode == 0
     if existe:                                              # créée entre-temps par la CI (release.yml)
-        _cmd(gh, "release", "upload", tag, str(archive), str(somme), "--repo", depot, "--clobber")
+        _cmd(gh, "release", "upload", tag, *fichiers, "--repo", depot, "--clobber")
         if titre:
             _cmd(gh, "release", "edit", tag, "--repo", depot, "--title", titre_release(ver, titre))
     else:
-        _cmd(gh, "release", "create", tag, str(archive), str(somme), "--repo", depot, "--title", titre_release(ver, titre),
+        _cmd(gh, "release", "create", tag, *fichiers, "--repo", depot, "--title", titre_release(ver, titre),
              "--notes-file", str(notes_f), "--verify-tag")
+    if portable:
+        # Release portable à part, en pré-version : /releases/latest (mises à jour) ne la voit jamais.
+        # Tag sans « v » : le workflow build-native.yml ne se déclenche pas.
+        etape("Release portable")
+        ptag = f"portable-{ver}"
+        pnotes = DIST / f"notes-portable-{ver}.md"
+        pnotes.write_text(
+            f"## Télécharger\n\n**[NEXUS-Portable-{ver}.zip](https://github.com/{depot}/releases/download/{ptag}/"
+            f"NEXUS-Portable-{ver}.zip)** — Windows 10/11 64 bits, aucune installation.\n\n"
+            "1. Décompresse le ZIP où tu veux (dossier perso, clé USB…), sur un support inscriptible.\n"
+            "2. Lance **NEXUS.exe** (ou « Lancer NEXUS.bat »).\n"
+            "3. Au premier lancement, la fenêtre de configuration s'ouvre.\n\n"
+            "Toutes les données restent dans le dossier du portable. Mise à jour manuelle : remplace `NEXUS.exe` et "
+            "`_internal\\` en gardant `config.json`, `data\\`, `logs\\`, `profils\\` et `actions\\`. "
+            f"Pour les mises à jour automatiques, prends plutôt l'installeur de [NEXUS {ver}]"
+            f"(https://github.com/{depot}/releases/tag/{tag}).\n\n"
+            f"SHA256 : `{portable_sha.read_text(encoding='utf-8').split()[0]}`\n", encoding="utf-8")
+        _cmd(gh, "release", "create", ptag, str(portable), str(portable_sha), "--repo", depot, "--target", tag,
+             "--title", f"NEXUS {ver} — version portable Windows", "--notes-file", str(pnotes),
+             "--prerelease", "--latest=false")
     print(f"\n✔ Release {tag} publiée : https://github.com/{depot}/releases/tag/{tag}")
     return 0
 

@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -161,6 +162,17 @@ Mise à jour manuelle :
     return cible
 
 
+def depot_origin() -> str:
+    """propriétaire/nom du remote origin GitHub, ou chaîne vide."""
+    try:
+        url = subprocess.run(["git", "remote", "get-url", "origin"], cwd=BASE, capture_output=True,
+                             text=True, timeout=10).stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+    m = re.search(r"github\.com[:/]([A-Za-z0-9-]{1,39}/[A-Za-z0-9._-]{1,100}?)(?:\.git)?/?$", url)
+    return m.group(1) if m else ""
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Construire NEXUS.exe et l'installeur")
     ap.add_argument("--skip-tests", action="store_true", help="ne pas lancer outils/tests/run_all.py")
@@ -171,6 +183,8 @@ def main() -> int:
     ap.add_argument("--pfx", default="", help="fichier .pfx pour signer")
     ap.add_argument("--pfx-password", default="", help="mot de passe du .pfx")
     ap.add_argument("--hashes-only", action="store_true", help="réécrire seulement les fichiers .sha256")
+    ap.add_argument("--depot", default="", help="dépôt GitHub surveillé pour les mises à jour (propriétaire/nom) ; "
+                                                 "par défaut : le remote origin")
     args = ap.parse_args()
 
     ver = version()
@@ -196,7 +210,18 @@ def main() -> int:
         run([sys.executable, str(BASE / "outils" / "tests" / "run_all.py")])
 
     print("\n[2/6] PyInstaller")
-    run([sys.executable, "-m", "PyInstaller", "--clean", "--noconfirm", str(BASE / "nexus.spec")])
+    depot = args.depot.strip() or depot_origin()
+    depot_file = BASE / "DEPOT"
+    depot_temp = bool(depot) and not depot_file.exists()
+    if depot_temp:
+        # Embarqué dans l'exe : l'installation sait quel dépôt surveiller pour ses mises à jour
+        depot_file.write_text(depot + "\n", encoding="utf-8")
+    print(f"  dépôt des mises à jour : {depot or '(aucun : mises à jour à configurer à la main)'}")
+    try:
+        run([sys.executable, "-m", "PyInstaller", "--clean", "--noconfirm", str(BASE / "nexus.spec")])
+    finally:
+        if depot_temp:
+            depot_file.unlink(missing_ok=True)
     if not exe.is_file():
         raise BuildError(f"exe introuvable après PyInstaller : {exe}")
     print(f"  {exe} ({exe.stat().st_size / 2**20:.1f} Mo)")
