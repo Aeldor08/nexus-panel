@@ -102,6 +102,24 @@ def titre_release(ver: str, titre: str = "") -> str:
     return f"NEXUS {ver} — {titre}" if titre else f"NEXUS {ver}"
 
 
+def notes_release(notes: str, ver: str, depot: str, taille_mo: float) -> str:
+    """Notes de la release GitHub : d'abord un encadré « Télécharger » (lien direct vers l'archive et installation en
+    trois lignes, pour qui arrive sur la page), puis le CHANGELOG de la version, puis la vérification SHA256."""
+    nom = f"NEXUS-{ver}.zip"
+    lien = f"https://github.com/{depot}/releases/download/v{ver}/{nom}"
+    tete = (f"## ⬇️ Télécharger NEXUS {ver}\n\n"
+            f"**[{nom}]({lien})** ({taille_mo:.1f} Mo, Windows 10/11) : c'est le seul fichier à prendre "
+            "(pas « Source code »).\n\n"
+            "1. Clic droit sur le zip → **Extraire tout…**, puis range le dossier (par exemple dans Documents).\n"
+            "2. Double-clique sur **`installer.bat`** : rien d'autre à installer, NEXUS apporte son propre Python "
+            "(il faut Internet la première fois).\n"
+            "3. Ouvre NEXUS avec le raccourci du Bureau : son icône apparaît près de l'horloge.\n\n"
+            "Déjà installé ? Pas besoin de retélécharger : NEXUS propose la mise à jour tout seul "
+            "(**⚙ Réglages → Version et mises à jour**).\n\n---\n\n")
+    return (tete + notes + f"\n\nVérifier l'archive : `certutil -hashfile {nom} SHA256` doit donner "
+            "le contenu du fichier `.sha256`.\n")
+
+
 def dater_changelog(ver: str, date: str, titre: str = "") -> None:
     p = BASE / "CHANGELOG.md"
     t = p.read_text(encoding="utf-8")
@@ -285,8 +303,7 @@ def main() -> int:
         _cmd(git, "push", "origin", "main")
     _cmd(git, "push", "origin", tag)                       # (avec --branche : seul le tag part, pas la branche)
     notes_f = DIST / f"notes-{ver}.md"
-    notes_f.write_text(notes + "\n\nVérifier l'archive : `certutil -hashfile NEXUS-" + ver + ".zip SHA256` doit donner "
-                       "le contenu du fichier `.sha256`.\n", encoding="utf-8")
+    notes_f.write_text(notes_release(notes, ver, depot, archive.stat().st_size / 1e6), encoding="utf-8")
     existe = subprocess.run([gh, "release", "view", tag, "--repo", depot], cwd=BASE, capture_output=True).returncode == 0
     if existe:                                              # créée entre-temps par la CI (release.yml)
         _cmd(gh, "release", "upload", tag, str(archive), str(somme), "--repo", depot, "--clobber")

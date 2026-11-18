@@ -9,6 +9,8 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 ## [Non publié]
 
 ### Ajouté
+- **Téléchargement plus simple** : chaque release GitHub commence par un encadré « Télécharger » avec le lien
+  direct vers l'archive et l'installation en trois étapes
 - **Profil visuel « Averse de néons »** (v1.2, modes Terminal et Sentinelle) : une ville de nuit sous la pluie. Fond :
   une rue-canyon en perspective centrale serrée d'enseignes (tubes de néon, caissons lumineux à signes inventés,
   enseignes de boutiques), câbles tendus au-dessus de la rue, carpe holographique translucide, brume éclairée par les

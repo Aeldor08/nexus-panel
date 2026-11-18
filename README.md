@@ -20,8 +20,9 @@ de ce dernier ne le dérange jamais.
 
 ### Étape 1 — Dézipper NEXUS
 
-Télécharge `NEXUS-x.y.z.zip` dans la dernière release du dépôt GitHub (page **Releases**), ou utilise
-le zip qu'on t'a envoyé.
+Sur la page du dépôt GitHub, clique sur **Releases** (colonne de droite) : la dernière version est en haut, avec
+un encadré **⬇️ Télécharger** et un lien direct vers `NEXUS-x.y.z.zip`. C'est le seul fichier à prendre (pas
+« Source code »). Tu peux aussi utiliser le zip qu'on t'a envoyé.
 
 1. Fais un clic droit sur le fichier `NEXUS-x.y.z.zip` → **Extraire tout…** → **Extraire**.
 2. Déplace le dossier obtenu à un endroit où tu le garderas, par exemple dans **Documents**.

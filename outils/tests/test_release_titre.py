@@ -49,5 +49,13 @@ finally:
     shutil.rmtree(tmp, ignore_errors=True)
 ok((BASE / "CHANGELOG.md").read_bytes() == vrai, "le vrai CHANGELOG.md n'a pas changé")
 
+# notes de la release GitHub : encadré « Télécharger » en tête (lien direct vers l'archive), puis le CHANGELOG
+n = release.notes_release("### Ajouté\n- Philibert", "1.6.0", "proprio/nexus-panel", 2.345)
+ok(n.startswith("## ⬇️ Télécharger NEXUS 1.6.0"), "notes : encadré Télécharger en tête")
+ok("(https://github.com/proprio/nexus-panel/releases/download/v1.6.0/NEXUS-1.6.0.zip)" in n and "2.3 Mo" in n,
+   "notes : lien direct vers l'archive de la version, avec sa taille")
+ok("installer.bat" in n and n.index("installer.bat") < n.index("- Philibert") < n.index("certutil -hashfile NEXUS-1.6.0.zip"),
+   "notes : installation, puis CHANGELOG, puis vérification SHA256")
+
 print(f"\n{passed} tests réussis, {failed} échec(s)")
 sys.exit(1 if failed else 0)
