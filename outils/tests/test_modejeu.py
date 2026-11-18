@@ -67,9 +67,16 @@ ok(gm.state()["in_game"] and plans == [gm.cfg["game_plan"]], f"réactivé : mode
 gm.update_config({"enabled": False}); plans.clear()
 gm.in_game, gm.game = False, None
 G.psutil.process_iter = lambda attrs=None: iter([P("Hades.exe", r"D:\SteamLibrary\steamapps\common\Hades\Hades.exe")])
-G.time.sleep = lambda s: (_ for _ in ()).throw(StopIteration)      # un seul tour de boucle
+
+
+class _FinBoucle(Exception):
+    """Sortie propre de la boucle infinie pour le test (StopIteration est interdit dans
+    une génératrice depuis Python 3.7, PEP 479)."""
+
+
+G.time.sleep = lambda s: (_ for _ in ()).throw(_FinBoucle())      # un seul tour de boucle
 try: gm._loop()
-except StopIteration: pass
+except _FinBoucle: pass
 ok(gm.in_game and not gm.active and plans == [], f"désactivé : jeu vu mais plan inchangé ({plans})")
 gm.update_config({"enabled": True})
 

@@ -29,7 +29,8 @@ DIST = BASE / "dist"
 SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 # Jamais dans une archive, même s'ils étaient suivis par erreur
 INTERDITS = re.compile(r"(^|/)(data|logs|versions|partage|maj|sauvegardes-maj|sauvegardes|backups|reference|references|"
-                       r"\.venv|venv|runtime|runtime\.neuf|runtime\.tmp|dist|__pycache__|LibreHardwareMonitor)(/|$)|(^|/)(config|deck|jeux|fan_names)\.json$|"
+                       r"\.venv|venv|runtime|runtime\.neuf|runtime\.tmp|dist|__pycache__|LibreHardwareMonitor)(/|$)|"
+                       r"(^|/)(config|deck|jeux|fan_names|runtime)\.json$|"
                        r"(^|/)\.env|\.(db|sqlite3?|log|bak|pem|key|pfx|p12|lnk)$", re.I)
 HORS_ARCHIVE = (".github/",)               # utile au dépôt seulement
 

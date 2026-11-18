@@ -255,7 +255,9 @@ def main() -> int:
         ok(r.returncode == 0 and cfg["deck"]["password_hash"].startswith("pbkdf2_sha256$") and not cfg["deck"]["password"],
            "assistant de première configuration : mot de passe enregistré en empreinte seulement")
         ok(cfg.get("mises_a_jour", {}).get("depot") == DEPOT, f"assistant : dépôt surveillé proposé et retenu ({cfg.get('mises_a_jour')})")
-        ok((inst / "deck.json").is_file() and not (inst / "data").exists(), "assistant : deck.json d'exemple, data/ encore vide")
+        ok((inst / "deck.json").is_file() and not (inst / "data" / "nexus.db").exists()
+           and not (inst / "data" / "agenda.json").exists(),
+           "assistant : deck.json d'exemple, data/ encore vide (aucune donnée)")
 
         # profil personnel + données témoins (ne doivent jamais être touchés)
         shutil.copytree(inst / "profils" / "_modele", inst / "profils" / "mon-perso")

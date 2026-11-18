@@ -24,14 +24,13 @@ import shutil
 import sys
 import threading
 import time
-from pathlib import Path
 
 import psutil
 
 import db
+import paths
 
-BASE = Path(__file__).resolve().parent
-JEUX_FILE, JEUX_EXAMPLE = BASE / "jeux.json", BASE / "jeux.example.json"
+JEUX_FILE, JEUX_EXAMPLE = paths.JEUX_FILE, paths.JEUX_EXAMPLE
 CATEGORIES = ("jeu", "musique", "video", "navigation", "travail", "autre")
 FOCUS_NOM = "Focus (Pomodoro)"
 # lecteurs et sites de musique (nom donné par media.py) : comptés en « musique » même sans entrée dans jeux.json
@@ -96,6 +95,8 @@ class Tracker:
         self._last_tick = None
         self._session_id = None
         self._lock = threading.Lock()
+        self._stop = threading.Event()
+        self._thread = None
         psutil.cpu_percent()                              # amorce (mesure globale, indépendante des autres)
 
     # -- jeux.json -------------------------------------------------------------
@@ -105,6 +106,7 @@ class Tracker:
             return self._map
         self._map_checked = now
         if not JEUX_FILE.exists() and JEUX_EXAMPLE.exists():
+            JEUX_FILE.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(JEUX_EXAMPLE, JEUX_FILE)
         try:
             mtime = JEUX_FILE.stat().st_mtime
@@ -236,18 +238,27 @@ class Tracker:
         c.execute("DELETE FROM sessions WHERE fin < ?", (time.time() - days * 86400,))
 
     def start(self) -> None:
+        if self._thread and self._thread.is_alive():
+            return
+        self._stop.clear()
+
         def loop():
             last_prune = 0.0
-            while True:
+            while not self._stop.is_set():
                 try:
                     self.tick()
                     if time.time() - last_prune > 6 * 3600:
                         self.prune(); last_prune = time.time()
                 except Exception as exc:            # jamais d'arrêt du serveur
                     self.status.update(etat="erreur", erreur=f"{type(exc).__name__}: {exc}")
-                time.sleep(TICK)
+                self._stop.wait(TICK)
+
         self.status["etat"] = "actif"
-        threading.Thread(target=loop, daemon=True, name="statistiques").start()
+        self._thread = threading.Thread(target=loop, daemon=True, name="statistiques")
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
 
 
 # --------------------------------------------------------------------------- #

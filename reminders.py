@@ -84,6 +84,8 @@ class ReminderService:
     def __init__(self, notifier: Callable[[str, str], bool | None] | None = None) -> None:
         self.notifier = notifier          # envoi Discord : True envoyé, False à réessayer, None pas de bot
         self._lock = threading.Lock()
+        self._stop = threading.Event()
+        self._thread = None
         self.state = self._load()
 
     # -- état sur disque ---------------------------------------------------------
@@ -98,7 +100,7 @@ class ReminderService:
         return {"seen": {}, "sent": {}, "fired": [], "discord": {}}
 
     def _save(self) -> None:
-        store.DATA_DIR.mkdir(exist_ok=True)
+        store.DATA_DIR.mkdir(parents=True, exist_ok=True)
         tmp = STATE_FILE.with_suffix(".tmp")
         tmp.write_text(json.dumps(self.state, ensure_ascii=False, indent=1), encoding="utf-8")
         tmp.replace(STATE_FILE)
@@ -188,11 +190,20 @@ class ReminderService:
             return [f for f in self.state["fired"] if f["envoye"] >= limit]
 
     def start(self) -> None:
+        if self._thread and self._thread.is_alive():
+            return
+        self._stop.clear()
+
         def loop():
-            while True:
+            while not self._stop.is_set():
                 try:
                     self.tick()
                 except Exception as exc:              # un agenda illisible ne doit pas arrêter le serveur
                     print(f"[Rappels] erreur : {exc}")
-                time.sleep(TICK_SECONDS)
-        threading.Thread(target=loop, daemon=True, name="rappels").start()
+                self._stop.wait(TICK_SECONDS)
+
+        self._thread = threading.Thread(target=loop, daemon=True, name="rappels")
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()

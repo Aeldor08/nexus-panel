@@ -97,7 +97,7 @@ _ready = False
 
 
 def _connect() -> sqlite3.Connection:
-    store.DATA_DIR.mkdir(exist_ok=True)
+    store.DATA_DIR.mkdir(parents=True, exist_ok=True)
     con = sqlite3.connect(DB_FILE, timeout=10, isolation_level=None, check_same_thread=False)
     con.row_factory = sqlite3.Row
     con.execute("PRAGMA journal_mode=WAL")

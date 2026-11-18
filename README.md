@@ -115,6 +115,43 @@ et `/command` qui les liste toutes.
 - **Mettre à jour :** remplace les fichiers par ceux d'une version plus récente **sans toucher** à
   `config.json`, `deck.json` et au dossier `data\` (tes réglages et tes données).
 
+## Version native et portable (exécutable Windows)
+
+En plus de la version source décrite ci-dessus, NEXUS peut être livré en
+**application Windows autonome** et en **version portable** :
+
+1. `NEXUS-x.y.z-Setup.exe` : installation par utilisateur dans
+   `%LOCALAPPDATA%\Programs\NEXUS`, fenêtre native WebView2, icône dans la zone
+   de notification, données dans `%LOCALAPPDATA%\NEXUS`, désinstallation qui
+   conserve les données.
+2. `NEXUS-Portable-x.y.z.zip` : à décompresser où tu veux, données dans le
+   dossier portable, aucun raccourci ni entrée de registre, démarrage
+   automatique désactivé. Lance `Lancer NEXUS.bat` ou `NEXUS.exe`.
+
+La version native reprend les fonctions de la version source (serveur FastAPI,
+profils, Philibert, mises à jour, etc.). La mise à jour de la version installée
+passe par l'installeur signé (SHA256 + Authenticode, sauvegarde et rollback) ;
+celle de la version portable est manuelle : remplacer `NEXUS.exe` et
+`_internal\` en conservant `config.json`, `data\`, `logs\`, `profils\` et
+`actions\`.
+
+Pour construire les deux :
+
+```bat
+.venv\Scripts\python.exe -m pip install -r requirements-native.txt
+.venv\Scripts\python.exe outils\build_native.py --installer --portable
+```
+
+Les fichiers sont produits dans `dist\` avec leurs `.sha256` et
+`SHA256SUMS.txt`. Pour faire simple, double-clique sur
+**`Creer-NEXUS-Portable.bat`** : il prépare un environnement de build séparé
+(`.venv-build`), installe les dépendances si besoin et produit le ZIP portable
+dans `dist\`. Pour construire aussi l'installeur :
+`Creer-NEXUS-Portable.bat --installer`.
+
+Pour adapter une future version du dépôt d'origine, lire
+`docs\MODOP-PORTABLE.md` et utiliser `outils\verifier_personnalisation.py`.
+
 ## Dépannage
 
 | Problème | Solution |

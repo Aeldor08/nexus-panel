@@ -8,13 +8,17 @@ import time
 import zipfile
 from pathlib import Path
 
-BASE = Path(__file__).resolve().parent
-VERSIONS_DIR = BASE / "versions"
+import paths
+
+BASE = paths.APP_DIR
+VERSIONS_DIR = paths.VERSIONS_DIR
 # Ce qui fait partie du « code » du panel (les données dans data/ ne sont jamais incluses)
 # (config.json et deck.json, personnels, ne sont jamais inclus : seuls les modèles *.example.json le sont)
-CODE_GLOBS = ["*.py", "*.bat", "*.md", "*.txt", "*.ico", "*.example.json", ".gitignore", "VERSION", "LICENSE",
-              "static/**/*", "outils/*", "profils/**/*", "actions/*.bat", "actions/*.cmd", "actions/*.ps1", "actions/*.py"]
-EXCLUDE_PARTS = {".venv", "runtime", "runtime.neuf", "runtime.tmp", "data", "versions", "__pycache__", "LibreHardwareMonitor", "partage", "maj", "sauvegardes-maj", "dist"}
+CODE_GLOBS = ["*.py", "*.bat", "*.spec", "*.iss", "*.md", "*.txt", "*.ico", "*.example.json", ".gitignore", "VERSION",
+              "LICENSE", "static/**/*", "outils/*", "profils/**/*", "docs/**/*", "actions/*.bat", "actions/*.cmd",
+              "actions/*.ps1", "actions/*.py"]
+EXCLUDE_PARTS = {".venv", ".venv-build", "runtime", "runtime.neuf", "runtime.tmp", "data", "versions", "__pycache__",
+                 "LibreHardwareMonitor", "partage", "maj", "sauvegardes-maj", "dist"}
 
 
 def current() -> str:
@@ -67,8 +71,14 @@ def code_files() -> list[Path]:
 
 
 def snapshot(force: bool = False) -> Path | None:
-    """Archive le code de la version actuelle (une seule fois par version)."""
-    VERSIONS_DIR.mkdir(exist_ok=True)
+    """Archive le code de la version actuelle (une seule fois par version).
+
+    En version installée, le code vit dans le dossier de ressources en lecture seule : les
+    snapshots de code n'ont plus de sens (la mise à jour passera par l'installeur signé).
+    """
+    if paths.FROZEN:
+        return None
+    VERSIONS_DIR.mkdir(parents=True, exist_ok=True)
     target = VERSIONS_DIR / f"panel-v{current()}.zip"
     if target.exists() and not force:
         return None
@@ -114,7 +124,9 @@ def snapshots() -> list[dict]:
 
 def backup_current() -> Path:
     """Sauvegarde de sécurité du code actuel avant une restauration."""
-    VERSIONS_DIR.mkdir(exist_ok=True)
+    if paths.FROZEN:
+        raise OSError("les sauvegardes de code ne sont pas disponibles dans la version installée")
+    VERSIONS_DIR.mkdir(parents=True, exist_ok=True)
     target = VERSIONS_DIR / f"avant-restauration-v{current()}-{time.strftime('%Y%m%d-%H%M%S')}.zip"
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as z:
         for f in code_files():
@@ -124,6 +136,8 @@ def backup_current() -> Path:
 
 def restore(archive: Path) -> int:
     """Remet en place le code contenu dans l'archive. Ne touche jamais à data/, .venv/, etc."""
+    if paths.FROZEN:
+        raise OSError("la restauration de code n'est pas disponible dans la version installée")
     count = 0
     with zipfile.ZipFile(archive) as z:
         for member in z.infolist():

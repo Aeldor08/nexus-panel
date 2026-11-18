@@ -9,10 +9,10 @@ from __future__ import annotations
 
 import copy
 import json
-from pathlib import Path
 
-BASE = Path(__file__).resolve().parent
-CONFIG_FILE = BASE / "config.json"
+import paths
+
+CONFIG_FILE = paths.CONFIG_FILE
 
 DEFAULTS = {
     "discord": {
@@ -51,6 +51,8 @@ DEFAULTS = {
         "intervalle_heures": 6,
         "discord": False,            # simple message « nouvelle version disponible » (le bot n'installe jamais rien)
         "jeton": "",                 # repli SEULEMENT si le gestionnaire d'identifiants de Windows est indisponible
+        "signature": "auto",         # auto : vérifie si signé, accepte sinon ; requise : refuse un exe non signé
+        "certificat": "",            # empreinte SHA1 du certificat attendu (vide = n'importe quel signataire valide)
     },
 }
 
@@ -61,7 +63,7 @@ CONFIG_VERSION = 1
 def _migration_1(cfg: dict) -> dict:
     """1 : section « mises_a_jour » explicite (dépôt à surveiller, intervalle, Discord)."""
     sec = cfg.setdefault("mises_a_jour", {})
-    depot = Path(__file__).resolve().parent / "DEPOT"     # mis dans l'archive de release : dépôt d'origine
+    depot = paths.DEPOT_FILE     # mis dans l'archive de release : dépôt d'origine
     if not sec.get("depot") and depot.is_file():
         sec["depot"] = depot.read_text(encoding="utf-8").strip()[:140]
     for k, v in DEFAULTS["mises_a_jour"].items():
@@ -101,7 +103,8 @@ def load(force: bool = False) -> dict:
             warnings.append(f"config.json illisible ({exc}) : valeurs par défaut utilisées")
             user = {}
     else:
-        warnings.append("config.json absent : lance configurer.bat pour configurer le mot de passe du deck et le bot Discord")
+        warnings.append("config.json absent : lance configurer.bat (sources) ou NEXUS.exe --configure "
+                        "(raccourci « Configurer NEXUS ») pour définir le mot de passe du deck et le bot Discord")
     _cache = _merge(DEFAULTS, user)
     return _cache
 
@@ -123,7 +126,7 @@ def migrer() -> int:
     cur = int(data.get("config_version") or 0)
     todo = [(v, f) for v, f in MIGRATIONS if v > cur]
     for v, f in todo:
-        backups = BASE / "data" / "backups"
+        backups = paths.BACKUP_DIR
         backups.mkdir(parents=True, exist_ok=True)
         (backups / f"config-v{cur}-{time.strftime('%Y%m%d-%H%M%S')}.json").write_text(
             json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")

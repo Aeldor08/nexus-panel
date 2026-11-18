@@ -28,9 +28,15 @@ Les illustrations, sprites et SVG des profils sont des créations originales pou
 | discord.py | bot Discord facultatif | MIT |
 | Pillow | miniatures des souvenirs, icônes | MIT-CMU (HPND) |
 | keyring | rangement du jeton GitHub dans le gestionnaire d'identifiants de Windows | MIT |
-| pystray | icône de NEXUS près de l'horloge | LGPL-3.0 (bibliothèque installée par pip, non modifiée) |
+| pywebview | fenêtre native WebView2 (lanceur `nexus_launcher.py`) | BSD-3-Clause |
+| pystray | icône dans la zone de notification | LGPL-3.0 (bibliothèque installée par pip, non modifiée) |
+| winotify | notifications Windows natives | MIT |
+| PyInstaller | fabrication de l'exécutable (outil de build, Phase 2) | GPL-2.0 avec exception bootloader |
 
 Outils de développement seulement (`requirements-dev.txt`, non nécessaires pour utiliser NEXUS) : ruff (MIT), httpx / httpx2 (BSD-3-Clause), gitleaks (MIT).
+
+`pystray` est utilisé comme bibliothèque non modifiée (LGPL-3.0) : sa licence et le moyen d'en obtenir
+le code source seront joints à l'installeur. `PyInstaller` n'est utilisé que pour fabriquer l'exécutable.
 
 ## Logiciel téléchargé séparément
 

@@ -10,7 +10,15 @@ from pathlib import Path
 
 ICI = Path(__file__).resolve().parent
 BASE = ICI.parents[1]
+# Console Windows en cp1252 : ne jamais planter en affichant un échec accentué.
+for flux in (sys.stdout, sys.stderr):
+    try:
+        flux.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, OSError):
+        pass
 TESTS = [
+    ("test_paths.py", [str(BASE)]),
+    ("test_portable.py", [str(BASE)]),
     ("test_media.py", []),
     ("test_stats_doublon.py", []),
     ("test_audio.py", [str(BASE)]),
@@ -18,6 +26,7 @@ TESTS = [
     ("test_modejeu.py", [str(BASE)]),
     ("test_modejeu_pc.py", [str(BASE)]),
     ("test_maj.py", []),
+    ("test_maj_natif.py", [str(BASE)]),
     ("test_focus_sante.py", []),
     ("test_philibert.py", [str(BASE)]),
     ("test_release_titre.py", []),
@@ -28,8 +37,14 @@ TESTS = [
 def main() -> int:
     env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1", NEXUS_NO_BOT="1", NEXUS_DECK_DRYRUN="1",
                NEXUS_OPEN_BROWSER="0")
-    echecs = []
+    echecs, ignores = [], []
     for nom, args in TESTS:
+        # test_maj vérifie les archives de release à partir des fichiers suivis par Git :
+        # dans une archive distribuée sans .git, il n'a pas de sens (il tourne dans le dépôt/CI).
+        if nom == "test_maj.py" and not (BASE / ".git").exists():
+            print("IGNORÉ test_maj.py (dépôt Git absent : test réservé au dépôt)")
+            ignores.append(nom)
+            continue
         t0 = time.time()
         r = subprocess.run([sys.executable, str(ICI / nom), *args], cwd=BASE, env=env, capture_output=True,
                            text=True, encoding="utf-8", errors="replace", timeout=900)
@@ -46,7 +61,8 @@ def main() -> int:
                 print("\n".join("    " + ligne for ligne in en_echec[:30]))
                 print("    --- fin de la sortie ---")
             print("\n".join("    " + ligne for ligne in lignes[-40:]))
-    print(f"\n{len(TESTS) - len(echecs)}/{len(TESTS)} fichiers de tests passés")
+    print(f"\n{len(TESTS) - len(echecs) - len(ignores)}/{len(TESTS) - len(ignores)} fichiers de tests passés"
+          + (f" ({len(ignores)} ignoré(s) : {', '.join(ignores)})" if ignores else ""))
     return 1 if echecs else 0
 
 

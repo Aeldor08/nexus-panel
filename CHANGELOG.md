@@ -8,6 +8,29 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Personnalisation native et portable
+- Portée sur NEXUS 1.6.0 (Python privé, superviseur d'arrière-plan, profil « Averse de néons »)
+- Lancement : les dépendances ne sont plus réinstallées à chaque démarrage ; elles ne sont vérifiées que si `requirements.txt` a changé (marque `runtime\requirements.installe` ou `.venv\.requirements.sha256`)
+- Données : nouveau module `paths.py` ; en version installée, les données vont dans `%LOCALAPPDATA%\NEXUS` (config, `data\`, `logs\`, `actions\`, profils personnels), les ressources restent en lecture seule. Migration automatique de l'ancien dossier au premier lancement, sans écrasement ; mode portable avec `NEXUS_DATA_DIR` ou `NEXUS_PORTABLE=1`
+- Journal : les messages et erreurs sont aussi écrits dans `logs\nexus.log` (rotation à 5 Mo), utile sans console
+- Réseau local : port configurable par `NEXUS_PORT` (0 = port libre), jeton local `NEXUS_TOKEN` pour les requêtes loopback en version installée, instance unique par session Windows
+- Sécurité : en-têtes `X-Frame-Options`, `X-Content-Type-Options` et `Referrer-Policy` sur les réponses ; limite de taille des corps JSON ; révocation des sessions du deck quand le mot de passe change
+- Fenêtre native (Phase 1) : `nexus_launcher.py` (pywebview/WebView2), icône dans la zone de notification (pystray), fermeture dans le tray, instance unique avec activation de la fenêtre existante, toasts Windows (winotify), démarrage automatique optionnel, `lancer_native.bat` et `requirements-native.txt`
+- Notifications : les rappels, alertes CPU/RAM/disque et évènements de Philibert passent par les toasts Windows en mode natif ; le navigateur garde ses notifications en mode web
+- Exécutable autonome (Phase 2) : `nexus.spec` + `outils/build_native.py` (PyInstaller onedir, icône, version, données) ; `requirements-native.txt` contient PyInstaller
+- Installeur Windows : `installer.iss` (Inno Setup 6), installation par utilisateur dans `%LOCALAPPDATA%\Programs\NEXUS`, raccourcis NEXUS / Configurer NEXUS / Désinstaller, vérification WebView2, désinstallation qui conserve `%LOCALAPPDATA%\NEXUS`
+- Premier lancement : fenêtre de configuration native (mot de passe, Discord, dépôt des mises à jour), sans console ; raccourci « Configurer NEXUS » (`NEXUS.exe --configure`)
+- Signature : `outils/sign_native.ps1` pour signer l'exe et l'installeur avec un certificat Authenticode (signtool)
+- Mises à jour natives (Phase 3) : en version installée, NEXUS télécharge `NEXUS-x.y.z-Setup.exe`, vérifie le SHA256 et la signature Authenticode, sauvegarde l'installation, puis un helper PowerShell ferme NEXUS, installe en silence et relance
+- Rollback natif : si la nouvelle version ne confirme pas son démarrage, l'ancienne installation est restaurée et relancée ; « Revenir à la version précédente » utilise la même sauvegarde
+- Signature configurable : `mises_a_jour.signature` (`auto`, `requise`, `ignoree`) et `mises_a_jour.certificat` (empreinte SHA1 attendue)
+- Build : `outils/build_native.py` signe l'exe avant l'installeur et écrit `*.sha256` + `SHA256SUMS.txt` ; CI Windows sur tag `v*` (artefacts, sans publication automatique) et documentation du fork (`docs/GITHUB-FORK.md`)
+- Version portable : `outils/build_native.py --portable` produit `NEXUS-Portable-x.y.z.zip` (exe, `_internal`, `portable.flag`, `Lancer NEXUS.bat`, `LISEZMOI.txt`) ; le drapeau `portable.flag` place les données dans le dossier de l'exe, désactive le démarrage automatique et donne un mutex d'instance unique propre au dossier ; mise à jour manuelle, sans installeur
+- Adaptation des futures versions : `docs/MODOP-PORTABLE.md`, inventaire `docs/PERSONNALISATION.md`, patch de référence `docs/PATCH-PERSONNALISATION-1.4.1.patch` et vérificateur `outils/verifier_personnalisation.py`
+
+### Corrigé
+- Tests : `test_modejeu.py` n'utilise plus `StopIteration` dans une génératrice (interdit depuis Python 3.7) ; `run_all.py` ignore proprement `test_maj.py` hors dépôt Git
+
 ## [1.6.0] - 2026-11-18 - Averse de néons
 
 ### Ajouté

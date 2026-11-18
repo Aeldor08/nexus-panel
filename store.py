@@ -6,7 +6,9 @@ import json
 import threading
 from pathlib import Path
 
-DATA_DIR = Path(__file__).resolve().parent / "data"
+import paths
+
+DATA_DIR = paths.DATA_DIR
 # Clés autorisées : rien d'autre ne peut être écrit sur le disque.
 KEYS = {"agenda", "clocks", "launcher", "devices", "speedtests", "gamemode", "remote"}
 MAX_BYTES = 2 * 1024 * 1024
@@ -33,7 +35,7 @@ def save(key: str, value) -> None:
         raise ValueError("données trop volumineuses")
     path = _path(key)
     with _lock:
-        DATA_DIR.mkdir(exist_ok=True)
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix(".tmp")
         tmp.write_text(text, encoding="utf-8")
         tmp.replace(path)
