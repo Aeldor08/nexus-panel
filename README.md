@@ -6,23 +6,89 @@ un lanceur de jeux, un agenda, un mur de souvenirs, tes statistiques personnelle
 musique), un journal quotidien, un stream deck (gros boutons d'actions) et, si tu
 veux, un bot Discord qui t'envoie des alertes.
 
-Tout tourne **sur ton PC uniquement** : la page est à l'adresse `http://127.0.0.1:8000`, que personne
-d'autre ne peut ouvrir. Tes données restent sur ton PC : la seule connexion faite par NEXUS lui-même est la
-vérification des mises à jour auprès de `api.github.com` (désactivable), plus le bot Discord si tu l'actives.
+Tout tourne **sur ton PC uniquement** : personne d'autre ne peut ouvrir NEXUS (sauf ton téléphone, si tu
+l'autorises). Tes données restent sur ton PC : la seule connexion faite par NEXUS lui-même est la vérification
+des mises à jour auprès de `api.github.com` (désactivable), plus le bot Discord si tu l'actives.
 
 ---
 
-## Installation pas à pas (aucune connaissance en Python nécessaire)
+## Quelle version choisir ?
+
+Tout se télécharge sur la page du dépôt GitHub → **Releases** (colonne de droite). Ne prends jamais
+« Source code » : c'est un fichier technique de GitHub.
+
+| | **Application Windows** *(recommandé)* | **Portable** | **Version source** |
+|---|---|---|---|
+| Fichier | `NEXUS-x.y.z-Setup.exe` (dernière release) | `NEXUS-Portable-x.y.z.zip` (release « version portable ») | `NEXUS-x.y.z.zip` (dernière release) |
+| Installation | double-clic, 1 minute | dézipper, c'est tout | `installer.bat`, environ 10 minutes |
+| Fenêtre | fenêtre NEXUS à part | fenêtre NEXUS à part | dans ton navigateur |
+| Mises à jour | **automatiques** | à la main | automatiques |
+| Tes données | `%LOCALAPPDATA%\NEXUS` | dans le dossier du portable (clé USB possible) | dans le dossier de NEXUS |
+| Pour qui | tout le monde | une clé USB, un PC où on n'installe rien | modifier NEXUS, développeurs |
+
+Les trois versions ont les mêmes fonctions. Windows 10 ou 11 en 64 bits est nécessaire.
+
+> **Avertissement Windows SmartScreen.** NEXUS n'est pas signé avec un certificat payant : au premier
+> lancement, Windows peut afficher « Windows a protégé votre ordinateur ». Clique sur **Informations
+> complémentaires** puis **Exécuter quand même**. C'est normal pour un logiciel gratuit téléchargé.
+
+---
+
+## Installer l'application Windows (recommandé)
+
+1. Dans la dernière release, télécharge **`NEXUS-x.y.z-Setup.exe`**.
+2. Double-clique dessus (voir l'avertissement SmartScreen ci-dessus). Aucun droit administrateur n'est demandé :
+   NEXUS s'installe pour ton compte Windows seulement, dans `%LOCALAPPDATA%\Programs\NEXUS`.
+3. Coche si tu veux le **raccourci sur le Bureau** et le **lancement au démarrage de Windows**, puis **Installer**.
+4. Au premier lancement, une fenêtre de configuration s'ouvre :
+   - **Mot de passe du Deck** (obligatoire) : il protège les boutons qui lancent des applis ou mettent le PC en
+     veille, et il est demandé pour installer une mise à jour. **Note-le.**
+   - **Bot Discord** (facultatif) : laisse vide si tu n'en veux pas, voir l'[étape 6](#étape-6--facultatif-bot-discord).
+   - **Dépôt des mises à jour** : n'y touche pas ; même vide, NEXUS surveille le dépôt d'où vient
+     l'installeur. Écris `non` seulement si tu ne veux aucune mise à jour.
+5. NEXUS s'ouvre dans sa fenêtre et son icône apparaît près de l'horloge.
+
+Ensuite :
+
+- **Mises à jour** : NEXUS vérifie tout seul (au démarrage puis toutes les 6 heures) et te propose la nouvelle
+  version. Tu valides avec ton mot de passe : il télécharge l'installeur, vérifie son empreinte SHA-256, sauvegarde
+  l'installation, met à jour et redémarre. Si la nouvelle version ne démarre pas, l'ancienne est remise en place.
+- **Changer le mot de passe ou Discord** : menu Démarrer → **Configurer NEXUS**.
+- **Microsoft Edge WebView2** est nécessaire pour la fenêtre. Il est déjà présent sur Windows 11 et presque tous
+  les Windows 10 ; sinon l'installeur te le signale et donne le lien.
+- **Désinstaller** : Paramètres Windows → Applications → NEXUS. Tes données (`%LOCALAPPDATA%\NEXUS`) sont gardées ;
+  supprime ce dossier à la main si tu veux tout effacer.
+- **Températures du processeur** : voir l'[étape 5](#étape-5--facultatif-températures-du-processeur--librehardwaremonitor),
+  avec le dossier `LibreHardwareMonitor` à créer dans `%LOCALAPPDATA%\Programs\NEXUS`.
+
+## Version portable
+
+1. Sur la page **Releases**, ouvre la release **« NEXUS x.y.z — version portable Windows »** et télécharge
+   **`NEXUS-Portable-x.y.z.zip`**.
+2. Clic droit → **Extraire tout…**, vers un dossier où tu peux écrire (Documents, clé USB…). Évite
+   `C:\Program Files`.
+3. Double-clique sur **`NEXUS.exe`** (ou `Lancer NEXUS.bat`). Au premier lancement, la même fenêtre de
+   configuration que l'application Windows s'ouvre.
+
+Tout reste dans ce dossier : configuration, `data\`, journaux, profils. Pour l'emporter ailleurs, déplace le
+dossier entier. Il n'y a ni raccourci ni démarrage automatique (crée un raccourci vers `NEXUS.exe` si tu veux).
+
+**Mettre à jour le portable** (à la main) : ferme NEXUS, télécharge le nouveau ZIP, puis remplace seulement
+`NEXUS.exe` et le dossier `_internal\`. Garde `config.json`, `deck.json`, `jeux.json`, `data\`, `logs\`,
+`profils\` et `actions\`.
+
+---
+
+## Installer la version source (aucune connaissance en Python nécessaire)
 
 Compte environ 10 minutes. **Rien à installer sur Windows** : NEXUS apporte son propre Python (dossier
 `runtime\`), indépendant du Python éventuellement installé sur le PC ; une mise à jour ou une désinstallation
-de ce dernier ne le dérange jamais.
+de ce dernier ne le dérange jamais. Les étapes 5 et 6 (températures, Discord) valent pour les trois versions.
 
 ### Étape 1 — Dézipper NEXUS
 
-Sur la page du dépôt GitHub, clique sur **Releases** (colonne de droite) : la dernière version est en haut, avec
-un encadré **⬇️ Télécharger** et un lien direct vers `NEXUS-x.y.z.zip`. C'est le seul fichier à prendre (pas
-« Source code »). Tu peux aussi utiliser le zip qu'on t'a envoyé.
+Dans la dernière release, l'encadré **⬇️ Télécharger** donne un lien direct vers `NEXUS-x.y.z.zip`. Tu peux aussi
+utiliser le zip qu'on t'a envoyé.
 
 1. Fais un clic droit sur le fichier `NEXUS-x.y.z.zip` → **Extraire tout…** → **Extraire**.
 2. Déplace le dossier obtenu à un endroit où tu le garderas, par exemple dans **Documents**.
@@ -67,7 +133,8 @@ Windows ne donne pas la température du processeur aux programmes ordinaires. Le
 1. Va sur <https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases>, et dans la
    dernière version (section **Assets**), télécharge le fichier **`LibreHardwareMonitor-net472.zip`**
    (ou celui dont le nom ressemble le plus).
-2. Dans le dossier de NEXUS, crée un dossier nommé exactement **`LibreHardwareMonitor`**.
+2. Dans le dossier de NEXUS, crée un dossier nommé exactement **`LibreHardwareMonitor`** (application Windows :
+   dans `%LOCALAPPDATA%\Programs\NEXUS` ; portable : à côté de `NEXUS.exe`).
 3. Dézippe le contenu du zip **dans** ce dossier : on doit avoir
    `LibreHardwareMonitor\LibreHardwareMonitor.exe`.
 4. C'est tout : au prochain lancement, NEXUS le configure et le démarre tout seul.
@@ -89,9 +156,10 @@ affichent « indisponible ».
 4. Dans Discord : **Paramètres → Avancés → Mode développeur** (active-le). Ensuite :
    - clic droit sur ton nom → **Copier l'identifiant** : c'est ton **ID utilisateur** ;
    - clic droit sur le salon où tu veux les alertes → **Copier l'identifiant** : c'est l'**ID du salon**.
-5. Double-clic sur **`configurer.bat`**, garde ou change ton mot de passe, réponds `O` à la question
-   Discord et colle le jeton, ton ID et l'ID du salon (clic droit dans la fenêtre noire = coller).
-6. Relance NEXUS : la fenêtre noire affiche `[Discord] Connecté : …`.
+5. Version source : double-clic sur **`configurer.bat`**, garde ou change ton mot de passe, réponds `O` à la
+   question Discord et colle le jeton, ton ID et l'ID du salon (clic droit dans la fenêtre noire = coller).
+   Application Windows : menu Démarrer → **Configurer NEXUS** ; portable : `NEXUS.exe --configure`.
+6. Relance NEXUS : le journal (`logs\nexus.log`) affiche `[Discord] Connecté : …`.
 
 Commandes (pour toi seul, dans ce salon seulement) : `/stats`, `/disques`, `/gpu`, `/deck <bouton>`,
 et `/command` qui les liste toutes.
@@ -99,6 +167,10 @@ et `/command` qui les liste toutes.
 ---
 
 ## Utilisation au quotidien
+
+*Application Windows et portable : NEXUS s'ouvre dans sa propre fenêtre ; fermer la fenêtre le laisse tourner près
+de l'horloge (clic droit sur l'icône → **Quitter NEXUS** pour l'arrêter). Le reste de cette section concerne la
+version source.*
 
 - **Ouvrir NEXUS :** double-clic sur le raccourci **NEXUS** du Bureau (ou sur `lancer.bat`).
   NEXUS tourne en arrière-plan, **sans fenêtre noire** : son **icône** apparaît près de l'horloge et le
@@ -115,42 +187,26 @@ et `/command` qui les liste toutes.
 - **Mettre à jour :** remplace les fichiers par ceux d'une version plus récente **sans toucher** à
   `config.json`, `deck.json` et au dossier `data\` (tes réglages et tes données).
 
-## Version native et portable (exécutable Windows)
+## Construire l'application Windows et le portable (développeurs)
 
-En plus de la version source décrite ci-dessus, NEXUS peut être livré en
-**application Windows autonome** et en **version portable** :
+Prérequis : Python 3.11 ou 3.12, et **Inno Setup 6** pour l'installeur (`winget install JRSoftware.InnoSetup`).
 
-1. `NEXUS-x.y.z-Setup.exe` : installation par utilisateur dans
-   `%LOCALAPPDATA%\Programs\NEXUS`, fenêtre native WebView2, icône dans la zone
-   de notification, données dans `%LOCALAPPDATA%\NEXUS`, désinstallation qui
-   conserve les données.
-2. `NEXUS-Portable-x.y.z.zip` : à décompresser où tu veux, données dans le
-   dossier portable, aucun raccourci ni entrée de registre, démarrage
-   automatique désactivé. Lance `Lancer NEXUS.bat` ou `NEXUS.exe`.
-
-La version native reprend les fonctions de la version source (serveur FastAPI,
-profils, Philibert, mises à jour, etc.). La mise à jour de la version installée
-passe par l'installeur signé (SHA256 + Authenticode, sauvegarde et rollback) ;
-celle de la version portable est manuelle : remplacer `NEXUS.exe` et
-`_internal\` en conservant `config.json`, `data\`, `logs\`, `profils\` et
-`actions\`.
-
-Pour construire les deux :
+Le plus simple : double-clic sur **`Creer-NEXUS-Portable.bat`** (ZIP portable) ou
+`Creer-NEXUS-Portable.bat --installer` (ZIP portable + installeur). Il prépare un environnement de build séparé
+(`.venv-build`), installe les dépendances si besoin, lance les tests et produit les fichiers dans `dist\`, avec
+leurs `.sha256` et `SHA256SUMS.txt`. Équivalent à la main :
 
 ```bat
-.venv\Scripts\python.exe -m pip install -r requirements-native.txt
-.venv\Scripts\python.exe outils\build_native.py --installer --portable
+.venv-build\Scripts\python.exe outils\build_native.py --installer --portable
 ```
 
-Les fichiers sont produits dans `dist\` avec leurs `.sha256` et
-`SHA256SUMS.txt`. Pour faire simple, double-clique sur
-**`Creer-NEXUS-Portable.bat`** : il prépare un environnement de build séparé
-(`.venv-build`), installe les dépendances si besoin et produit le ZIP portable
-dans `dist\`. Pour construire aussi l'installeur :
-`Creer-NEXUS-Portable.bat --installer`.
+Le dépôt GitHub à surveiller pour les mises à jour (remote `origin`, ou `--depot proprietaire/nom`) est embarqué
+dans l'exe : une installation sait donc toute seule où chercher ses mises à jour. L'installeur n'est pas signé
+(seule l'empreinte SHA-256 est vérifiée) ; pour signer avec un certificat Authenticode, voir
+`outils\sign_native.ps1` et `docs\MODOP-PORTABLE.md`.
 
-Pour adapter une future version du dépôt d'origine, lire
-`docs\MODOP-PORTABLE.md` et utiliser `outils\verifier_personnalisation.py`.
+Pour adapter une future version du dépôt d'origine, lire `docs\MODOP-PORTABLE.md` et utiliser
+`outils\verifier_personnalisation.py`.
 
 ## Dépannage
 
@@ -535,6 +591,12 @@ Le fichier `VERSION` est la source de vérité, `CHANGELOG.md` suit le format *K
    `dist\NEXUS-X.Y.Z.zip` (code seulement : ni `data\`, ni configuration réelle, ni journaux, sauvegardes ou
    références) et son `.sha256`, pousse, puis publie la release avec `gh release create`.
    `--sans-publier` s'arrête avant l'envoi.
+   Il construit aussi **l'installeur** `NEXUS-X.Y.Z-Setup.exe` (+ `.sha256`), joint à la même release : c'est
+   lui que les applications installées téléchargent pour se mettre à jour. Le ZIP portable part dans une
+   pré-release `portable-X.Y.Z` à part (jamais dans `vX.Y.Z` : les versions source prennent le dernier `.zip`
+   de la release). Il faut `.venv-build` (lancer une fois `Creer-NEXUS-Portable.bat`) et Inno Setup 6 ;
+   `--sans-natif` publie seulement l'archive source, mais les applications installées ne pourront alors pas
+   se mettre à jour vers cette version.
 3. GitHub Actions relance tests, lint, validation des profils et détection de secrets à chaque push et
    pull request (`.github/workflows/ci.yml`) ; sur un tag `v*`, `release.yml` refabrique l'archive et son
    SHA256 et les joint à la release si elle ne les a pas.
@@ -546,6 +608,9 @@ aucune donnée personnelle** : il ne prend que le code et les fichiers d'exemple
 copie et annule tout s'il y trouve un de tes secrets (jeton, mot de passe, ID Discord, nom
 d'utilisateur Windows, nom du PC, chemins personnels, noms d'appareils). Envoie ce zip : la
 personne suit ce README depuis l'étape 1.
+
+Plus simple encore : envoie le lien de la page **Releases** et dis de prendre `NEXUS-x.y.z-Setup.exe`
+(installation en un clic, mises à jour automatiques).
 
 La liste de ce qui ne doit jamais être partagé est dans **`NE_PAS_PARTAGER.md`**.
 
@@ -647,8 +712,16 @@ chaque exécution est notée dans `logs\deck.log`.
 ### Accès depuis le téléphone
 
 Désactivé par défaut. Bouton **📱 Téléphone** sur le PC → autoriser → scanner le QR code avec le
-téléphone (même Wi-Fi). Windows demande d'autoriser Python sur les **réseaux privés** : accepte (une fois de plus après le passage au
-Python privé de NEXUS : c'est un autre `python.exe`, celui de `runtime\`).
+téléphone (même Wi-Fi).
+
+- **Version source** : Windows demande d'autoriser Python sur les **réseaux privés** : accepte (une fois de plus
+  après le passage au Python privé de NEXUS : c'est un autre `python.exe`, celui de `runtime\`).
+- **Application Windows et portable** : si le pare-feu bloque, la fenêtre 📱 Téléphone l'indique et propose
+  **Autoriser dans le pare-feu** (confirmation administrateur Windows). La règle porte sur le port de NEXUS
+  (8765 par défaut), pas sur un programme : elle reste valable si le dossier portable est déplacé.
+- L'adresse change d'une version à l'autre (source : port 8000, application/portable : 8765) : un téléphone
+  appairé sur une version doit être appairé à nouveau sur l'autre.
+
 Seuls les appareils appairés passent ; les adresses Internet sont toujours refusées.
 
 ### Autres réglages
