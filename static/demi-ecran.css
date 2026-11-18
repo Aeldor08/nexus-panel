@@ -3,6 +3,9 @@
    et le plein écran, les grilles à 3 colonnes deviennent trop étroites : on passe à 2 colonnes.
    Chargée en dernier ; ne s'applique qu'à la disposition d'origine (un bloc déplacé à la main garde sa place). */
 
+/* Un onglet caché reste caché, quelle que soit la règle de disposition */
+main.tab[hidden] { display: none !important; }
+
 @media (min-width: 761px) and (max-width: 1400px) {
 
   /* ---- PC : cases 2 par 2 -------------------------------------------------------------------
@@ -11,7 +14,8 @@
      Réseau | Disques
      Processus | Ventilation & énergie
      Mode jeu (toute la largeur) */
-  #tab-pc { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-content: start; }
+  /* (:not([hidden]) : sans ça, display: grid l'emporte sur l'attribut hidden et PC s'affiche sur tous les onglets) */
+  #tab-pc:not([hidden]) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-content: start; }
   #tab-pc > * { grid-column: 1 / -1; min-width: 0; }
   #tab-pc > section.grid { display: contents; }
   #tab-pc > section.grid > .card { grid-column: auto; margin: 0; }
