@@ -8,6 +8,8 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+## [1.5.0] - 2026-11-18
+
 ### Ajouté
 - **NEXUS autonome sur Windows** : il apporte son propre Python (dossier `runtime\`, Python 3.12 officiel de la
   Python Software Foundation, téléchargé une seule fois depuis nuget.org avec vérification de l'empreinte SHA256)
