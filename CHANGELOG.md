@@ -9,10 +9,13 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 ## [Non publié]
 
 ### Ajouté
-- **Profil visuel « Averse de néons »** (v1.1, modes Terminal et Sentinelle) : une ville de nuit sous la pluie. Fond :
-  une rue-canyon en perspective centrale, enseignes verticales, vitrines, véhicules volants et méga-tour lumineuse
-  qui se perd dans une brume bleu-violet, reflets étirés sur l'asphalte mouillé (violet et magenta en Terminal, bleu,
-  cyan et ambre en Sentinelle), pluie fine qui tombe en biais, deux groupes d'enseignes qui scintillent ; cartes en verre fumé à liseré néon, jauges et barres
+- **Profil visuel « Averse de néons »** (v1.2, modes Terminal et Sentinelle) : une ville de nuit sous la pluie. Fond :
+  une rue-canyon en perspective centrale serrée d'enseignes (tubes de néon, caissons lumineux à signes inventés,
+  enseignes de boutiques), câbles tendus au-dessus de la rue, carpe holographique translucide, brume éclairée par les
+  enseignes, vapeur qui monte de la chaussée, passants sous des parapluies, trottoirs et passage piéton, méga-tour à
+  écran géant qui se perd dans une brume bleu-violet, reflets étirés et ronds de pluie dans les flaques (violet et
+  magenta en Terminal, bleu, cyan et ambre en Sentinelle), pluie en deux plans qui tombe en biais (fine au loin, plus
+  longue et plus rapide au premier plan, aussi sur téléphone), deux groupes d'enseignes qui scintillent ; cartes en verre fumé à liseré néon, jauges et barres
   en tubes de néon (couleur selon le niveau, tube rouge qui grésille en critique), alertes en enseignes lumineuses.
   Page de garde : on lève les yeux entre les tours sous la pluie, les enseignes s'allument dans le flou, la mise au
   point se fait, des projecteurs balaient la brume et le logo NEXUS s'allume comme un néon ; au clic, on s'envole

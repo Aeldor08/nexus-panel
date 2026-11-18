@@ -1,7 +1,8 @@
 /* ==========================================================================
-   Profil « Averse de néons » (v1.1) — une ville de nuit sous la pluie, modes Terminal et Sentinelle.
-   Rue-canyon en perspective centrale (enseignes, vitrines, méga-tour dans la brume), reflets sur l'asphalte mouillé,
-   contre-plongée entre les tours ; nuit bleu-violet, néons magenta et cyan, touches d'ambre. Toutes les images sont
+   Profil « Averse de néons » (v1.2) — une ville de nuit sous la pluie, modes Terminal et Sentinelle.
+   Rue-canyon en perspective centrale, serrée d'enseignes (tubes de néon, caissons lumineux à signes inventés), câbles
+   au-dessus de la rue, carpe holographique, brume éclairée, vapeur, passants sous la pluie, trottoirs et asphalte mouillé
+   en miroir ; contre-plongée entre les tours ; nuit bleu-violet, néons magenta et cyan, touches d'ambre. Toutes les images sont
    des dessins ORIGINAUX, rendus une fois (WebGL : lancer de rayons, reflets brillants, brume, flou d'objectif) :
      ville-t / ville-s            la rue sous la pluie (Terminal : violet et magenta ; Sentinelle : bleu, cyan, ambre)
      ville-tel-t / ville-tel-s     version portrait allégée pour le téléphone
@@ -9,7 +10,8 @@
      tours-*, tours-flou-*         contre-plongée entre les tours, nette / floue (mise au point = fondu entre les deux)
      neons-flou-*                  halo des enseignes (calque transparent qui « s'allume »)
      tours-tel-*                   contre-plongée en portrait pour le téléphone
-     pluie, pluie-radiale(-tel)    pluie fine (tuile sans couture) ; gouttes qui tombent vers nous (page de garde)
+     pluie, pluie-proche           pluie en deux plans (tuiles sans couture) : lointaine et fine, proche, plus longue et floue
+     pluie-radiale(-tel)           gouttes qui tombent vers nous (page de garde)
      faisceaux, enseigne-ok, enseigne-alerte
    Enseignes de la page de garde : tubes de néon tracés à la main (HOTEL, RAMEN, SUSHI, BAR, NUIT, CINE, OUVERT, 24/24…).
    Polices : Inter (OFL, licence à la racine) ; titres en Bahnschrift si elle est installée (Windows), sinon Inter.
@@ -67,7 +69,7 @@
   background-attachment: fixed;
 }
 
-/* ---------- 2. Fond : pluie fine, enseignes qui scintillent ---------- */
+/* ---------- 2. Fond : pluie en deux plans, enseignes qui scintillent ---------- */
 :root[data-profile] body { background: transparent; }
 /* deux calques d'enseignes plus vives, alignés sur le fond (même cadrage « cover ») : elles s'allument par moments */
 :root[data-profile]::before, :root[data-profile]::after {
@@ -88,6 +90,14 @@
   transform: rotate(8deg); animation: av-pluie .85s steps(51, jump-none) infinite;
 }
 @keyframes av-pluie { from { transform: rotate(8deg) translateY(-512px); } to { transform: rotate(8deg) translateY(0); } }
+/* pluie proche (premier plan) : traits plus longs et flous, qui tombent plus vite (parallaxe), 33 pas en 0,55 s = 60 images/s */
+:root[data-profile] header::before {
+  content: ""; position: fixed; left: -30vw; top: -50vh; width: 160vw; height: calc(200vh + 768px); z-index: -1; pointer-events: none;
+  opacity: .22; background: url("assets/pluie-proche.webp") 0 0 / 768px 768px repeat;
+  transform: rotate(10deg); animation: av-pluie-proche .55s steps(33, jump-none) infinite;
+}
+@keyframes av-pluie-proche { from { transform: rotate(10deg) translateY(-768px); } to { transform: rotate(10deg) translateY(0); } }
+:root[data-profile] body.gamemode header::before { display: none; }
 /* clin d'œil (2,8 s, dans le coin) : une enseigne « OK » quand tout est résolu, un triangle rouge si critique */
 :root[data-profile] body::after {
   content: ""; position: fixed; right: 22px; bottom: 22px; left: auto; top: auto; width: 150px; height: 150px; z-index: 50;
@@ -162,6 +172,11 @@
 :root[data-profile] .jn-mood, :root[data-profile] .jn-act { color: var(--text); }
 :root[data-profile] .spark-legend { margin-top: 6px; }
 :root[data-profile] .spark-legend span { position: relative; z-index: 1; padding: 0 5px; border-radius: 4px; color: var(--text-2); background: rgba(var(--deep-rgb), .88); }   /* lisible même si une courbe passe dessous */
+:root[data-profile] .cover .ph { color: rgba(var(--neon-rgb), .75); text-shadow: 0 0 18px rgba(var(--neon-rgb), .45); }   /* note de musique sans pochette */
+/* petites aides posées sur le fond de la ville : plaque sombre, lisibles même devant une enseigne vive */
+:root[data-profile] .nx-hint, :root[data-profile] main > .hint, :root[data-profile] main > p.hint {
+  padding: 1px 7px; border-radius: 5px; background: rgba(var(--deep-rgb), .86); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+:root[data-profile] main > .hint, :root[data-profile] main > p.hint { width: fit-content; max-width: 100%; }
 :root[data-profile] .temp, :root[data-profile] .rate, :root[data-profile] .home-live {
   background: linear-gradient(180deg, rgba(255, 255, 255, .035), transparent 40%), rgba(var(--deep-rgb), .82);
   border: 1px solid rgba(var(--mag-rgb), .26); box-shadow: inset 0 0 18px rgba(0, 0, 0, .35);
@@ -437,11 +452,12 @@
 @keyframes av-flambe { from { opacity: .32; } 30% { opacity: 1; } to { opacity: .9; } }
 @keyframes av-efface { to { opacity: 0; transform: scale(1.06); } }
 
-/* ---------- Téléphone : version allégée (images portrait, pas de pluie ni de scintillement sur le panel) ---------- */
+/* ---------- Téléphone : version allégée (images portrait, une seule pluie, sans scintillement sur le panel) ---------- */
 @media (max-width: 760px) {
   :root[data-profile][data-theme="terminal"] { background: linear-gradient(180deg, rgba(6, 4, 18, .86), rgba(6, 4, 18, .74)), url("assets/ville-tel-t.webp") 50% 50% / cover no-repeat, #07060d; }
   :root[data-profile][data-theme="sentinelle"] { background: linear-gradient(180deg, rgba(3, 6, 16, .86), rgba(3, 6, 16, .74)), url("assets/ville-tel-s.webp") 50% 50% / cover no-repeat, #05080f; }
-  :root[data-profile]::before, :root[data-profile]::after, :root[data-profile] body::before { display: none; }
+  :root[data-profile]::before, :root[data-profile]::after, :root[data-profile] header::before { display: none; }
+  :root[data-profile] body::before { opacity: .2; left: -40vw; width: 180vw; }
   :root[data-profile] .card { box-shadow: 0 0 0 1px rgba(0, 0, 0, .45), 0 10px 24px rgba(0, 0, 0, .5); }
   :root[data-profile] .gauge::before, :root[data-profile] .gauge::after { height: 14px; bottom: 10px; }
   :root[data-profile] .gauge .val { font-size: 26px; }
@@ -466,6 +482,7 @@
   :root[data-profile] *::before, :root[data-profile] *::after { animation: none !important; transition: none !important; }
   :root[data-profile]::before, :root[data-profile]::after, :root[data-profile] body::after, :root[data-profile] #splash::after { display: none !important; }
   :root[data-profile] body::before { transform: rotate(8deg); opacity: .18; }
+  :root[data-profile] header::before { transform: rotate(10deg); opacity: .12; }
   :root[data-profile] #splash::before { opacity: .45; transform: none; }
   :root[data-profile] #splash .sp-glow { opacity: .32; }
   :root[data-profile] body[data-etat] #splash .sp-enter, :root[data-profile] body[data-etat] #splash .sp-tag,
