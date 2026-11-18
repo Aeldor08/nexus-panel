@@ -8,7 +8,7 @@ chacun leur propre licence.
 | Police | Où | Licence | Fichier de licence |
 |---|---|---|---|
 | Uncial Antiqua | `profils/des-du-destin/assets/` | SIL Open Font License 1.1 | `profils/des-du-destin/OFL-UncialAntiqua.txt` |
-| Inter | `profils/des-du-destin/assets/`, `profils/pluie-d-etoiles/assets/` | SIL Open Font License 1.1 | `OFL-Inter.txt` dans chacun de ces profils |
+| Inter | `profils/des-du-destin/assets/`, `profils/pluie-d-etoiles/assets/`, `profils/averse-de-neons/assets/` | SIL Open Font License 1.1 | `OFL-Inter.txt` dans chacun de ces profils |
 | Cinzel | `profils/pluie-d-etoiles/assets/` | SIL Open Font License 1.1 | `profils/pluie-d-etoiles/OFL-Cinzel.txt` |
 
 Les polices sont livrées telles quelles (sous-ensembles WOFF2), sans changement de nom.

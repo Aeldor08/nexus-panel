@@ -304,6 +304,12 @@ sur téléphone (`@media (max-width: 700px)`). Quelques règles de plus :
   sur un élément de la taille d'UNE image (`background-size: N×100% 100%`), animée par `background-position`
   de `0 0` à `100% 0` avec `steps(N, jump-none)` (N positions, pas N - 1) — ex. `profils/des-du-destin` :
   `de-roule.webp` (60 images) et `flamme.webp` (16 images en boucle) ;
+- **mise au point** (flou → net) : `filter: blur()` animé est trop coûteux ; superpose plutôt une image floue et
+  une image nette, et fais apparaître la nette par `opacity` — ex. `profils/averse-de-neons` : `tours-flou-*.webp`
+  (petite, le flou se passe de détails) puis `tours-*.webp` ;
+- **pluie en biais sans couture** : une tuile répétée sur un calque tourné, animé par
+  `transform: rotate(8deg) translateY(…)` d'exactement une tuile, avec `steps()` pour rester sous 60 images/s
+  (ex. `profils/averse-de-neons`, `pluie.webp`) ;
 - quand l'onglet est caché, le panel met toutes les animations CSS en pause (`html.nx-pause`) : rien à faire.
 
 **Mise en cache :** les fichiers du profil sont servis avec une adresse versionnée (`?v=<signature>`,

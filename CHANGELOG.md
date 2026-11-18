@@ -8,6 +8,17 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Ajouté
+- **Profil visuel « Averse de néons »** (modes Terminal et Sentinelle) : une ville de nuit sous la pluie. Fond en
+  bokeh de néons avec reflets sur l'asphalte mouillé (rouge et rose en Terminal, cyan et ambre en Sentinelle), pluie
+  fine qui tombe en biais, quelques enseignes qui scintillent ; cartes en verre fumé à liseré néon, jauges et barres
+  en tubes de néon (couleur selon le niveau, tube rouge qui grésille en critique), alertes en enseignes lumineuses.
+  Page de garde : on lève les yeux entre les tours sous la pluie, les enseignes s'allument dans le flou, la mise au
+  point se fait, des projecteurs balaient la brume et le logo NEXUS s'allume comme un néon ; au clic, on s'envole
+  entre les tours et la scène s'ouvre en rond, bordée d'un anneau néon. Dessins originaux rendus une fois en WebP,
+  version portrait allégée pour le téléphone, versions fixes sans animation et en mode jeu, contraste du texte
+  d'au moins 4,5:1 sur toutes les vues
+
 ## [1.5.0] - 2026-11-18
 
 ### Ajouté

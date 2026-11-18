@@ -1,0 +1,470 @@
+/* ==========================================================================
+   Profil « Averse de néons » (v1.0) — une ville de nuit sous la pluie, modes Terminal et Sentinelle.
+   Bokeh de néons, reflets sur l'asphalte mouillé, contre-plongée entre les tours. Toutes les images sont des dessins
+   ORIGINAUX, rendus une fois (WebGL, lancer de rayons et flou d'objectif procéduraux) :
+     ville-t / ville-s            rue sous la pluie en bokeh (Terminal : rouge et rose ; Sentinelle : cyan et ambre)
+     ville-tel-t / ville-tel-s     version portrait allégée pour le téléphone
+     scint-a-* / scint-b-*         quelques enseignes du fond, plus vives (petits scintillements, opacité seulement)
+     tours-*, tours-flou-*         contre-plongée entre les tours, nette / floue (mise au point = fondu entre les deux)
+     neons-flou-*                  halo des enseignes (calque transparent qui « s'allume »)
+     tours-tel-*                   contre-plongée en portrait pour le téléphone
+     pluie, pluie-radiale(-tel)    pluie fine (tuile sans couture) ; gouttes qui tombent vers nous (page de garde)
+     faisceaux, enseigne-ok, enseigne-alerte
+   Enseignes de la page de garde : tubes de néon tracés à la main (HOTEL, RAMEN, SUSHI, BAR, NUIT, CINE, OUVERT, 24/24…).
+   Polices : Inter (OFL, licence à la racine) ; titres en Bahnschrift si elle est installée (Windows), sinon Inter.
+   Animations : transform, opacity et planches d'images seulement ; 60 images/s au plus (steps) ; versions fixes
+   pour « sans animation », le mode jeu et le téléphone.
+   ========================================================================== */
+
+@font-face { font-family: "NX Averse Texte"; src: url("assets/inter-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "NX Averse Texte"; src: url("assets/inter-600.woff2") format("woff2"); font-weight: 600 700; font-display: swap; }
+
+/* ---------- 1. Palette ---------- */
+:root[data-profile] {
+  --accent-profil: #ff4fa8;
+  --mono: "NX Averse Texte", "Segoe UI", system-ui, sans-serif;
+  --display: "Bahnschrift SemiCondensed", "Bahnschrift", "NX Averse Texte", "Segoe UI", sans-serif;
+  --note-titre: "Bahnschrift SemiBold", "Bahnschrift", "NX Averse Texte", sans-serif;
+  --hex-img: none;
+  --aberr: 0 0 14px rgba(var(--neon-rgb), .35);
+  font-variant-numeric: tabular-nums;
+  --note-jaune: #f4e3b0; --note-rose: #f6c9de; --note-vert: #c9ecd9; --note-bleu: #c4e3f2; --note-violet: #ddd0f4; --note-peche: #f6d2b8;
+  --note-texte: #1c1426;
+}
+:root[data-profile][data-theme="terminal"] {   /* Terminal : rose néon, cyan, ambre ; nuit violette */
+  --cyan: #ff4fa8;  --neon-2: #ff8cc6;  --neon-3: #ffd2ea;  --magenta: #3fe0ff;  --yellow: #ffb347;  --green: #b78cff;
+  --ok: #5effc4;  --warn: #ffb347;  --hot: #ff4d6a;
+  --neon-rgb: 255, 79, 168;  --mag-rgb: 63, 224, 255;  --yel-rgb: 255, 179, 71;  --ok-rgb: 94, 255, 196;
+  --neon3-rgb: 255, 210, 234;  --glow2-rgb: 150, 30, 120;  --deep-rgb: 14, 10, 26;  --splash-rgb: 5, 4, 10;
+  --bg: #07060d;  --card: rgba(13, 10, 26, .86);
+  --text: #f6f1ff;  --text-2: #ddd3f2;  --muted: #ab9fca;
+  --track: #261c3c;  --edge: #4d2f70;  --edge-2: #33234c;  --deep-1: #171028;  --deep-2: #120c20;  --deep-3: #0b0815;
+  --chrome: linear-gradient(180deg, #ffffff 0%, #ffd2ea 40%, #ff6fb8 62%, #8fe9ff 100%);
+  --tab-grad: linear-gradient(180deg, rgba(255, 79, 168, .32), rgba(255, 79, 168, .12));
+  --av-t-bas: #3fe0ff;  --av-t-moyen: #ff4fa8;  --av-t-haut: #ffb347;  --av-t-crit: #ff4d6a;
+  --av-l1: #ff4fa8;  --av-l2: #3fe0ff;
+  background:
+    linear-gradient(180deg, rgba(6, 4, 14, .87), rgba(6, 4, 14, .82) 26%, rgba(6, 4, 14, .76) 55%, rgba(6, 4, 14, .7)),
+    url("assets/ville-t.webp") 50% 50% / cover no-repeat, #07060d;
+  background-attachment: fixed;
+}
+:root[data-profile][data-theme="sentinelle"] { /* Sentinelle : cyan, orange, un peu de rose ; nuit bleue */
+  --cyan: #36d6ff;  --neon-2: #84e6ff;  --neon-3: #cdf5ff;  --magenta: #ff9e3d;  --yellow: #ffc861;  --green: #ff6fb0;
+  --ok: #5dffb0;  --warn: #ffb347;  --hot: #ff4d5e;
+  --neon-rgb: 54, 214, 255;  --mag-rgb: 255, 158, 61;  --yel-rgb: 255, 200, 97;  --ok-rgb: 93, 255, 176;
+  --neon3-rgb: 205, 245, 255;  --glow2-rgb: 20, 90, 150;  --deep-rgb: 9, 13, 26;  --splash-rgb: 3, 6, 12;
+  --bg: #05080f;  --card: rgba(8, 13, 26, .86);
+  --text: #eef7ff;  --text-2: #cfe1f3;  --muted: #93abc6;
+  --track: #16263c;  --edge: #24486e;  --edge-2: #1a324e;  --deep-1: #0f1a2c;  --deep-2: #0b1424;  --deep-3: #070d18;
+  --chrome: linear-gradient(180deg, #ffffff 0%, #cdf5ff 40%, #4fd8ff 62%, #ffbe72 100%);
+  --tab-grad: linear-gradient(180deg, rgba(54, 214, 255, .3), rgba(54, 214, 255, .1));
+  --av-t-bas: #36d6ff;  --av-t-moyen: #ff9e3d;  --av-t-haut: #ff6f8e;  --av-t-crit: #ff4d5e;
+  --av-l1: #36d6ff;  --av-l2: #ff9e3d;
+  background:
+    linear-gradient(180deg, rgba(3, 6, 14, .87), rgba(3, 6, 14, .82) 26%, rgba(3, 6, 14, .76) 55%, rgba(3, 6, 14, .7)),
+    url("assets/ville-s.webp") 50% 50% / cover no-repeat, #05080f;
+  background-attachment: fixed;
+}
+
+/* ---------- 2. Fond : pluie fine, enseignes qui scintillent ---------- */
+:root[data-profile] body { background: transparent; }
+/* deux calques d'enseignes plus vives, alignés sur le fond (même cadrage « cover ») : elles s'allument par moments */
+:root[data-profile]::before, :root[data-profile]::after {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0;
+  background: url("assets/scint-a-t.webp") 50% 50% / cover no-repeat;
+  animation: av-scint-a 9s linear infinite;
+}
+:root[data-profile]::after { background-image: url("assets/scint-b-t.webp"); animation: av-scint-b 13s linear 2.5s infinite; }
+:root[data-profile][data-theme="sentinelle"]::before { background-image: url("assets/scint-a-s.webp"); }
+:root[data-profile][data-theme="sentinelle"]::after { background-image: url("assets/scint-b-s.webp"); }
+@keyframes av-scint-a { 0%, 62% { opacity: 0; } 63% { opacity: .26; } 64% { opacity: .06; } 66% { opacity: .32; } 72% { opacity: .3; } 76%, 100% { opacity: 0; } }
+@keyframes av-scint-b { 0%, 30% { opacity: 0; } 33% { opacity: .28; } 41% { opacity: .26; } 42% { opacity: .04; } 43% { opacity: .26; } 48%, 100% { opacity: 0; } }
+/* la pluie : tuile sans couture qui tombe en biais (60 images/s au plus) */
+:root[data-profile] body::before {
+  left: -30vw; right: auto; top: -50vh; bottom: auto; width: 160vw; height: calc(200vh + 512px); z-index: -1;
+  -webkit-mask-image: none; mask-image: none; opacity: .3;
+  background: url("assets/pluie.webp") 0 0 / 512px 512px repeat;
+  transform: rotate(8deg); animation: av-pluie .85s steps(51, jump-none) infinite;
+}
+@keyframes av-pluie { from { transform: rotate(8deg) translateY(-512px); } to { transform: rotate(8deg) translateY(0); } }
+/* clin d'œil (2,8 s, dans le coin) : une enseigne « OK » quand tout est résolu, un triangle rouge si critique */
+:root[data-profile] body::after {
+  content: ""; position: fixed; right: 22px; bottom: 22px; left: auto; top: auto; width: 150px; height: 150px; z-index: 50;
+  pointer-events: none; display: none; background: url("assets/enseigne-ok.webp") center / contain no-repeat;
+  -webkit-mask-image: none; mask-image: none;
+}
+:root[data-profile] body[data-alerte-evenement="resolue"]::after { display: block; animation: av-clin 2.8s linear forwards; }
+:root[data-profile] body[data-alerte-evenement="nouvelle-critique"]::after { display: block; background-image: url("assets/enseigne-alerte.webp"); animation: av-clin-crit 2.8s linear forwards; }
+@keyframes av-clin { 0% { opacity: 0; transform: scale(.9); } 6% { opacity: .9; } 9% { opacity: .1; } 14% { opacity: 1; } 17% { opacity: .4; } 22% { opacity: 1; transform: none; }
+  78% { opacity: 1; } 100% { opacity: 0; transform: none; } }
+@keyframes av-clin-crit { 0% { opacity: 0; } 5% { opacity: 1; } 8% { opacity: .2; } 11% { opacity: 1; } 30% { opacity: 1; } 32% { opacity: .3; } 34% { opacity: 1; }
+  52% { opacity: 1; } 54% { opacity: .35; } 56% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+/* arrivée sur le sommaire : une dernière averse lumineuse qui passe et se dissipe */
+:root[data-profile] body[data-etat="arrivee"]:not([data-alerte-evenement])::after {
+  display: block; left: 0; right: 0; top: -20vh; bottom: -20vh; width: auto; height: auto; z-index: 95;
+  background: radial-gradient(ellipse 85% 55% at 50% 30%, rgba(var(--neon-rgb), .28), rgba(var(--mag-rgb), .1) 45%, transparent 75%),
+    url("assets/pluie.webp") 0 0 / 512px 512px repeat;
+  animation: av-ondee 1.5s cubic-bezier(.4, 0, .6, 1) forwards; will-change: transform, opacity;
+}
+@keyframes av-ondee { 0% { opacity: 1; transform: translateY(-8vh); } 100% { opacity: 0; transform: translateY(10vh); } }
+
+/* ---------- 3. Typographie : enseignes condensées, chiffres nets ---------- */
+:root[data-profile] h1, :root[data-profile] .card h2, :root[data-profile] .home-title, :root[data-profile] .home-hello,
+:root[data-profile] .sp-title, :root[data-profile] .sv-date, :root[data-profile] .tabs a {
+  font-family: var(--display); font-weight: 600; letter-spacing: .08em;
+}
+:root[data-profile] h1.glitch .t::before, :root[data-profile] h1.glitch .t::after { display: none; }
+:root[data-profile] h1 em { color: var(--magenta); text-shadow: 0 0 12px rgba(var(--mag-rgb), .6); }
+:root[data-profile] h1 .home-link span, :root[data-profile] .home-hello, :root[data-profile] .home-title {
+  filter: drop-shadow(0 0 10px rgba(var(--neon-rgb), .35)) drop-shadow(0 2px 0 rgba(0, 0, 0, .7));
+}
+:root[data-profile] .hdr-logo { filter: drop-shadow(0 0 6px rgba(var(--neon-rgb), .8)) drop-shadow(0 0 14px rgba(var(--mag-rgb), .4)); }
+:root[data-profile] header::after {               /* tube de néon sous l'en-tête */
+  height: 2px; bottom: 0; border-radius: 2px; animation: none; opacity: 1;
+  background: linear-gradient(90deg, transparent, var(--cyan) 12%, var(--neon-3) 50%, var(--magenta) 88%, transparent);
+  box-shadow: 0 0 10px rgba(var(--neon-rgb), .7), 0 0 26px rgba(var(--mag-rgb), .35);
+}
+:root[data-profile] h1 .sub, :root[data-profile] .card h2 small, :root[data-profile] .home-title small { color: var(--muted); letter-spacing: .1em; font-weight: 400; }
+:root[data-profile] .gauge .val, :root[data-profile] .temp .big, :root[data-profile] .rate .v, :root[data-profile] .home-time,
+:root[data-profile] .ping-big, :root[data-profile] #clock, :root[data-profile] .sv-clock {
+  font-family: var(--display); font-weight: 600; letter-spacing: .02em; text-shadow: 0 0 14px rgba(var(--neon-rgb), .4);
+}
+:root[data-profile] #clock { color: var(--yellow); text-shadow: 0 0 12px rgba(var(--yel-rgb), .55); }
+:root[data-profile] .section-title { color: var(--neon-3); letter-spacing: .16em; text-shadow: 0 0 10px rgba(var(--neon-rgb), .45); }
+:root[data-profile] .section-title::before { content: "▍"; color: var(--magenta); margin-right: .3em; text-shadow: 0 0 8px rgba(var(--mag-rgb), .9); }
+
+/* ---------- 4. Cartes : verre fumé, liseré néon, reflet de pluie ---------- */
+:root[data-profile] .card {
+  clip-path: none; border-radius: 14px; border: 1px solid transparent; isolation: isolate;
+  background:
+    linear-gradient(162deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, 0) 34%) padding-box,      /* reflet du verre */
+    linear-gradient(180deg, var(--card), color-mix(in srgb, var(--card) 70%, #000)) padding-box,
+    linear-gradient(135deg, var(--av-l1), rgba(var(--neon-rgb), .22) 26%, rgba(255, 255, 255, .07) 50%, rgba(var(--mag-rgb), .22) 74%, var(--av-l2)) border-box;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .45), 0 0 22px rgba(var(--neon-rgb), .12), 0 16px 36px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .07);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+:root[data-profile] .card::before {           /* petit tube allumé en haut à gauche */
+  content: ""; position: absolute; left: 18px; top: -1px; width: 72px; height: 2px; border-radius: 2px; pointer-events: none;
+  background: linear-gradient(90deg, var(--neon-3), var(--accent, var(--cyan))); box-shadow: 0 0 8px var(--accent, var(--cyan)), 0 0 18px rgba(var(--neon-rgb), .5);
+}
+:root[data-profile] .card::after {            /* coin ambré en bas à droite */
+  right: 10px; bottom: 10px; width: 14px; height: 14px; border-radius: 0 0 4px 0; opacity: .85; animation: none; transform: none; background: none;
+  border-right: 2px solid var(--yellow); border-bottom: 2px solid var(--yellow); filter: drop-shadow(0 0 4px rgba(var(--yel-rgb), .9));
+}
+:root[data-profile] .card h2 { color: var(--neon-3); text-transform: uppercase; text-shadow: 0 0 12px rgba(var(--neon-rgb), .55), 0 1px 0 rgba(0, 0, 0, .8); }
+:root[data-profile] .card h2::before { content: "▍"; color: var(--accent, var(--cyan)); text-shadow: 0 0 8px var(--accent, var(--cyan)); font-size: 15px; }
+:root[data-profile] .temp, :root[data-profile] .rate, :root[data-profile] .home-live, :root[data-profile] .in, :root[data-profile] .day,
+:root[data-profile] .game, :root[data-profile] .app, :root[data-profile] .cover, :root[data-profile] .dk-btn,
+:root[data-profile] .mx-row, :root[data-profile] .sv-cday, :root[data-profile] .jn-mday, :root[data-profile] .jn-mood, :root[data-profile] .jn-act {
+  border-radius: 10px; clip-path: none;
+}
+:root[data-profile] .jn-mood, :root[data-profile] .jn-act { color: var(--text); }
+:root[data-profile] .temp, :root[data-profile] .rate, :root[data-profile] .home-live {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .035), transparent 40%), rgba(var(--deep-rgb), .82);
+  border: 1px solid rgba(var(--mag-rgb), .26); box-shadow: inset 0 0 18px rgba(0, 0, 0, .35);
+}
+:root[data-profile] .temp::before, :root[data-profile] .rate::before { display: none; }
+:root[data-profile] .tbl th { color: var(--neon-3); border-color: rgba(var(--neon-rgb), .35); }
+:root[data-profile] .tbl td { border-color: rgba(var(--mag-rgb), .14); }
+:root[data-profile] .in { background: rgba(4, 3, 10, .72); border: 1px solid rgba(var(--mag-rgb), .4); color: var(--text); box-shadow: inset 0 2px 5px rgba(0, 0, 0, .6); }
+:root[data-profile] .in:focus { border-color: var(--magenta); box-shadow: inset 0 2px 5px rgba(0, 0, 0, .6), 0 0 0 2px rgba(var(--mag-rgb), .25), 0 0 14px rgba(var(--mag-rgb), .3); outline: none; }
+
+/* ---------- 5. Boutons lumineux ; onglet actif = enseigne allumée ---------- */
+:root[data-profile] .btn, :root[data-profile] .tabs a, :root[data-profile] .home-parts a {
+  clip-path: none; border-radius: 10px; transform: none; color: var(--text);
+  border: 1px solid rgba(var(--neon-rgb), .42);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, 0) 55%), rgba(var(--deep-rgb), .9);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 2px 8px rgba(0, 0, 0, .45);
+  transition: border-color .15s, box-shadow .2s, color .15s, background .15s;
+}
+:root[data-profile] .tabs a::before, :root[data-profile] .tabs a::after { content: none; }
+:root[data-profile] .btn:not(.sv-nbar *):hover, :root[data-profile] .tabs a:hover, :root[data-profile] .home-parts a:hover {
+  color: #fff; border-color: var(--neon-2); text-shadow: 0 0 8px rgba(var(--neon-rgb), .9);
+  background: linear-gradient(180deg, rgba(var(--neon-rgb), .16), rgba(var(--neon-rgb), .05)), rgba(var(--deep-rgb), .92);
+  box-shadow: 0 0 14px rgba(var(--neon-rgb), .45), inset 0 0 10px rgba(var(--neon-rgb), .18);
+}
+:root[data-profile] .tabs a[aria-selected="true"] {
+  color: #fff; border-color: var(--neon-2); text-shadow: 0 0 10px rgba(var(--neon-rgb), .95), 0 1px 0 rgba(0, 0, 0, .6);
+  background: var(--tab-grad), rgba(var(--deep-rgb), .95);
+  box-shadow: 0 0 18px rgba(var(--neon-rgb), .5), inset 0 0 14px rgba(var(--neon-rgb), .3), inset 0 -2px 0 var(--neon-3);
+}
+/* (jamais sur les boutons des post-it : le panel les garde lisibles sur le papier clair) */
+:root[data-profile] .btn.on:not(.sv-nbar *), :root[data-profile] .btn[aria-pressed="true"]:not(.sv-nbar *) {
+  color: #fff; border-color: var(--magenta); background: linear-gradient(180deg, rgba(var(--mag-rgb), .26), rgba(var(--mag-rgb), .1)), rgba(var(--deep-rgb), .95);
+  box-shadow: 0 0 14px rgba(var(--mag-rgb), .4), inset 0 0 10px rgba(var(--mag-rgb), .2);
+}
+:root[data-profile] .np { transform: none; border-radius: 10px; border: 1px solid rgba(var(--mag-rgb), .45); background: rgba(var(--deep-rgb), .86); color: var(--text-2); }
+:root[data-profile] .np .eq { color: var(--magenta); }
+:root[data-profile] .ctl { border-radius: 50%; color: var(--text); border: 1px solid rgba(var(--neon-rgb), .5); background: rgba(var(--deep-rgb), .9);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 3px 8px rgba(0, 0, 0, .5); }
+:root[data-profile] .ctl:hover:not(:disabled) { color: #fff; box-shadow: 0 0 14px rgba(var(--neon-rgb), .5); }
+:root[data-profile] .ctl.main { color: #fff; border: 2px solid var(--neon-3);
+  background: radial-gradient(circle at 50% 40%, rgba(var(--neon-rgb), .32), rgba(var(--neon-rgb), .12) 60%, rgba(var(--deep-rgb), .95));
+  box-shadow: 0 0 20px rgba(var(--neon-rgb), .6), inset 0 0 12px rgba(255, 255, 255, .25); text-shadow: 0 0 8px rgba(0, 0, 0, .6); }
+/* icônes du sommaire : anneaux de néon */
+:root[data-profile] .home-ico { clip-path: none; border-radius: 50%; color: #fff;
+  border: 2px solid color-mix(in srgb, var(--accent, var(--cyan)) 80%, #fff);
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent, var(--cyan)) 30%, #08060f) 0, #08060f 72%);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent, var(--cyan)) 70%, transparent), inset 0 0 10px color-mix(in srgb, var(--accent, var(--cyan)) 45%, transparent);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--accent, var(--cyan)) 80%, transparent); }
+:root[data-profile] .home-tile:hover { box-shadow: 0 0 26px rgba(var(--neon-rgb), .22), 0 16px 36px rgba(0, 0, 0, .55), inset 0 0 26px color-mix(in srgb, var(--accent) 16%, transparent); }
+
+/* ---------- 6. Menus, dialogues, post-it ---------- */
+:root[data-profile] .rg-menu, :root[data-profile] .focus-menu, :root[data-profile] .pf-menu, :root[data-profile] .pf-dlg, :root[data-profile] .ver-dlg {
+  border-radius: 14px; border: 1px solid transparent; color: var(--text);
+  background: linear-gradient(180deg, rgba(var(--deep-rgb), .97), rgba(4, 3, 10, .98)) padding-box,
+    linear-gradient(135deg, var(--av-l1), rgba(255, 255, 255, .08) 50%, var(--av-l2)) border-box;
+  box-shadow: 0 18px 46px rgba(0, 0, 0, .7), 0 0 26px rgba(var(--neon-rgb), .18);
+}
+:root[data-profile] .sv-note { border-radius: 4px 4px 10px 3px; box-shadow: 0 8px 18px rgba(0, 0, 0, .55); }
+:root[data-profile] .sv-photo { border-radius: 4px; box-shadow: 0 10px 22px rgba(0, 0, 0, .6), 0 0 0 1px rgba(var(--neon-rgb), .25); }
+
+/* ---------- 7. Jauges : TUBES DE NÉON (cœur blanc, gaine colorée, halo fixe) ----------
+   Couleur selon le niveau (FORMAT.md § 4.8) : bas, moyen, haut ; critique = rouge qui grésille. */
+:root[data-profile] .gauge canvas { visibility: hidden; }
+:root[data-profile] .gauge, :root[data-profile] .temp, :root[data-profile] .disk { --av-t: var(--av-t-bas); }
+:root[data-profile] :is(.gauge, .temp, .disk)[data-niveau="moyen"] { --av-t: var(--av-t-moyen); }
+:root[data-profile] :is(.gauge, .temp, .disk)[data-niveau="haut"] { --av-t: var(--av-t-haut); }
+:root[data-profile] :is(.gauge, .temp, .disk)[data-niveau="critique"] { --av-t: var(--av-t-crit); }
+:root[data-profile] .gauge::before, :root[data-profile] .gauge::after {
+  content: ""; position: absolute; left: 8px; bottom: 14px; height: 18px; border-radius: 9px; pointer-events: none;
+}
+:root[data-profile] .gauge::after, :root[data-profile] .temp::after {   /* le tube de verre éteint */
+  right: 8px; z-index: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .13) 0, rgba(255, 255, 255, .02) 38%, transparent 62%, rgba(255, 255, 255, .05) 100%), rgba(6, 4, 12, .9);
+  border: 1px solid rgba(255, 255, 255, .14); box-shadow: inset 0 2px 4px rgba(0, 0, 0, .7), 0 0 0 1px rgba(0, 0, 0, .55);
+}
+:root[data-profile] .gauge::before, :root[data-profile] .temp::before {   /* le gaz allumé */
+  z-index: 1; width: calc((100% - 16px) * var(--valeur, 0) / 100); min-width: 0;
+  background: linear-gradient(180deg, transparent 8%, color-mix(in srgb, var(--av-t) 75%, transparent) 24%, color-mix(in srgb, var(--av-t) 45%, #fff) 42%, #fff 50%,
+    color-mix(in srgb, var(--av-t) 45%, #fff) 58%, color-mix(in srgb, var(--av-t) 75%, transparent) 76%, transparent 92%);
+  box-shadow: 0 0 8px var(--av-t), 0 0 20px color-mix(in srgb, var(--av-t) 55%, transparent);
+}
+:root[data-profile] .gauge[data-niveau="critique"]::before, :root[data-profile] .temp[data-niveau="critique"]::before { animation: av-gresille 2.6s linear infinite; }
+@keyframes av-gresille { 0%, 40%, 47%, 100% { opacity: 1; } 41% { opacity: .35; } 42% { opacity: .95; } 44% { opacity: .5; } 45% { opacity: 1; } 80% { opacity: 1; } 81% { opacity: .55; } 82% { opacity: 1; } }
+:root[data-profile] .gauge .val {
+  top: 6px; bottom: auto; left: 50%; right: auto; transform: translateX(-50%); z-index: 2;
+  padding: 0 14px; border-radius: 10px; white-space: nowrap; font-size: 34px; line-height: 1.25; color: var(--text);
+  background: rgba(5, 4, 11, .9); border: 1px solid rgba(var(--neon-rgb), .35);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, .55), 0 0 12px rgba(var(--neon-rgb), .15); text-shadow: 0 0 12px rgba(var(--neon-rgb), .5);
+}
+:root[data-profile] .gauge[data-niveau="critique"] .val { color: #ffe1e6; border-color: rgba(255, 77, 106, .7); }
+:root[data-profile] .temp { padding-bottom: 30px; }
+:root[data-profile] .temp::before, :root[data-profile] .temp::after {
+  content: ""; display: block; position: absolute; left: 12px; bottom: 10px; top: auto; height: 12px; border-radius: 6px; pointer-events: none;
+}
+:root[data-profile] .temp::after { right: 12px; }
+:root[data-profile] .temp::before { width: calc((100% - 24px) * var(--valeur, 0) / 100); border: 0; }
+:root[data-profile] .temp:not([data-niveau])::after { display: none; }
+:root[data-profile] .bar { position: relative; border-radius: 999px; overflow: hidden; border: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .02) 40%, transparent 62%), rgba(6, 4, 12, .92);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .13), inset 0 2px 4px rgba(0, 0, 0, .7); }
+:root[data-profile] .bar i {
+  position: relative; display: block; height: 100%; border-radius: 999px; overflow: visible; -webkit-mask: none; mask: none; transition: none;
+  background: linear-gradient(180deg, transparent 6%, color-mix(in srgb, var(--av-t, var(--av-t-bas)) 80%, transparent) 22%, color-mix(in srgb, var(--av-t, var(--av-t-bas)) 45%, #fff) 42%, #fff 50%,
+    color-mix(in srgb, var(--av-t, var(--av-t-bas)) 45%, #fff) 58%, color-mix(in srgb, var(--av-t, var(--av-t-bas)) 80%, transparent) 78%, transparent 94%) !important;
+  box-shadow: 0 0 8px var(--av-t, var(--av-t-bas)) !important;
+}
+:root[data-profile] .bar i::after { content: none; animation: none; }
+:root[data-profile] .st-track i, :root[data-profile] .st-col i { box-shadow: 0 0 8px rgba(var(--neon-rgb), .5); }
+/* Disques : longs tubes sur toute la largeur, lettre et pourcentage en gros */
+:root[data-profile] .disk { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "nom pct" "barre barre" "libre libre";
+  align-items: end; gap: 4px 12px; margin-top: 16px; }
+:root[data-profile] .disk:first-of-type { margin-top: 4px; }
+:root[data-profile] .disk-head { display: contents; }
+:root[data-profile] .disk-head .name { grid-area: nom; font-family: var(--display); font-size: 26px; font-weight: 600; color: var(--neon-3);
+  text-shadow: 0 0 10px rgba(var(--neon-rgb), .45); }
+:root[data-profile] .disk-head .pct { grid-area: pct; font-family: var(--display); font-size: 28px; font-weight: 600; color: var(--text) !important; font-variant-numeric: tabular-nums; }
+:root[data-profile] .disk-head .sub { grid-area: libre; font-size: 14px; color: var(--text-2); white-space: normal; }
+:root[data-profile] .disk .bar { grid-area: barre; height: 18px; }
+:root[data-profile] .disk[data-niveau="critique"] .bar { box-shadow: 0 0 0 1px var(--av-t-crit), 0 0 14px rgba(255, 77, 106, .45), inset 0 2px 4px rgba(0, 0, 0, .7); }
+:root[data-profile] .disk[data-niveau="critique"] .pct { color: #ffd9df !important; }
+:root[data-profile] .disk[data-niveau="critique"] .sub::after { content: " · presque plein"; color: #ff9aaa; font-weight: 600; }
+:root[data-profile] .progress .bar { height: 12px; }
+:root[data-profile] .mx-meter { height: 8px; border-radius: 4px; background: rgba(6, 4, 12, .92); box-shadow: 0 0 0 1px rgba(255, 255, 255, .13), inset 0 2px 3px rgba(0, 0, 0, .7); }
+:root[data-profile] .mx-meter i { border-radius: 4px; background: linear-gradient(180deg, var(--av-t-bas), #fff 50%, var(--av-t-bas)) !important; box-shadow: 0 0 8px var(--av-t-bas) !important; }
+:root[data-profile] .mx-range::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; border: 1px solid rgba(255, 255, 255, .16);
+  background: linear-gradient(90deg, transparent var(--pct, 0%), rgba(6, 4, 12, .95) var(--pct, 0%)), linear-gradient(180deg, var(--cyan), #fff 50%, var(--cyan));
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, .6); }
+:root[data-profile] .mx-range::-moz-range-track { height: 8px; border-radius: 4px; border: 1px solid rgba(255, 255, 255, .16); background: rgba(6, 4, 12, .95); }
+:root[data-profile] .mx-range::-moz-range-progress { height: 8px; border-radius: 4px; background: linear-gradient(180deg, var(--cyan), #fff 50%, var(--cyan)); }
+:root[data-profile] .mx-range::-webkit-slider-thumb { width: 18px; height: 18px; margin-top: -6px; border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 30%, var(--neon-2) 55%, var(--cyan)); border: 1px solid rgba(0, 0, 0, .6); box-shadow: 0 0 10px rgba(var(--neon-rgb), .8); }
+:root[data-profile] .mx-range::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle, #fff 0 30%, var(--neon-2) 55%, var(--cyan)); border: 1px solid rgba(0, 0, 0, .6); }
+
+/* ---------- 8. Alertes : plaques sombres, tube ambré ; critique = tube rouge qui grésille ---------- */
+:root[data-profile] .alert { isolation: isolate; clip-path: none; border-radius: 10px; color: #fff1dc;
+  border: 1px solid rgba(255, 179, 71, .55); border-left: 4px solid #ffb347;
+  background: linear-gradient(90deg, rgba(48, 30, 10, .97), rgba(20, 13, 8, .97)); box-shadow: 0 6px 16px rgba(0, 0, 0, .5); }
+:root[data-profile] .alert b { border-radius: 6px; background: #ffb347; color: #241302; letter-spacing: .14em; box-shadow: 0 0 10px rgba(255, 179, 71, .6); }
+:root[data-profile] .alert::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 18px rgba(255, 179, 71, .45); animation: av-pulse 3s ease-in-out infinite;
+}
+:root[data-profile] .alert.crit { color: #ffe6ea; border-color: rgba(255, 77, 106, .7); border-left-color: #ff4d6a; padding-right: 64px;
+  background: linear-gradient(90deg, rgba(70, 8, 22, .97), rgba(26, 6, 12, .97)); }
+:root[data-profile] .alert.crit b { background: #c81e3c; color: #fff; text-shadow: 0 1px 0 rgba(0, 0, 0, .5); box-shadow: 0 0 12px rgba(255, 77, 106, .7); }
+:root[data-profile] .alert.crit::after { box-shadow: 0 0 22px rgba(255, 60, 90, .6); animation-duration: 1.8s; }
+:root[data-profile] .alert.crit::before {
+  content: ""; position: absolute; right: 8px; top: 50%; width: 50px; height: 50px; margin-top: -25px; pointer-events: none;
+  background: url("assets/enseigne-alerte.webp") center / contain no-repeat; animation: av-gresille 2.2s linear infinite;
+}
+:root[data-profile] .alert-x { color: #fff1dc; border-radius: 8px; border-color: rgba(255, 220, 180, .45); }
+@keyframes av-pulse { 0%, 100% { opacity: .25; animation-timing-function: steps(90, jump-none); } 50% { opacity: 1; animation-timing-function: steps(90, jump-none); } }
+
+/* ==========================================================================
+   PAGE DE GARDE — on lève les yeux entre les tours sous la pluie, les enseignes s'allument dans le flou,
+   la mise au point se fait, les projecteurs balaient la brume, puis le logo NEXUS s'allume comme un néon.
+   Calques : tours floues (.sp-grid) → tours nettes (.sp-screen::before) → halo des enseignes (.sp-glow)
+   → projecteurs (.sp-sweep) → voile (.sp-screen::after) → pluie qui tombe vers nous (#splash::before, ::after)
+   → logo et textes (.sp-center)
+   ========================================================================== */
+:root[data-profile] #splash { background: #040309; --sp-anneau: rgba(255, 120, 200, .95); --sp-disperse: 1.35; }
+:root[data-profile][data-theme="sentinelle"] #splash { --sp-anneau: rgba(120, 230, 255, .95); }
+:root[data-profile] #splash .sp-screen { background: transparent; }
+:root[data-profile] #splash .sp-grid, :root[data-profile] #splash .sp-screen::before, :root[data-profile] #splash .sp-glow {
+  position: absolute; left: 0; right: 0; top: 0; bottom: 0; width: auto; height: auto; border-radius: 0; pointer-events: none;
+  -webkit-mask-image: none; mask-image: none; transform: none; transform-origin: 50% 92%; animation: none;
+}
+:root[data-profile] #splash .sp-grid { z-index: 1; opacity: 1; background: url("assets/tours-flou-t.webp") 50% 50% / cover no-repeat; }
+:root[data-profile] #splash .sp-screen::before { content: ""; z-index: 2; background: url("assets/tours-t.webp") 50% 50% / cover no-repeat; }
+:root[data-profile] #splash .sp-glow { z-index: 3; opacity: .32; background: url("assets/neons-flou-t.webp") 50% 50% / cover no-repeat;
+  animation: av-halo 6s linear infinite; }
+:root[data-profile][data-theme="sentinelle"] #splash .sp-grid { background-image: url("assets/tours-flou-s.webp"); }
+:root[data-profile][data-theme="sentinelle"] #splash .sp-screen::before { background-image: url("assets/tours-s.webp"); }
+:root[data-profile][data-theme="sentinelle"] #splash .sp-glow { background-image: url("assets/neons-flou-s.webp"); }
+:root[data-profile] #splash .sp-sweep {      /* projecteurs dans la brume */
+  position: absolute; left: 0; right: 0; top: 0; bottom: 0; height: auto; z-index: 4; opacity: .8; pointer-events: none;
+  background: url("assets/faisceaux.webp") 50% 50% / cover no-repeat; transform-origin: 96% 82%;
+  animation: av-balaye 16s steps(960, jump-none) infinite alternate;
+}
+:root[data-profile] #splash .sp-screen::after {   /* voile : bords plus sombres, centre plus calme pour lire */
+  content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none;
+  background: radial-gradient(ellipse 60% 52% at 50% 50%, rgba(4, 3, 10, .5), rgba(4, 3, 10, .12) 70%, transparent),
+    radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0, 0, 0, .55) 100%);
+}
+:root[data-profile] #splash::before, :root[data-profile] #splash::after {   /* la pluie tombe vers nous (deux calques décalés) */
+  content: ""; position: absolute; inset: 0; z-index: 5; pointer-events: none; opacity: 0;
+  background: url("assets/pluie-radiale.webp") 50% 50% / cover no-repeat; transform-origin: 50% 11%;
+  animation: av-chute .8s linear infinite;
+}
+:root[data-profile] #splash::after { z-index: 6; animation-delay: -.4s; }
+:root[data-profile] #splash .sp-center { z-index: 8; }
+:root[data-profile] #splash .sp-log, :root[data-profile] #splash .sp-skip { z-index: 8; }
+:root[data-profile] #splash .sp-center::before {    /* plaque sombre derrière le logo et les textes */
+  content: ""; position: absolute; left: 50%; top: 50%; width: min(960px, 100vw); height: 560px; margin: -280px 0 0 calc(min(960px, 100vw) / -2);
+  z-index: -1; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(4, 3, 10, .86), rgba(4, 3, 10, .7) 62%, rgba(4, 3, 10, .3) 86%, transparent);
+}
+@keyframes av-halo { 0%, 38%, 100% { opacity: .32; } 39% { opacity: .2; } 40% { opacity: .36; } 42% { opacity: .26; } 43% { opacity: .33; }
+  71% { opacity: .32; } 72% { opacity: .23; } 73% { opacity: .34; } }
+@keyframes av-balaye { from { transform: rotate(-3deg); } to { transform: rotate(4deg); } }
+@keyframes av-chute {   /* pas réglés par segment : 10 + 24 + 14 pas en 0,8 s = 60 images/s */
+  0% { opacity: 0; transform: scale(1); animation-timing-function: steps(10, jump-none); }
+  20% { opacity: .72; transform: scale(1.15); animation-timing-function: steps(24, jump-none); }
+  70% { opacity: .72; transform: scale(1.525); animation-timing-function: steps(14, jump-none); }
+  100% { opacity: 0; transform: scale(1.75); } }
+
+/* Intro (≈ 6,8 s) : noir → on lève les yeux (0 → 3,6 s) → la pluie (0,4 s) → les enseignes s'allument dans le flou
+   (1,3 → 3,3 s) → mise au point (3,3 → 4,5 s) → projecteurs (4,2 s) → le logo s'allume (4,6 s) → textes (5,4 s). */
+:root[data-profile] body[data-etat="intro"] #splash .sp-grid { will-change: transform, opacity;
+  animation: av-leve 3.6s cubic-bezier(.35, 0, .2, 1) both, av-apparait 1.4s ease-out .1s both; }
+:root[data-profile] body[data-etat="intro"] #splash .sp-screen::before { will-change: transform, opacity;
+  animation: av-leve 3.6s cubic-bezier(.35, 0, .2, 1) both, av-net 1.2s cubic-bezier(.4, 0, .2, 1) 3.3s both; }
+:root[data-profile] body[data-etat="intro"] #splash .sp-glow { will-change: transform, opacity;
+  animation: av-leve 3.6s cubic-bezier(.35, 0, .2, 1) both, av-allumage 2s linear 1.3s both, av-apaise .9s ease-in-out 3.5s forwards, av-halo 6s linear 4.6s infinite; }
+:root[data-profile] body[data-etat="intro"] #splash .sp-sweep { animation: av-apparait 1.4s ease-out 4.1s both, av-balaye 16s steps(960, jump-none) 4.1s infinite alternate; }
+:root[data-profile] body[data-etat="intro"] #splash::before { animation: av-chute .8s linear .4s infinite; }
+:root[data-profile] body[data-etat="intro"] #splash::after { animation: av-chute .8s linear .8s infinite; }
+:root[data-profile] body[data-etat="intro"] #splash .sp-center::before { animation: av-apparait 1s ease-out 4.2s both; }
+:root[data-profile] body[data-etat="intro"] #splash .sp-enter { animation: av-logo 1.2s linear 4.6s both; }
+:root[data-profile] body[data-etat="intro"] #splash .sp-tag, :root[data-profile] body[data-etat="intro"] #splash .sp-bar,
+:root[data-profile] body[data-etat="intro"] #splash .sp-log { animation: av-apparait .8s ease-out 5.4s both; }
+@keyframes av-leve { 0% { transform: scale(1.32) rotate(-2.5deg); } 100% { transform: none; } }
+@keyframes av-apparait { from { opacity: 0; } }
+@keyframes av-net { 0% { opacity: 0; transform: scale(1.012); } 100% { opacity: 1; transform: none; } }
+@keyframes av-allumage { 0% { opacity: 0; } 8% { opacity: .45; } 10% { opacity: 0; } 22% { opacity: .1; } 25% { opacity: .8; } 27% { opacity: .15; }
+  40% { opacity: .9; } 44% { opacity: .5; } 52% { opacity: 1; } 56% { opacity: .7; } 62%, 100% { opacity: 1; } }
+@keyframes av-apaise { from { opacity: 1; } to { opacity: .32; } }
+@keyframes av-logo { 0% { opacity: 0; transform: scale(.94); } 8% { opacity: .9; } 12% { opacity: .05; } 22% { opacity: 1; } 26% { opacity: .3; }
+  34% { opacity: 1; transform: scale(1.02); } 100% { opacity: 1; transform: none; } }
+/* (la propriété « transform » des calques n'est animée que pendant l'intro et la transition) */
+
+/* Logo NEXUS du panel, en tubes rose et cyan */
+:root[data-profile] #splash .sp-logo { filter: drop-shadow(0 0 8px rgba(var(--neon-rgb), .85)) drop-shadow(0 0 22px rgba(var(--mag-rgb), .45)); }
+:root[data-profile] #splash .sp-logo stop:first-child { stop-color: var(--neon-3); }
+:root[data-profile] #splash .sp-logo stop:last-child { stop-color: var(--cyan); }
+:root[data-profile] #splash .sp-traces { stroke: var(--magenta); }
+:root[data-profile] #splash .sp-nodes { fill: var(--yellow); }
+:root[data-profile] #splash .sp-title { letter-spacing: .14em; margin-right: -.14em; color: var(--neon-3);
+  text-shadow: 0 0 18px rgba(var(--neon-rgb), .75), 0 0 40px rgba(var(--neon-rgb), .35), 0 2px 0 rgba(0, 0, 0, .8); }
+:root[data-profile] #splash .sp-title::before, :root[data-profile] #splash .sp-title::after { display: none; }
+:root[data-profile] #splash .sp-title .ch.scr { color: var(--magenta); }
+:root[data-profile] #splash .sp-tag, :root[data-profile] #splash .sp-granted, :root[data-profile] #splash .sp-prompt {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .95), 0 0 14px rgba(0, 0, 0, .9); }
+:root[data-profile] #splash .sp-tag { color: #e9e3fb; } :root[data-profile] #splash .sp-tag b { color: var(--neon-2); }
+:root[data-profile] #splash .sp-granted { color: var(--magenta); font-family: var(--display); letter-spacing: .3em; }
+:root[data-profile] #splash .sp-prompt { color: var(--neon-3); }
+:root[data-profile] #splash .sp-bar { height: 4px; border-radius: 4px; background: rgba(0, 0, 0, .6); border: 1px solid rgba(255, 255, 255, .16); }
+:root[data-profile] #splash .sp-bar i { border-radius: 4px; background: linear-gradient(90deg, var(--magenta), #fff 50%, var(--cyan)); box-shadow: 0 0 10px rgba(var(--neon-rgb), .8); }
+:root[data-profile] #splash .sp-log { color: #e3dcf6; text-shadow: 0 1px 2px #000; opacity: 1; padding: 10px 14px; border-radius: 10px;
+  background: linear-gradient(90deg, rgba(4, 3, 10, .88), rgba(4, 3, 10, .76)); box-shadow: 0 0 0 1px rgba(var(--neon-rgb), .25), 0 8px 24px rgba(0, 0, 0, .5); }
+:root[data-profile] #splash .sp-log .dim { color: #b2a9cc; }
+:root[data-profile] #splash .sp-log .ok { color: #7dffc9; } :root[data-profile] #splash .sp-log .warn { color: #ffc56e; } :root[data-profile] #splash .sp-log .err { color: #ff9aac; }
+:root[data-profile] #splash .sp-skip { color: var(--neon-3); padding: 9px 16px; border-radius: 10px; background: rgba(4, 3, 10, .85);
+  border: 1px solid rgba(var(--neon-rgb), .45); box-shadow: 0 0 12px rgba(var(--neon-rgb), .25); animation: none; }
+:root[data-profile] #splash .sp-standby { background: #040309; }
+
+/* Transition au clic sur NEXUS : les enseignes flambent, on s'envole entre les tours, la pluie accélère,
+   puis l'ouverture EN ROND (profil.json : "ouverture": "cercle") traverse la scène, bordée d'un anneau néon. */
+:root[data-profile] #splash .sp-anneau {
+  background: radial-gradient(circle at var(--sp-ix, 50%) var(--sp-iy, 50%), transparent calc(var(--sp-r) - 10px),
+    rgba(255, 255, 255, .95) calc(var(--sp-r) - 2px), var(--sp-anneau) calc(var(--sp-r) + 4px),
+    rgba(var(--mag-rgb), .55) calc(var(--sp-r) + 20px), rgba(var(--mag-rgb), .18) calc(var(--sp-r) + 54px), transparent calc(var(--sp-r) + 100px));
+}
+:root[data-profile] body:is([data-etat="transition"], [data-etat="arrivee"]) #splash :is(.sp-grid, .sp-glow),
+:root[data-profile] body:is([data-etat="transition"], [data-etat="arrivee"]) #splash .sp-screen::before {
+  transform-origin: 50% 11%; animation: av-envol 3.1s cubic-bezier(.5, 0, .75, .4) forwards; }
+:root[data-profile] body:is([data-etat="transition"], [data-etat="arrivee"]) #splash .sp-glow { animation: av-envol 3.1s cubic-bezier(.5, 0, .75, .4) forwards, av-flambe 1.2s ease-out forwards; }
+:root[data-profile] body:is([data-etat="transition"], [data-etat="arrivee"]) #splash::before,
+:root[data-profile] body:is([data-etat="transition"], [data-etat="arrivee"]) #splash::after { opacity: 1; }
+:root[data-profile] body:is([data-etat="transition"], [data-etat="arrivee"]) #splash .sp-center,
+:root[data-profile] body:is([data-etat="transition"], [data-etat="arrivee"]) #splash .sp-log { animation: av-efface 1s ease-in forwards; }
+@keyframes av-envol { from { transform: none; } to { transform: scale(1.38); } }
+@keyframes av-flambe { from { opacity: .32; } 30% { opacity: 1; } to { opacity: .9; } }
+@keyframes av-efface { to { opacity: 0; transform: scale(1.06); } }
+
+/* ---------- Téléphone : version allégée (images portrait, pas de pluie ni de scintillement sur le panel) ---------- */
+@media (max-width: 760px) {
+  :root[data-profile][data-theme="terminal"] { background: linear-gradient(180deg, rgba(6, 4, 14, .86), rgba(6, 4, 14, .78)), url("assets/ville-tel-t.webp") 50% 50% / cover no-repeat, #07060d; }
+  :root[data-profile][data-theme="sentinelle"] { background: linear-gradient(180deg, rgba(3, 6, 14, .86), rgba(3, 6, 14, .78)), url("assets/ville-tel-s.webp") 50% 50% / cover no-repeat, #05080f; }
+  :root[data-profile]::before, :root[data-profile]::after, :root[data-profile] body::before { display: none; }
+  :root[data-profile] .card { box-shadow: 0 0 0 1px rgba(0, 0, 0, .45), 0 10px 24px rgba(0, 0, 0, .5); }
+  :root[data-profile] .gauge::before, :root[data-profile] .gauge::after { height: 14px; bottom: 10px; }
+  :root[data-profile] .gauge .val { font-size: 26px; }
+  :root[data-profile] body::after { width: 110px; height: 110px; right: 12px; bottom: 12px; }
+  /* page de garde : une seule image nette (tours en portrait), une seule pluie */
+  :root[data-profile] #splash .sp-grid { background: url("assets/tours-tel-t.webp") 50% 50% / cover no-repeat; }
+  :root[data-profile][data-theme="sentinelle"] #splash .sp-grid { background-image: url("assets/tours-tel-s.webp"); }
+  :root[data-profile] #splash .sp-screen::before, :root[data-profile] #splash .sp-glow, :root[data-profile] #splash::after { display: none; }
+  :root[data-profile] #splash::before { background: url("assets/pluie-radiale-tel.webp") 50% 50% / cover no-repeat; transform-origin: 50% 21%; }
+  :root[data-profile] #splash .sp-sweep { opacity: .55; }
+  :root[data-profile] #splash .sp-center::before { height: 460px; margin-top: -230px; }
+  :root[data-profile] #splash .sp-title { letter-spacing: .08em; margin-right: -.08em; }
+  :root[data-profile] #splash .sp-granted { font-size: clamp(16px, 6vw, 26px); letter-spacing: .14em; white-space: normal; text-align: center; padding: 0 12px; }
+  :root[data-profile] #splash .sp-prompt { letter-spacing: .12em; padding: 0 12px; text-align: center; }
+  :root[data-profile] #splash .sp-tag { letter-spacing: .14em; font-size: 11px; padding: 0 12px; }
+}
+
+/* ---------- Sans animation : tout s'affiche directement (scène nette, enseignes allumées, pluie immobile) ---------- */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-profile]::before, :root[data-profile]::after, :root[data-profile] body::before, :root[data-profile] body::after,
+  :root[data-profile] #splash::before, :root[data-profile] #splash::after, :root[data-profile] *:not(#splash),
+  :root[data-profile] *::before, :root[data-profile] *::after { animation: none !important; transition: none !important; }
+  :root[data-profile]::before, :root[data-profile]::after, :root[data-profile] body::after, :root[data-profile] #splash::after { display: none !important; }
+  :root[data-profile] body::before { transform: rotate(8deg); opacity: .18; }
+  :root[data-profile] #splash::before { opacity: .45; transform: none; }
+  :root[data-profile] #splash .sp-glow { opacity: .32; }
+  :root[data-profile] body[data-etat] #splash .sp-enter, :root[data-profile] body[data-etat] #splash .sp-tag,
+  :root[data-profile] body[data-etat] #splash .sp-bar, :root[data-profile] body[data-etat] #splash .sp-center::before { opacity: 1; transform: none; }
+}
