@@ -8,6 +8,8 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+## [1.6.0] - 2026-11-18 - Averse de néons
+
 ### Ajouté
 - **Téléchargement plus simple** : chaque release GitHub commence par un encadré « Télécharger » avec le lien
   direct vers l'archive et l'installation en trois étapes
