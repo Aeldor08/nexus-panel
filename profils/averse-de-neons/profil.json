@@ -2,10 +2,10 @@
   "format": 1,
   "nom": "Averse de néons",
   "auteur": "NEXUS",
-  "version": "1.0",
+  "version": "1.1",
   "panel_min_version": "1.0.0",
   "modes": ["terminal", "sentinelle"],
-  "description": "Une ville de nuit sous la pluie : bokeh de néons, reflets sur l'asphalte mouillé, cartes en verre fumé et jauges en tubes néon. Intro : on lève les yeux entre les tours, les enseignes s'allument, la mise au point se fait.",
+  "description": "Rue-canyon de nuit sous la pluie : enseignes, méga-tour dans la brume, asphalte mouillé, cartes en verre fumé et jauges en tubes néon. Intro : on lève les yeux entre les tours, les enseignes s'allument, la mise au point se fait.",
   "apercu": { "couleurs": ["#07060d", "#ff4fa8", "#36dcff", "#ffb347"], "miniature": "assets/apercu.webp" },
   "animations": { "intro_ms": 6800, "transition_ms": 2400, "remplace_transition": true, "ouverture": "cercle" }
 }

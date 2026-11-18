@@ -1,10 +1,11 @@
 /* ==========================================================================
-   Profil « Averse de néons » (v1.0) — une ville de nuit sous la pluie, modes Terminal et Sentinelle.
-   Bokeh de néons, reflets sur l'asphalte mouillé, contre-plongée entre les tours. Toutes les images sont des dessins
-   ORIGINAUX, rendus une fois (WebGL, lancer de rayons et flou d'objectif procéduraux) :
-     ville-t / ville-s            rue sous la pluie en bokeh (Terminal : rouge et rose ; Sentinelle : cyan et ambre)
+   Profil « Averse de néons » (v1.1) — une ville de nuit sous la pluie, modes Terminal et Sentinelle.
+   Rue-canyon en perspective centrale (enseignes, vitrines, méga-tour dans la brume), reflets sur l'asphalte mouillé,
+   contre-plongée entre les tours ; nuit bleu-violet, néons magenta et cyan, touches d'ambre. Toutes les images sont
+   des dessins ORIGINAUX, rendus une fois (WebGL : lancer de rayons, reflets brillants, brume, flou d'objectif) :
+     ville-t / ville-s            la rue sous la pluie (Terminal : violet et magenta ; Sentinelle : bleu, cyan, ambre)
      ville-tel-t / ville-tel-s     version portrait allégée pour le téléphone
-     scint-a-* / scint-b-*         quelques enseignes du fond, plus vives (petits scintillements, opacité seulement)
+     scint-a-* / scint-b-*         deux groupes d'enseignes de la rue, plus vives (petits scintillements, opacité seulement)
      tours-*, tours-flou-*         contre-plongée entre les tours, nette / floue (mise au point = fondu entre les deux)
      neons-flou-*                  halo des enseignes (calque transparent qui « s'allume »)
      tours-tel-*                   contre-plongée en portrait pour le téléphone
@@ -44,7 +45,7 @@
   --av-t-bas: #3fe0ff;  --av-t-moyen: #ff4fa8;  --av-t-haut: #ffb347;  --av-t-crit: #ff4d6a;
   --av-l1: #ff4fa8;  --av-l2: #3fe0ff;
   background:
-    linear-gradient(180deg, rgba(6, 4, 14, .87), rgba(6, 4, 14, .82) 26%, rgba(6, 4, 14, .76) 55%, rgba(6, 4, 14, .7)),
+    linear-gradient(180deg, rgba(6, 4, 18, .85), rgba(6, 4, 18, .79) 26%, rgba(6, 4, 18, .7) 55%, rgba(6, 4, 18, .64)),
     url("assets/ville-t.webp") 50% 50% / cover no-repeat, #07060d;
   background-attachment: fixed;
 }
@@ -61,7 +62,7 @@
   --av-t-bas: #36d6ff;  --av-t-moyen: #ff9e3d;  --av-t-haut: #ff6f8e;  --av-t-crit: #ff4d5e;
   --av-l1: #36d6ff;  --av-l2: #ff9e3d;
   background:
-    linear-gradient(180deg, rgba(3, 6, 14, .87), rgba(3, 6, 14, .82) 26%, rgba(3, 6, 14, .76) 55%, rgba(3, 6, 14, .7)),
+    linear-gradient(180deg, rgba(3, 6, 16, .85), rgba(3, 6, 16, .79) 26%, rgba(3, 6, 16, .7) 55%, rgba(3, 6, 16, .64)),
     url("assets/ville-s.webp") 50% 50% / cover no-repeat, #05080f;
   background-attachment: fixed;
 }
@@ -159,6 +160,8 @@
   border-radius: 10px; clip-path: none;
 }
 :root[data-profile] .jn-mood, :root[data-profile] .jn-act { color: var(--text); }
+:root[data-profile] .spark-legend { margin-top: 6px; }
+:root[data-profile] .spark-legend span { position: relative; z-index: 1; padding: 0 5px; border-radius: 4px; color: var(--text-2); background: rgba(var(--deep-rgb), .88); }   /* lisible même si une courbe passe dessous */
 :root[data-profile] .temp, :root[data-profile] .rate, :root[data-profile] .home-live {
   background: linear-gradient(180deg, rgba(255, 255, 255, .035), transparent 40%), rgba(var(--deep-rgb), .82);
   border: 1px solid rgba(var(--mag-rgb), .26); box-shadow: inset 0 0 18px rgba(0, 0, 0, .35);
@@ -436,8 +439,8 @@
 
 /* ---------- Téléphone : version allégée (images portrait, pas de pluie ni de scintillement sur le panel) ---------- */
 @media (max-width: 760px) {
-  :root[data-profile][data-theme="terminal"] { background: linear-gradient(180deg, rgba(6, 4, 14, .86), rgba(6, 4, 14, .78)), url("assets/ville-tel-t.webp") 50% 50% / cover no-repeat, #07060d; }
-  :root[data-profile][data-theme="sentinelle"] { background: linear-gradient(180deg, rgba(3, 6, 14, .86), rgba(3, 6, 14, .78)), url("assets/ville-tel-s.webp") 50% 50% / cover no-repeat, #05080f; }
+  :root[data-profile][data-theme="terminal"] { background: linear-gradient(180deg, rgba(6, 4, 18, .86), rgba(6, 4, 18, .74)), url("assets/ville-tel-t.webp") 50% 50% / cover no-repeat, #07060d; }
+  :root[data-profile][data-theme="sentinelle"] { background: linear-gradient(180deg, rgba(3, 6, 16, .86), rgba(3, 6, 16, .74)), url("assets/ville-tel-s.webp") 50% 50% / cover no-repeat, #05080f; }
   :root[data-profile]::before, :root[data-profile]::after, :root[data-profile] body::before { display: none; }
   :root[data-profile] .card { box-shadow: 0 0 0 1px rgba(0, 0, 0, .45), 0 10px 24px rgba(0, 0, 0, .5); }
   :root[data-profile] .gauge::before, :root[data-profile] .gauge::after { height: 14px; bottom: 10px; }
