@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- NEXUS est servi en http:// sur le réseau local (pas de certificat). Android n'autorise le clair que par nom de
+     domaine, pas par plage d'adresses : on l'autorise ici, et MainActivity refuse toute adresse qui n'est pas
+     locale (10.x, 172.16-31.x, 192.168.x, *.local, *.lan, *.home). -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

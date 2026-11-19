@@ -722,6 +722,9 @@ téléphone (même Wi-Fi).
 - L'adresse change d'une version à l'autre (source : port 8000, application/portable : 8765) : un téléphone
   appairé sur une version doit être appairé à nouveau sur l'autre.
 
+- **Appli Android** (sans navigateur, plein écran) : `android\` construit `NEXUS-Android-x.y.z.apk` (≈ 50 Ko,
+  seule permission : Internet). Installation et construction : `android\LISEZMOI.md`.
+
 Seuls les appareils appairés passent ; les adresses Internet sont toujours refusées.
 
 ### Autres réglages
