@@ -94,6 +94,8 @@
           <ol><li>Connecte le téléphone au <b>même Wi-Fi</b> que le PC.</li>
               <li>Scanne ce QR code avec l'appareil photo.</li>
               <li>Ou ouvre <code>${esc(info.url)}/pair</code> et tape le code :</li></ol>
+          <small class="muted">Appli NEXUS Android : ouvre l'appli et tape ce code (le QR code ouvre le navigateur, pas l'appli).
+            Un code ne sert qu'une fois.</small>
           <div class="ph-code">${p.code.slice(0, 3)} ${p.code.slice(3)}</div>
           <div class="muted" id="ph-left"></div>
           <button class="btn" id="ph-cancel">Annuler</button>

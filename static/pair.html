@@ -55,7 +55,13 @@
   const $ = id => document.getElementById(id);
   const secret = location.hash.length > 1 ? decodeURIComponent(location.hash.slice(1)) : null;
   const ua = navigator.userAgent;
-  $("name").value = /iPhone/.test(ua) ? "iPhone" : /iPad/.test(ua) ? "iPad" : /Android/.test(ua) ? "Téléphone Android" : "Mon appareil";
+  const appli = /NEXUSApp\//.test(ua);               // appli Android NEXUS (android/) : elle ne lit pas le QR code
+  $("name").value = appli ? "Appli NEXUS" : /iPhone/.test(ua) ? "iPhone" : /iPad/.test(ua) ? "iPad"
+    : /Android/.test(ua) ? "Téléphone Android" : "Mon appareil";
+  if (appli && !secret) {
+    $("intro").innerHTML = "Appairer l'<b>appli NEXUS</b> avec ton PC : tape ici le code à 6 chiffres affiché sur le PC."
+      + "<br><small>Ne scanne pas le QR code : il ouvre le navigateur du téléphone, pas l'appli, et le code ne sert qu'une fois.</small>";
+  }
   if (secret) {
     // Arrivé par le QR code : pas besoin de taper le code
     $("code-box").hidden = true;
@@ -78,7 +84,10 @@
       $("msg").className = "msg ok"; $("msg").textContent = "✔ Téléphone appairé. Ouverture de NEXUS…";
       setTimeout(() => { location.href = "/"; }, 900);
     } catch (e) {
-      $("msg").className = "msg err"; $("msg").textContent = e.message;
+      $("msg").className = "msg err";
+      $("msg").textContent = /invalide ou expiré/.test(e.message)
+        ? "Code refusé : il a déjà servi (scan du QR code ?) ou a expiré. Sur le PC, 📱 Téléphone → « Afficher le QR code » pour un nouveau code, puis tape-le ici."
+        : e.message;
       $("go").disabled = false;
     }
   });
