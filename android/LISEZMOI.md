@@ -9,9 +9,12 @@ activé (📱 Téléphone sur le PC).
 1. Copie `NEXUS-Android-x.y.z.apk` sur le téléphone (câble USB, Google Drive, envoi à soi-même…).
 2. Ouvre-le depuis l'appli **Fichiers**. Android demande d'autoriser l'installation depuis cette source : accepte
    (Paramètres → Applications → accès spécial → Installer des applis inconnues).
-3. Ouvre **NEXUS**, tape l'adresse affichée sur le PC dans 📱 Téléphone (ex. `http://192.168.x.x:8765`).
-4. NEXUS demande un code : sur le PC, 📱 Téléphone → **Afficher le QR code**, puis tape le code à 6 chiffres dans
-   l'appli. L'appairage est gardé.
+3. Sur le PC : 📱 Téléphone → **Afficher le QR code** (le code à 6 chiffres est à côté, valable 2 minutes).
+4. Ouvre **NEXUS** sur le téléphone et remplis l'écran d'appairage :
+   1. le **nom du téléphone** (il s'affichera sur le PC, dans la liste des appareils) ;
+   2. l'**adresse du PC**, affichée dans 📱 Téléphone (ex. `http://192.168.x.x:8765`) ;
+   3. le **code à 6 chiffres**. Ne scanne pas le QR code : il ouvrirait le navigateur et utiliserait le code.
+5. **Appairer** : NEXUS s'ouvre. L'appairage est gardé ; s'il est révoqué sur le PC, l'écran d'appairage revient.
 
 Play Protect peut avertir « appli inconnue » : c'est normal pour une appli qui ne vient pas du Play Store.
 

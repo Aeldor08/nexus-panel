@@ -5,6 +5,8 @@ plugins {
 // Version de l'appli = VERSION de NEXUS (fichier à la racine du dépôt)
 val nexusVersion = rootProject.file("../VERSION").takeIf { it.isFile }?.readText()?.trim() ?: "1.0.0"
 val parts = nexusVersion.split(".").mapNotNull { it.toIntOrNull() } + listOf(0, 0, 0)
+// Révision de l'appli pour une même version de NEXUS (à augmenter à chaque nouvel APK de la même version)
+val revisionAppli = 2
 
 android {
     namespace = "io.github.aeldor08.nexus"
@@ -14,8 +16,8 @@ android {
         applicationId = "io.github.aeldor08.nexus"
         minSdk = 24
         targetSdk = 35
-        versionCode = parts[0] * 10000 + parts[1] * 100 + parts[2]
-        versionName = nexusVersion
+        versionCode = (parts[0] * 10000 + parts[1] * 100 + parts[2]) * 100 + revisionAppli
+        versionName = "$nexusVersion-$revisionAppli"
     }
 
     buildTypes {
