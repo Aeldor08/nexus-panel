@@ -8,6 +8,18 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Ajouté
+- **Mode repos** : quand NEXUS n'est plus au premier plan depuis 20 s (autre fenêtre active, NEXUS sur un second écran), les animations décoratives se mettent en pause (Philibert, éclats, balayages) ; les valeurs, alertes et notifications continuent. Retour immédiat au focus ou au passage de la souris. Réglable dans ⚙ Réglages → Économie. Mesuré sur un écran 165 Hz : affichage + carte graphique de 30 % à 1,2 % d'un cœur
+- **Application Windows** : installeur `NEXUS-x.y.z-Setup.exe` avec mises à jour automatiques (dépôt embarqué dans l'exe) ; `release.py` le publie à chaque version, le portable dans une pré-release à part
+- **Demi-écran** : onglet PC en cases 2 par 2, en-tête compact, onglets sur une ligne
+
+### Corrigé
+- Fenêtre native : activer ou couper l'accès téléphone ne ferme plus NEXUS ; le pare-feu Windows (NEXUS.exe ≠ Python) est détecté et une règle par port est proposée
+
+### Modifié
+- Balayage de l'en-tête limité à 30 images/s (il repeignait toute la barre à chaque image d'un écran 144/165 Hz)
+- Exe plus léger : décodeur AVIF de Pillow retiré (inutilisé, les souvenirs acceptent JPEG/PNG/WebP) ; portable 39,6 → 35,5 Mo
+
 ### Personnalisation native et portable
 - Portée sur NEXUS 1.6.0 (Python privé, superviseur d'arrière-plan, profil « Averse de néons »)
 - Lancement : les dépendances ne sont plus réinstallées à chaque démarrage ; elles ne sont vérifiées que si `requirements.txt` a changé (marque `runtime\requirements.installe` ou `.venv\.requirements.sha256`)

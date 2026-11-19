@@ -111,7 +111,10 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=["pytest", "_pytest", "tests", "outils.tests", "tkinter", "matplotlib", "numpy"],
+    # Pillow : décodeur AVIF (7,7 Mo, le plus gros fichier) et pont Tk inutiles — les souvenirs n'acceptent que
+    # JPEG, PNG et WebP (souvenirs.FORMATS), et tkinter est exclu. Un AVIF est refusé avec le message habituel.
+    excludes=["pytest", "_pytest", "tests", "outils.tests", "tkinter", "matplotlib", "numpy",
+              "PIL._avif", "PIL.AvifImagePlugin", "PIL._imagingtk", "PIL.ImageTk"],
     noarchive=False,
 )
 pyz = PYZ(a.pure)

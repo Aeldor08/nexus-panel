@@ -449,6 +449,7 @@
   refresh();
   setInterval(() => {
     if (document.hidden || document.body.classList.contains("gamemode")) return;
+    if (window.nxRepos && window.nxRepos.enCours()) return;     // mode repos : pas de relecture des profils
     if (active !== DEFAULT || !menu.hidden) refresh({ quiet: true });
   }, 5000);
 })();

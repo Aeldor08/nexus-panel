@@ -87,6 +87,10 @@
     mini.style.transform = `translateX(${x.toFixed(1)}px)`;
   }
   const classe = (c, on) => mini.classList.toggle(c, on);
+  // Position réellement affichée (au milieu d'une marche, la transition n'est pas finie : x vaut déjà la cible)
+  function posActuelle() {
+    try { return new DOMMatrixReadOnly(getComputedStyle(mini).transform).m41; } catch (err) { return x; }
+  }
 
   function cligner() {
     clearTimeout(cligneT);
@@ -102,6 +106,7 @@
   function agir() {
     if (!e || lane.hidden) return;
     if (document.hidden) return;                                     // repris au retour sur l'onglet
+    if (window.nxRepos && window.nxRepos.enCours()) return;          // mode repos : repris au retour (nexus:repos)
     if (gm()) { classe("marche", false); return suite(15000); }      // mode jeu : il ne bouge plus
     classe("marche", false); classe("hoche", false); classe("fanon", false); classe("regarde", false);
     if (e.stade === "oeuf" || ["veto", "pension"].includes(e.niveau) || reduit.matches) return;
@@ -210,6 +215,11 @@
     charger();
     suite(500);
     cligner();
+  });
+  // Mode repos (NEXUS pas au premier plan) : il s'arrête là où il est, et repart au retour
+  addEventListener("nexus:repos", ev => {
+    if (ev.detail) { arreter(); placer(posActuelle(), 0); }
+    else if (!document.hidden) { suite(500); cligner(); }
   });
   addEventListener("resize", () => { if (x > largeur()) placer(largeur(), 0); });
   addEventListener("philibert:etat", ev => { if (ev.detail) appliquer(ev.detail); });

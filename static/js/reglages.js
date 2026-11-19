@@ -56,6 +56,11 @@
             .map(([v, t]) => `<option value="${v}"${cur === v ? " selected" : ""}>${esc(t)}</option>`).join("")}
         </select></label>
         <small class="muted rg-note">Retenu pour ce profil seulement : chaque profil garde son propre passage.</small>`; })()}
+      ${window.nxRepos ? `<div class="rg-group">Économie</div>
+      <label class="rg-row rg-chk"><input type="checkbox" data-act="repos" ${window.nxRepos.actif() ? "checked" : ""}>
+        <span>Mettre les animations en pause quand NEXUS n'est pas au premier plan (après 20 s)</span></label>
+      <small class="muted rg-note">Les valeurs continuent de se mettre à jour. Moins de travail pour le processeur et la
+        carte graphique, surtout sur un écran 144/165 Hz.</small>` : ""}
       ${window.nxPhilibert ? `<div class="rg-group">Philibert, l'iguane</div>
       <label class="rg-row rg-chk"><input type="checkbox" data-act="philibert-visible" ${window.nxPhilibert.visible() ? "checked" : ""}>
         <span>Le voir se promener sous la barre du haut</span></label>
@@ -125,6 +130,7 @@
   });
   menu.addEventListener("change", e => {
     if (e.target.dataset.act === "sound" && window.reminderSound) window.reminderSound.on = e.target.checked;
+    if (e.target.dataset.act === "repos" && window.nxRepos) window.nxRepos.regler(e.target.checked);
     if (e.target.dataset.act === "philibert-visible" && window.nxPhilibert) window.nxPhilibert.afficher(e.target.checked);
     if (e.target.dataset.act === "intro") { try { localStorage.setItem(INTRO_KEY, e.target.checked ? "1" : "0"); } catch (x) {} }
     if (e.target.dataset.act === "ouverture") {

@@ -194,3 +194,8 @@ body[data-focus="pause"] .focus-barre i, body[data-focus="longue"] .focus-barre 
 .ph-fw { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 4px 0 12px; padding: 10px 12px;
   border: 1px solid var(--warn, #ffb020); border-radius: 6px; background: color-mix(in srgb, var(--warn, #ffb020) 10%, transparent); }
 .ph-fw small { flex-basis: 100%; }
+
+/* Mode repos (js/repos.js) : NEXUS n'est plus au premier plan → animations décoratives en pause.
+   Les valeurs continuent d'être mises à jour ; tout reprend dès le retour du focus ou de la souris. */
+html.nx-repos, html.nx-repos::before, html.nx-repos::after,
+html.nx-repos *, html.nx-repos *::before, html.nx-repos *::after { animation-play-state: paused !important; }

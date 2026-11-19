@@ -755,7 +755,9 @@ h1 .sub.sub-sent { display: none; }
     linear-gradient(90deg, transparent, rgba(255, 255, 255, .95), transparent) -30% 0 / 22% 100% no-repeat,
     linear-gradient(90deg, transparent, var(--magenta) 5%, var(--cyan) 16%, var(--cyan) 84%, var(--magenta) 95%, transparent);
   box-shadow: 0 0 14px rgba(var(--neon-rgb), .9), 0 0 40px rgba(var(--neon-rgb), .45);
-  animation: eye-scan 4.5s ease-in-out infinite;
+  /* steps(135) : 30 images/s (4,5 s × 30). L'éclat anime une position de fond, donc une repeinture de toute la
+     barre (et de son halo) à chaque image : à 165 Hz, c'était 165 repeintures par seconde pour un détail. */
+  animation: eye-scan 4.5s infinite steps(135);
 }
 @keyframes eye-scan { 0% { background-position: -30% 0, 0 0; } 50% { background-position: 130% 0, 0 0; } 100% { background-position: -30% 0, 0 0; } }
 
