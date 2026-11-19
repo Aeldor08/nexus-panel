@@ -587,6 +587,35 @@ def _run_server(host: str, port: int) -> None:
     _SERVER.run()
 
 
+def _demarrer_lhm() -> None:
+    """Démarre LibreHardwareMonitor (températures CPU, disques, ventilateurs) s'il est posé à côté de NEXUS.exe
+    (dossier « LibreHardwareMonitor ») et ne tourne pas déjà. En mode source, c'est superviseur.py qui s'en charge ;
+    la version exe (installée ou portable) ne le lançait jamais : elle ne profitait que d'un LHM déjà démarré.
+    Windows demande l'autorisation administrateur (sans elle, pas de température processeur). Dans un fil à part :
+    la demande d'autorisation ne bloque pas l'ouverture de la fenêtre."""
+    if os.name != "nt":
+        return
+    try:
+        import paths
+        exe = paths.INSTALL_DIR / "LibreHardwareMonitor" / "LibreHardwareMonitor.exe"
+        if not exe.is_file():
+            return
+        cfg = exe.with_name("LibreHardwareMonitor.config")
+        modele = paths.APP_DIR / "outils" / "LibreHardwareMonitor.config"     # serveur web 8085 activé, réduit
+        if not cfg.exists() and modele.is_file():
+            import shutil
+            shutil.copyfile(modele, cfg)
+        import psutil
+        if any((p.info.get("name") or "").lower() == "librehardwaremonitor.exe" for p in psutil.process_iter(["name"])):
+            return
+        print("[Matériel] démarrage de LibreHardwareMonitor (fenêtre administrateur de Windows)")
+        r = ctypes.windll.shell32.ShellExecuteW(None, "runas", str(exe), None, str(exe.parent), 7)   # 7 : réduit
+        if r <= 32:
+            print("[Matériel] LibreHardwareMonitor non démarré (autorisation refusée ?) : températures CPU indisponibles")
+    except Exception as exc:
+        print(f"[Matériel] LibreHardwareMonitor : démarrage impossible ({type(exc).__name__}: {exc})")
+
+
 def _restart_server(port: int) -> None:
     """Accès téléphone activé ou coupé : relance le serveur web sur la nouvelle adresse (0.0.0.0 ou 127.0.0.1)
     sans quitter NEXUS. La fenêtre garde son jeton et retrouve le serveur sur le même port."""
@@ -747,6 +776,8 @@ def main() -> int:
         return 1
     paths.write_runtime(port, token)
     app.start_services()
+    if not _ARGS.smoke_test:
+        threading.Thread(target=_demarrer_lhm, daemon=True, name="lhm").start()
 
     try:
         import webview
