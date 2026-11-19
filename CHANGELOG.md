@@ -10,6 +10,7 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ### Ajouté
 - **Mode repos** : quand NEXUS n'est plus au premier plan depuis 20 s (autre fenêtre active, NEXUS sur un second écran), les animations décoratives se mettent en pause (Philibert, éclats, balayages) ; les valeurs, alertes et notifications continuent. Retour immédiat au focus ou au passage de la souris. Réglable dans ⚙ Réglages → Économie. Mesuré sur un écran 165 Hz : affichage + carte graphique de 30 % à 1,2 % d'un cœur
+- **Animations limitées à 60 images/s** (js/fps60.js) : sur un écran 144/165 Hz, les animations en boucle (Philibert, voyants, balayage, glitch) avancent 60 fois par seconde au lieu de suivre l'écran ; même mouvement, recalculs de style de 170 à environ 70 par seconde, travail de la fenêtre environ divisé par deux. Réglable dans ⚙ Réglages → Économie
 - **Application Windows** : installeur `NEXUS-x.y.z-Setup.exe` avec mises à jour automatiques (dépôt embarqué dans l'exe) ; `release.py` le publie à chaque version, le portable dans une pré-release à part
 - **Demi-écran** : onglet PC en cases 2 par 2, en-tête compact, onglets sur une ligne
 
