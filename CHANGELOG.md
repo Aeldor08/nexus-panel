@@ -8,6 +8,8 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+## [1.9.0] - 2026-11-24
+
 ### Ajouté
 - **La version portable se met à jour toute seule**, comme l'application Windows : une nouvelle version allume la
   pastille de version, **Installer** (mot de passe du panel puis validation) télécharge `NEXUS-Portable-x.y.z.zip`
