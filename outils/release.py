@@ -372,7 +372,8 @@ def main() -> int:
             f"Pour les mises à jour automatiques, prends plutôt l'installeur de [NEXUS {ver}]"
             f"(https://github.com/{depot}/releases/tag/{tag}).\n\n"
             f"SHA256 : `{portable_sha.read_text(encoding='utf-8').split()[0]}`\n", encoding="utf-8")
-        _cmd(gh, "release", "create", ptag, str(portable), str(portable_sha), "--repo", depot, "--target", tag,
+        _cmd(gh, "release", "create", ptag, str(portable), str(portable_sha), "--repo", depot,
+             "--target", _cmd(git, "rev-list", "-n", "1", tag).strip(),   # un commit : GitHub refuse un tag annoté
              "--title", f"NEXUS {ver} — version portable Windows", "--notes-file", str(pnotes),
              "--prerelease", "--latest=false")
     print(f"\n✔ Release {tag} publiée : https://github.com/{depot}/releases/tag/{tag}")
