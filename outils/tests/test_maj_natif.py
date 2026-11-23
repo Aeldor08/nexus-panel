@@ -131,6 +131,78 @@ try:
        "helper copié hors du dossier d'installation")
     ok(maj_natif.JOB_FILE.is_file(), "travail JSON écrit pour le helper")
     os.environ.pop("NEXUS_MAJ_HELPER_DRY", None)
+    ok(script.read_bytes().startswith(b"\xef\xbb\xbf"),
+       "helper en UTF-8 avec BOM (PowerShell 5.1 : accents justes dans les messages)")
+    ok("config.json" in job["proteger"] and "data" in job["proteger"] and "maj" in job["proteger"],
+       "travail : données protégées transmises au helper")
+
+    # --- version portable --------------------------------------------------
+    import zipfile
+    passets = [{"id": 7, "name": "NEXUS-Portable-1.9.0.zip"}, {"id": 8, "name": "NEXUS-Portable-1.9.0.zip.sha256"},
+               {"id": 9, "name": "NEXUS-Portable-1.8.0.zip"}]
+    pchoix = maj_natif.choisir_assets_portable(passets, "1.9.0")
+    ok(pchoix["portable"]["id"] == 7 and pchoix["sha256_portable"]["id"] == 8, "portable : archive de la bonne version choisie")
+    ok(maj_natif.choisir_assets_portable(passets, "2.0.0")["portable"] is None, "portable : autre version → rien")
+
+    def zip_portable(nom, fichiers):
+        z = root / nom
+        with zipfile.ZipFile(z, "w") as f:
+            for n, contenu in fichiers.items():
+                f.writestr(n, contenu)
+        return z
+
+    bon = zip_portable("bon.zip", {"NEXUS-Portable-1.9.0/NEXUS.exe": "exe", "NEXUS-Portable-1.9.0/portable.flag": "p",
+                                   "NEXUS-Portable-1.9.0/_internal/VERSION": "1.9.0\n",
+                                   "NEXUS-Portable-1.9.0/_internal/app.py": "x"})
+    nouveau = maj_natif.extraire_portable(bon, root / "extrait", "1.9.0")
+    ok((nouveau / "NEXUS.exe").is_file() and (nouveau / "_internal" / "app.py").is_file(), "portable : archive extraite")
+
+    def refuse(nom, fichiers, ver="1.9.0"):
+        try:
+            maj_natif.extraire_portable(zip_portable(nom, fichiers), root / ("x-" + nom), ver)
+            return False
+        except maj_natif.NatifError:
+            return True
+
+    base_ok = {"N/NEXUS.exe": "e", "N/_internal/VERSION": "1.9.0"}
+    ok(refuse("v.zip", base_ok, "2.0.0"), "portable : version annoncée différente → refusée")
+    ok(refuse("d.zip", {**base_ok, "N/config.json": "{}"}), "portable : config.json dans l'archive → refusée")
+    ok(refuse("dd.zip", {**base_ok, "N/data/x.db": "x"}), "portable : data\\ dans l'archive → refusée")
+    ok(refuse("p.zip", {**base_ok, "N/../evil.txt": "x"}), "portable : chemin avec .. → refusé")
+    ok(refuse("r.zip", {**base_ok, "Autre/x.txt": "x"}), "portable : deux dossiers racine → refusé")
+    ok(refuse("e.zip", {"N/_internal/VERSION": "1.9.0"}), "portable : NEXUS.exe absent → refusé")
+
+    # sauvegarde du portable : programme copié, données jamais
+    port = root / "portable"
+    (port / "_internal").mkdir(parents=True)
+    (port / "NEXUS.exe").write_bytes(b"exe")
+    (port / "portable.flag").write_text("p", encoding="utf-8")
+    (port / "_internal" / "app.py").write_text("x", encoding="utf-8")
+    (port / "_internal" / "profils" / "pure").mkdir(parents=True)
+    (port / "_internal" / "profils" / "pure" / "profil.json").write_text("{}", encoding="utf-8")
+    for d in ("data", "profils", "maj", "LibreHardwareMonitor", "_mes-affaires"):
+        (port / d).mkdir()
+    (port / "config.json").write_text("{}", encoding="utf-8")
+    paths.INSTALL_DIR = port
+    paths.USER_ROOT = port
+    ok(maj_natif.est_portable(), "portable détecté (données à côté de l'exe)")
+    ok(maj_natif.dossier_inscriptible(port), "dossier du portable modifiable")
+    sp = maj_natif.sauvegarder_installation()
+    ok((sp / "NEXUS.exe").is_file() and (sp / "portable.flag").is_file() and (sp / "_internal" / "app.py").is_file(),
+       "portable : NEXUS.exe, portable.flag et _internal sauvegardés")
+    ok(not any((sp / n).exists() for n in ("config.json", "data", "profils", "maj")), "portable : données jamais sauvegardées")
+    ok((sp / "_internal" / "profils" / "pure" / "profil.json").is_file(), "portable : profils fournis de _internal sauvegardés")
+    ok(not (sp / "LibreHardwareMonitor").exists() and not (sp / "_mes-affaires").exists(),
+       "portable : LibreHardwareMonitor et dossiers perso ni sauvegardés ni gérés")
+    jp = maj_natif.construire_job_portable({"version": "1.9.0"}, nouveau, sp)
+    ok(jp["action"] == "portable" and jp["source_dir"] == str(nouveau) and "config.json" in jp["proteger"],
+       "travail portable cohérent")
+    ok(set(jp["elements"]) == {"NEXUS.exe", "_internal", "Lancer NEXUS.bat", "LISEZMOI.txt", "portable.flag"}
+       and "LibreHardwareMonitor" not in jp["elements"], "portable : le helper ne gère que les fichiers du programme")
+    ok(set(maj_natif.construire_job_retour(sp, "1.8.0")["elements"]) == set(jp["elements"]),
+       "portable : le retour en arrière ne gère aussi que les fichiers du programme")
+    maj_natif._ecrire(maj_natif.JOB_FILE, {**jp, "expected_version": version_mod.current()})
+    ok(maj_natif.marquer_demarrage_ok(), "le démarrage de la nouvelle version portable est confirmé au helper")
 finally:
     shutil.rmtree(root, ignore_errors=True)
 

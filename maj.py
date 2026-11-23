@@ -284,6 +284,17 @@ def derniere_release(depot: str, tok: str) -> dict:
             "sha256_installateur": _asset_public(assets["sha256_installateur"])}
 
 
+def release_portable(depot: str, tok: str, ver: str) -> dict:
+    """Archive de la version portable : pré-release « portable-X.Y.Z » à part (jamais vue par /releases/latest).
+    Pas encore publiée (404) → archive absente : le portable attend, ou se met à jour à la main."""
+    try:
+        data = _json(f"{_base_api()}/repos/{depot}/releases/tags/portable-{ver}", tok)
+    except MajError:
+        return {"portable": None, "sha256_portable": None}
+    assets = maj_natif.choisir_assets_portable(list(data.get("assets") or []), ver)
+    return {"portable": _asset_public(assets["portable"]), "sha256_portable": _asset_public(assets["sha256_portable"])}
+
+
 def _telecharger_asset(depot: str, asset_id: int, tok: str, dest: Path, limite: int = MAX_ARCHIVE, progres=None) -> None:
     """Fichier d'une release du dépôt configuré : demande à l'API (avec le jeton), puis suit la redirection
     vers l'hébergeur des fichiers de GitHub SANS le jeton."""
@@ -344,8 +355,15 @@ class Updater:
         dispo = dispo if dispo and plus_recente(dispo.get("version"), version_mod.current()) else None
         if dispo:
             dispo = dict(dispo)
-            if paths.FROZEN:
-                dispo["mode"] = "manuel" if maj_natif.est_portable() else "installateur"
+            if paths.FROZEN and maj_natif.est_portable():
+                # « portable » : remplacement automatique ; « manuel » : archive portable pas (encore) publiée
+                # ou dossier en lecture seule (clé verrouillée, Program Files…)
+                auto = bool(dispo.get("portable") and dispo.get("sha256_portable")
+                            and maj_natif.dossier_inscriptible(paths.INSTALL_DIR))
+                dispo["mode"] = "portable" if auto else "manuel"
+                dispo["taille"] = (dispo.get("portable") or {}).get("taille")
+            elif paths.FROZEN:
+                dispo["mode"] = "installateur"
                 dispo["taille"] = (dispo.get("installateur") or {}).get("taille")
             else:
                 dispo["mode"] = "archive"
@@ -385,6 +403,8 @@ class Updater:
                 try:
                     rel = derniere_release(r["depot"], tok)
                     nouvelle = plus_recente(rel["version"], version_mod.current())
+                    if nouvelle and maj_natif.est_portable():
+                        rel.update(release_portable(r["depot"], tok, rel["version"]))
                     self.etat.update(resultat="ok", erreur=None, a_jour=not nouvelle, disponible=rel if nouvelle else None)
                     if nouvelle and r["discord"] and self.notifier and self.etat.get("discord_notifie") != rel["version"]:
                         self.etat["discord_notifie"] = rel["version"]
@@ -436,8 +456,21 @@ class Updater:
             raise MajError("aucune version plus récente à installer (vérifie d'abord)")
         if paths.FROZEN:
             if maj_natif.est_portable():
-                raise MajError("la mise à jour automatique est réservée à la version installée ; "
-                               "en mode portable, télécharge le nouvel installeur")
+                if not maj_natif.dossier_inscriptible(paths.INSTALL_DIR):
+                    raise MajError("le dossier du portable est en lecture seule : NEXUS ne peut pas s'y mettre à jour "
+                                   "(copie-le dans un dossier modifiable, ou remplace NEXUS.exe et _internal à la main)")
+                if not dispo.get("portable") or not dispo.get("sha256_portable"):
+                    r = reglages()                       # publiée depuis la dernière vérification ?
+                    dispo.update(release_portable(r["depot"], jeton(r["depot"])[0], dispo["version"]))
+                    if self.etat.get("disponible"):
+                        self.etat["disponible"].update({k: dispo[k] for k in ("portable", "sha256_portable")})
+                if not dispo.get("portable") or not dispo.get("sha256_portable"):
+                    raise MajError(f"la version portable {dispo['version']} n'est pas encore publiée "
+                                   f"(NEXUS-Portable-{dispo['version']}.zip et son .sha256) : réessaie un peu plus tard")
+                self.travail = {"etape": "telechargement", "progres": 0, "erreur": None, "vers": dispo["version"]}
+                threading.Thread(target=self._installer_portable, args=(dispo, on_restart), daemon=True,
+                                 name="maj-installation").start()
+                return
             if not dispo.get("installateur") or not dispo.get("sha256_installateur"):
                 raise MajError("cette release n'a pas d'installeur NEXUS-x.y.z-Setup.exe et de fichier .sha256 : "
                                "installation refusée")
@@ -507,6 +540,50 @@ class Updater:
                 shutil.rmtree(dossier, ignore_errors=True)
             except OSError:
                 pass
+            message = str(e) if isinstance(e, (MajError, maj_natif.NatifError)) else f"{type(e).__name__}: {e}"
+            self.travail.update(etape="erreur", erreur=message)
+            try:
+                maj_natif.resultat_erreur("installation", version_mod.current(), str(dispo.get("version") or ""),
+                                          f"Mise à jour impossible : {message}")
+            except OSError:
+                pass
+
+    def _installer_portable(self, dispo: dict, on_restart) -> None:
+        """Portable : télécharge l'archive portable, vérifie SHA256 et contenu, sauvegarde le programme actuel,
+        puis le helper remplace NEXUS.exe et _internal (jamais les données posées à côté) et relance NEXUS."""
+        dossier = maj_natif.NATIF_DIR / dispo["version"]
+        try:
+            r = reglages()
+            tok, _ = jeton(r["depot"])
+            if dossier.exists():
+                shutil.rmtree(dossier, ignore_errors=True)
+            dossier.mkdir(parents=True, exist_ok=True)
+            archive = dossier / Path(str(dispo["portable"]["nom"])).name
+            somme = dossier / Path(str(dispo["sha256_portable"]["nom"])).name
+
+            self.travail.update(etape="telechargement", progres=0)
+            _telecharger_asset(r["depot"], dispo["sha256_portable"]["id"], tok, somme, limite=4096)
+            _telecharger_asset(r["depot"], dispo["portable"]["id"], tok, archive,
+                               progres=lambda p: self.travail.update(progres=round(p * 100)))
+
+            self.travail.update(etape="verification", progres=100)
+            attendu = somme.read_text(encoding="utf-8", errors="replace").strip().split()[0].lower() if somme.stat().st_size else ""
+            if not maj_natif.SHA256_RE.match(attendu):
+                raise MajError("fichier SHA256 de l'archive portable illisible : installation refusée")
+            if maj_natif.sha256_fichier(archive) != attendu:
+                raise MajError("SHA256 différent pour l'archive portable : fichier corrompu ou modifié — "
+                               "installation refusée, rien n'a été touché")
+            nouveau = maj_natif.extraire_portable(archive, dossier / "fichiers", dispo["version"])
+            archive.unlink(missing_ok=True)                # place disque : seul le dossier extrait sert
+
+            self.travail.update(etape="sauvegarde")
+            backup = maj_natif.sauvegarder_installation()
+            maj_natif.lancer_helper(maj_natif.construire_job_portable(dispo, nouveau, backup))
+            self.travail.update(etape="redemarrage", progres=100)
+            time.sleep(.8)
+            on_restart()
+        except Exception as e:
+            shutil.rmtree(dossier, ignore_errors=True)
             message = str(e) if isinstance(e, (MajError, maj_natif.NatifError)) else f"{type(e).__name__}: {e}"
             self.travail.update(etape="erreur", erreur=message)
             try:

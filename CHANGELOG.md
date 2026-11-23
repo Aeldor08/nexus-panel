@@ -8,6 +8,22 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Ajouté
+- **La version portable se met à jour toute seule**, comme l'application Windows : une nouvelle version allume la
+  pastille de version, **Installer** (mot de passe du panel puis validation) télécharge `NEXUS-Portable-x.y.z.zip`
+  (pré-release « version portable »), vérifie son empreinte SHA256 et son contenu (bonne version, aucun fichier de
+  données, aucun chemin dangereux), sauvegarde `NEXUS.exe` et `_internal\` dans `maj\rollback\`, ferme NEXUS,
+  remplace seulement les fichiers du programme et le relance. Tes données (`config.json`, `data\`, `profils\`…),
+  LibreHardwareMonitor et tes propres dossiers à côté ne sont jamais touchés. Si la nouvelle version ne démarre pas,
+  l'ancienne revient toute seule ; **↶ Revenir à la version précédente** marche aussi. Le dossier du portable doit
+  être modifiable (sinon NEXUS l'indique et la mise à jour reste manuelle) ; un portable antérieur se met à jour une
+  dernière fois à la main
+
+### Corrigé
+- Mises à jour de l'application Windows : seul le NEXUS du dossier mis à jour est fermé (un autre NEXUS, portable par
+  exemple, n'est plus arrêté) ; un retour en arrière ne supprime jamais `config.json`, `data\`, `profils\`… ; messages
+  accentués du résultat corrects (script en UTF-8 avec BOM pour PowerShell 5.1)
+
 ## [1.8.0] - 2026-11-23
 
 ### Ajouté

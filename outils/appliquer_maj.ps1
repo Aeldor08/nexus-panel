@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(Mandatory = $true)]
     [string]$Job
 )
@@ -44,11 +44,41 @@ function Write-Result([bool]$Ok, [string]$Type, [string]$Message) {
     Write-Log ("Résultat : " + $Message)
 }
 
+function Get-NexusIci {
+    # Seulement le NEXUS de ce dossier : un autre NEXUS (portable ailleurs, version installée) n'est pas touché.
+    # Chemin illisible (autre session, droits) : on le compte, comme avant.
+    @(Get-Process -Name "NEXUS" -ErrorAction SilentlyContinue | Where-Object {
+        (-not $_.Path) -or ($_.Path -ieq [string]$j.app_exe)
+    })
+}
+
+function Test-Protege([string]$Nom) {
+    # Données posées à côté du programme (version portable) : jamais supprimées ni remplacées.
+    foreach ($p in @($j.proteger)) { if ($Nom -ieq [string]$p) { return $true } }
+    # Portable : seuls les fichiers du programme (liste « elements ») peuvent être supprimés ou remplacés ;
+    # tout le reste du dossier (LibreHardwareMonitor, dossiers perso…) est laissé tel quel.
+    $liste = @($j.elements | Where-Object { $_ })
+    if ($liste.Count -gt 0) {
+        foreach ($e in $liste) { if ($Nom -ieq [string]$e) { return $false } }
+        return $true
+    }
+    return $false
+}
+
+function Remove-Element([string]$Chemin) {
+    # Un fichier tout juste libéré par NEXUS peut rester verrouillé quelques instants (antivirus, WebView2).
+    for ($i = 0; $i -lt 10; $i++) {
+        if (-not (Test-Path -LiteralPath $Chemin)) { return }
+        try { Remove-Item -LiteralPath $Chemin -Recurse -Force -ErrorAction Stop; return } catch { Start-Sleep -Milliseconds 700 }
+    }
+    throw "impossible de remplacer $Chemin (fichier encore utilisé ?)"
+}
+
 function Stop-Nexus {
     # Laisse à NEXUS le temps de s'arrêter proprement, puis force si besoin.
     $limite = (Get-Date).AddSeconds(20)
     while ((Get-Date) -lt $limite) {
-        $restants = @(Get-Process -Name "NEXUS" -ErrorAction SilentlyContinue)
+        $restants = Get-NexusIci
         if ($restants.Count -eq 0) {
             Start-Sleep -Milliseconds 800      # laisse WebView2 et les DLL se libérer
             return
@@ -109,17 +139,46 @@ function Restore-App {
     }
     Stop-Nexus
     Get-ChildItem -LiteralPath $j.app_dir -Force -ErrorAction SilentlyContinue | ForEach-Object {
-        Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction Stop
+        if (-not (Test-Protege $_.Name)) { Remove-Element $_.FullName }
     }
     Get-ChildItem -LiteralPath $j.backup_dir -Force -ErrorAction Stop | ForEach-Object {
-        Copy-Item -LiteralPath $_.FullName -Destination $j.app_dir -Recurse -Force -ErrorAction Stop
+        if (-not (Test-Protege $_.Name)) {
+            Copy-Item -LiteralPath $_.FullName -Destination $j.app_dir -Recurse -Force -ErrorAction Stop
+        }
     }
     Write-Log "Ancienne installation restaurée depuis $($j.backup_dir)"
+}
+
+function Install-Portable {
+    # Remplace chaque élément du programme (NEXUS.exe, _internal, lanceur, notice…) par celui de la nouvelle
+    # version ; tout le reste du dossier (données, LibreHardwareMonitor, raccourcis…) reste tel quel.
+    if (-not (Test-Path -LiteralPath (Join-Path $j.source_dir "NEXUS.exe"))) {
+        throw "nouvelle version introuvable : $($j.source_dir)"
+    }
+    Get-ChildItem -LiteralPath $j.source_dir -Force -ErrorAction Stop | ForEach-Object {
+        if (Test-Protege $_.Name) { return }
+        $cible = Join-Path $j.app_dir $_.Name
+        Remove-Element $cible
+        Copy-Item -LiteralPath $_.FullName -Destination $j.app_dir -Recurse -Force -ErrorAction Stop
+    }
+    if (-not (Test-Path -LiteralPath $j.app_exe)) {
+        throw "NEXUS.exe n'a pas été remis en place"
+    }
+    Write-Log "Version portable $($j.expected_version) copiée dans $($j.app_dir)"
 }
 
 function Clear-Travail {
     Remove-Item -LiteralPath $j.marker -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $Job -Force -ErrorAction SilentlyContinue
+    if ($j.action -eq "portable" -and $j.source_dir) {
+        # maj\natif\X.Y.Z (fichiers extraits + .sha256), réussite ou échec : ~100 Mo à ne pas laisser traîner
+        try {
+            $travail = Split-Path -Path (Split-Path -Path $j.source_dir -Parent) -Parent
+            if ((Split-Path -Path $travail -Leaf) -eq [string]$j.expected_version) {
+                Remove-Item -LiteralPath $travail -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        } catch { }
+    }
 }
 
 function Install-NouvelleVersion {
@@ -152,6 +211,17 @@ try {
         throw "la version restaurée n'a pas confirmé son démarrage"
     }
 
+    if ($j.action -eq "portable") {
+        Install-Portable
+        Start-App
+        if (Wait-Marker ([int]$j.timeout)) {
+            Write-Result $true "installation" ("Mise à jour vers la version " + $j.expected_version + " réussie.")
+            Clear-Travail
+            exit 0
+        }
+        throw "la nouvelle version n'a pas confirmé son démarrage"
+    }
+
     Install-NouvelleVersion
     Start-App
     if (Wait-Marker ([int]$j.timeout)) {
@@ -170,7 +240,7 @@ try {
     $erreur = $_.Exception.Message
     Write-Log "ERREUR : $erreur"
     try {
-        if ($j.action -eq "install") {
+        if ($j.action -eq "install" -or $j.action -eq "portable") {
             Stop-Nexus
             Restore-App
             Start-App

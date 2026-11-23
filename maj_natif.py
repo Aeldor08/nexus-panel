@@ -1,4 +1,4 @@
-"""Mises à jour de la version installée (.exe) via l'installeur Inno Setup.
+"""Mises à jour de la version gelée (.exe) : installeur Inno Setup, ou archive portable.
 
 En mode source, NEXUS met à jour son code depuis l'archive ZIP de la release.
 En mode gelé, ce n'est pas possible : l'exécutable et son dossier ``_internal``
@@ -12,6 +12,13 @@ sont remplacés par un installeur. Ce module prépare cette mise à jour :
 Le helper ferme NEXUS, lance l'installeur en mode silencieux, relance NEXUS
 et attend le marqueur ``maj/demarrage_ok.json``. Si la nouvelle version ne
 démarre pas, il remet la sauvegarde en place et relance l'ancienne version.
+
+Version portable : même chemin, sans installeur. On télécharge
+``NEXUS-Portable-x.y.z.zip`` (pré-release ``portable-x.y.z``), on vérifie son SHA256
+et son contenu, on l'extrait dans ``maj/natif/x.y.z``, puis le helper remplace
+seulement les fichiers du programme (``NEXUS.exe``, ``_internal``…) dans le dossier
+du portable. Les données posées à côté (``config.json``, ``data``, ``profils``…)
+ne sont jamais touchées, ni par la mise à jour ni par un retour en arrière.
 """
 
 from __future__ import annotations
@@ -31,6 +38,11 @@ import paths
 import version as version_mod
 
 INSTALLATEUR_RE = re.compile(r"^NEXUS-(\d+\.\d+\.\d+)-Setup\.exe$", re.I)
+MAX_FICHIERS_PORTABLE = 20000
+# Fichiers du programme portable (racine de NEXUS-Portable-x.y.z.zip) : les seuls que la mise à jour du
+# portable sauvegarde, remplace ou remet en place. Tout le reste du dossier (données, LibreHardwareMonitor,
+# dossiers perso…) n'est jamais touché.
+PROGRAMME_PORTABLE = ("NEXUS.exe", "_internal", "Lancer NEXUS.bat", "LISEZMOI.txt", "portable.flag")
 SEMVER_RE = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
@@ -121,6 +133,71 @@ def choisir_assets(assets: list[dict]) -> dict:
             archive = archive or asset
     return {"installateur": installateur, "sha256_installateur": sha_installateur,
             "archive": archive, "sha256": sha_archive}
+
+
+def choisir_assets_portable(assets: list[dict], version: str) -> dict:
+    """Archive portable ``NEXUS-Portable-<version>.zip`` et son .sha256 (pré-release ``portable-<version>``)."""
+    archive = somme = None
+    for asset in assets:
+        nom = str(asset.get("name") or "")
+        if nom.lower() == f"nexus-portable-{version}.zip".lower():
+            archive = asset
+        elif nom.lower() == f"nexus-portable-{version}.zip.sha256".lower():
+            somme = asset
+    return {"portable": archive, "sha256_portable": somme}
+
+
+def dossier_inscriptible(dossier: Path) -> bool:
+    """Le portable ne peut se remplacer que dans un dossier où il peut écrire (pas une clé verrouillée)."""
+    essai = Path(dossier) / f".nexus-ecriture-{os.getpid()}.tmp"
+    try:
+        essai.write_bytes(b"ok")
+        essai.unlink()
+        return True
+    except OSError:
+        return False
+
+
+def extraire_portable(archive: Path, dest: Path, version: str) -> Path:
+    """Extrait l'archive portable en la contrôlant ; renvoie le dossier qui contient NEXUS.exe.
+
+    Refusé : chemins absolus ou avec « .. », plusieurs dossiers racine, fichier de données à la
+    racine (config.json, data…, qui écraseraient celles de l'utilisateur), NEXUS.exe ou _internal
+    absents, version annoncée différente de celle de l'archive."""
+    import zipfile
+    if dest.exists():
+        shutil.rmtree(dest, ignore_errors=True)
+    try:
+        z = zipfile.ZipFile(archive)
+    except (OSError, zipfile.BadZipFile) as exc:
+        raise NatifError("archive portable illisible") from exc
+    with z:
+        noms = z.namelist()
+        if not noms or len(noms) > MAX_FICHIERS_PORTABLE:
+            raise NatifError("archive portable vide ou anormale")
+        racines = set()
+        for nom in noms:
+            n = nom.replace("\\", "/")
+            morceaux = [m for m in n.split("/") if m]
+            if n.startswith("/") or ":" in n or any(m == ".." for m in morceaux) or not morceaux:
+                raise NatifError(f"chemin dangereux dans l'archive portable : {nom!r}")
+            racines.add(morceaux[0])
+            if len(morceaux) >= 2 and morceaux[1].lower() in {p.lower() for p in PROTEGES_RACINE}:
+                raise NatifError(f"l'archive portable contient des données ({morceaux[1]}) : refusée")
+        if len(racines) != 1:
+            raise NatifError("l'archive portable doit contenir un seul dossier")
+        z.extractall(dest)
+    racine = dest / racines.pop()
+    if not (racine / "NEXUS.exe").is_file() or not (racine / "_internal").is_dir():
+        raise NatifError("l'archive portable ne contient pas NEXUS.exe et _internal")
+    lue = ""
+    try:
+        lue = (racine / "_internal" / "VERSION").read_text(encoding="utf-8").strip()
+    except OSError:
+        pass
+    if vtuple(lue) != vtuple(version):
+        raise NatifError("l'archive portable ne contient pas la version annoncée : installation refusée")
+    return racine
 
 
 def politique_signature() -> tuple[str, str]:
@@ -247,8 +324,6 @@ def sauvegarder_installation() -> Path:
     """Copie l'exe et ses fichiers dans ``maj/rollback/vX.Y.Z``."""
     if not paths.FROZEN:
         raise NatifError("la sauvegarde d'installation n'existe qu'en version gelée")
-    if est_portable():
-        raise NatifError("la mise à jour par installeur n'est pas disponible en mode portable")
     source = Path(paths.INSTALL_DIR)
     if not source.is_dir() or not (source / "NEXUS.exe").is_file():
         raise NatifError("dossier d'installation introuvable")
@@ -257,7 +332,16 @@ def sauvegarder_installation() -> Path:
     cible = ROLLBACK_DIR / f"v{version}"
     temporaire = ROLLBACK_DIR / f".copie-{version}-{int(time.time())}"
     try:
-        shutil.copytree(source, temporaire, ignore=_ignorer_racine(source))
+        if est_portable():                            # portable : seulement les fichiers du programme
+            temporaire.mkdir(parents=True)
+            for nom in PROGRAMME_PORTABLE:
+                el = source / nom
+                if el.is_dir():
+                    shutil.copytree(el, temporaire / nom)   # tout _internal, profils fournis compris
+                elif el.is_file():
+                    shutil.copy2(el, temporaire / nom)
+        else:
+            shutil.copytree(source, temporaire, ignore=_ignorer_racine(source))
     except OSError as exc:
         shutil.rmtree(temporaire, ignore_errors=True)
         raise NatifError(f"sauvegarde de l'installation impossible ({exc})") from exc
@@ -310,6 +394,11 @@ def _job(action: str, backup: Path, expected: str, timeout: int) -> dict:
         "started": time.time(),
         "timeout": int(timeout),
         "restart_args": [],
+        # jamais supprimés ni remplacés à la racine du dossier du programme (données du portable)
+        "proteger": sorted(PROTEGES_RACINE),
+        # portable : seuls éléments du dossier que le helper peut supprimer ou remplacer ; vide = tout le dossier
+        # du programme (version installée, où les données sont ailleurs)
+        "elements": list(PROGRAMME_PORTABLE) if est_portable() else [],
     }
 
 
@@ -319,6 +408,15 @@ def construire_job_installation(dispo: dict, installeur: Path, backup: Path) -> 
         "installer": str(Path(installeur)),
         "installer_log": str(NATIF_DIR / f"installateur-{dispo['version']}.log"),
     })
+    return job
+
+
+def construire_job_portable(dispo: dict, nouveau: Path, backup: Path) -> dict:
+    """Portable : le helper remplace les fichiers du programme par ceux de ``nouveau``."""
+    job = _job("portable", backup, str(dispo["version"]), 180)
+    nouveaux = [e.name for e in Path(nouveau).iterdir() if e.name.lower() not in {p.lower() for p in PROTEGES_RACINE}]
+    job.update({"source_dir": str(Path(nouveau)), "installer": "", "installer_log": "",
+                "elements": sorted(set(PROGRAMME_PORTABLE) | set(nouveaux))})
     return job
 
 
@@ -379,7 +477,7 @@ def job_en_cours() -> dict | None:
 def marquer_demarrage_ok() -> bool:
     """Appelé quand le serveur est prêt : le helper considère l'installation réussie."""
     job = job_en_cours()
-    if not isinstance(job, dict) or job.get("action") not in ("install", "restore"):
+    if not isinstance(job, dict) or job.get("action") not in ("install", "restore", "portable"):
         return False
     if str(job.get("expected_version") or "") != version_mod.current():
         return False

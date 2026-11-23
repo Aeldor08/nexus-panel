@@ -367,10 +367,12 @@ def main() -> int:
             "1. Décompresse le ZIP où tu veux (dossier perso, clé USB…), sur un support inscriptible.\n"
             "2. Lance **NEXUS.exe** (ou « Lancer NEXUS.bat »).\n"
             "3. Au premier lancement, la fenêtre de configuration s'ouvre.\n\n"
-            "Toutes les données restent dans le dossier du portable. Mise à jour manuelle : remplace `NEXUS.exe` et "
-            "`_internal\\` en gardant `config.json`, `data\\`, `logs\\`, `profils\\` et `actions\\`. "
-            f"Pour les mises à jour automatiques, prends plutôt l'installeur de [NEXUS {ver}]"
-            f"(https://github.com/{depot}/releases/tag/{tag}).\n\n"
+            "Toutes les données restent dans le dossier du portable.\n\n"
+            "**Déjà un portable 1.9.0 ou plus récent ?** Rien à télécharger : il se met à jour **tout seul** (pastille "
+            "de version → Installer), en remplaçant seulement `NEXUS.exe` et `_internal\\` ; tes données ne sont "
+            "jamais touchées et l'ancienne version revient toute seule en cas de problème. Plus ancien, ou dossier en "
+            "lecture seule : remplace `NEXUS.exe` et `_internal\\` à la main en gardant `config.json`, `data\\`, "
+            "`logs\\`, `profils\\` et `actions\\`.\n\n"
             f"SHA256 : `{portable_sha.read_text(encoding='utf-8').split()[0]}`\n", encoding="utf-8")
         _cmd(gh, "release", "create", ptag, str(portable), str(portable_sha), "--repo", depot,
              "--target", _cmd(git, "rev-list", "-n", "1", tag).strip(),   # un commit : GitHub refuse un tag annoté

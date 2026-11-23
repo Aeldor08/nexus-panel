@@ -75,14 +75,15 @@
           <div class="ver-line"><b>Version ${esc(d.version)} disponible</b>
             <small>${dateFr(d.date)}${d.taille ? " · " + fmtBytes(d.taille) : ""}</small></div>
           <div class="maj-notes">${notesHtml(d.notes)}</div>
-          ${maj.portable ? `<p class="t-warn">Version portable : la mise à jour automatique par installeur est désactivée.
-            Télécharge l'installeur depuis la page Releases.</p>` : `<div class="form-row maj-actions">
+          ${maj.portable && d.mode !== "portable" ? `<p class="t-warn">Version portable : la mise à jour automatique n'est pas
+            possible pour le moment (archive portable de cette version pas encore publiée, ou dossier du portable en lecture
+            seule). Réessaie plus tard, ou remplace <code>NEXUS.exe</code> et <code>_internal</code> à la main.</p>` : `<div class="form-row maj-actions">
             <input class="in" type="password" id="maj-mdp" autocomplete="current-password" placeholder="Mot de passe du panel" aria-label="Mot de passe du panel">
             <button class="btn on" data-maj="installer">⬇ Installer la version ${esc(d.version)}</button>
             <button class="btn" data-maj="plus-tard">Plus tard</button>
           </div>
           <small class="muted">Rien ne s'installe sans ton mot de passe et ta validation, à chaque mise à jour. Avant d'installer :
-            vérification du fichier (SHA256${maj.natif ? " et signature Windows" : ""}), sauvegarde de l'installation
+            vérification du fichier (SHA256${maj.natif && !maj.portable ? " et signature Windows" : ""}), sauvegarde de l'installation
             actuelle ; en cas de problème au redémarrage, la version actuelle est restaurée automatiquement.</small>`}
         </section>` : ""}`;
   }
@@ -156,7 +157,7 @@
         zone.innerHTML = `<div class="maj-valider" role="alertdialog" aria-label="Valider la mise à jour">
             <b>Valider la mise à jour vers la version ${esc(d.version)} ?</b>
             <ul><li>De la version ${esc(maj.version)} vers ${esc(d.version)}${d.taille ? ` · ${fmtBytes(d.taille)} à télécharger` : ""}</li>
-              <li>${maj.natif ? "Installeur vérifié (SHA256 et signature Windows)" : "Archive vérifiée (SHA256)"} puis sauvegarde de l'installation actuelle</li>
+              <li>${maj.portable ? "Archive portable vérifiée (SHA256 et contenu)" : maj.natif ? "Installeur vérifié (SHA256 et signature Windows)" : "Archive vérifiée (SHA256)"} puis sauvegarde de ${maj.portable ? "NEXUS.exe et _internal (tes données restent à leur place)" : "l'installation actuelle"}</li>
               <li>NEXUS redémarre (${maj.natif ? "environ 1 min" : "environ 30 s"}) ; en cas de problème, l'ancienne version revient toute seule</li></ul>
             <div class="form-row"><button class="btn on" data-maj="valider">✔ Valider la mise à jour</button>
               <button class="btn" data-maj="annuler">Annuler</button></div></div>`;
@@ -268,11 +269,12 @@
       </div>`;
     document.body.appendChild(ov);
     const natif = !!(maj && maj.natif);
-    const ETAPES = { telechargement: natif ? "Téléchargement de l'installeur…" : "Téléchargement de l'archive…",
+    const portable = !!(maj && maj.portable);
+    const ETAPES = { telechargement: portable ? "Téléchargement de la version portable…" : natif ? "Téléchargement de l'installeur…" : "Téléchargement de l'archive…",
       verification: "Vérification de l'empreinte SHA256…",
       signature: "Vérification de la signature Windows…",
-      sauvegarde: natif ? "Sauvegarde de l'installation actuelle…" : "Sauvegarde du code, de tes données et de ta configuration…",
-      redemarrage: natif ? "Installation et redémarrage…" : "Redémarrage du panel…" };
+      sauvegarde: portable ? "Sauvegarde de NEXUS.exe et _internal…" : natif ? "Sauvegarde de l'installation actuelle…" : "Sauvegarde du code, de tes données et de ta configuration…",
+      redemarrage: portable ? "Remplacement des fichiers et redémarrage…" : natif ? "Installation et redémarrage…" : "Redémarrage du panel…" };
     let vuArret = false, t0 = Date.now();
     const fill = p => { $("nx-maj-fill").style.width = Math.max(4, Math.min(100, p)) + "%"; };
     const tour = async () => {

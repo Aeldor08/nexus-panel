@@ -22,7 +22,7 @@ Tout se télécharge sur la page du dépôt GitHub → **Releases** (colonne de 
 | Fichier | `NEXUS-x.y.z-Setup.exe` (dernière release) | `NEXUS-Portable-x.y.z.zip` (release « version portable ») | `NEXUS-x.y.z.zip` (dernière release) |
 | Installation | double-clic, 1 minute | dézipper, c'est tout | `installer.bat`, environ 10 minutes |
 | Fenêtre | fenêtre NEXUS à part | fenêtre NEXUS à part | dans ton navigateur |
-| Mises à jour | **automatiques** | à la main | automatiques |
+| Mises à jour | **automatiques** | **automatiques** (dossier modifiable) | automatiques |
 | Tes données | `%LOCALAPPDATA%\NEXUS` | dans le dossier du portable (clé USB possible) | dans le dossier de NEXUS |
 | Pour qui | tout le monde | une clé USB, un PC où on n'installe rien | modifier NEXUS, développeurs |
 
@@ -73,9 +73,18 @@ Ensuite :
 Tout reste dans ce dossier : configuration, `data\`, journaux, profils. Pour l'emporter ailleurs, déplace le
 dossier entier. Il n'y a ni raccourci ni démarrage automatique (crée un raccourci vers `NEXUS.exe` si tu veux).
 
-**Mettre à jour le portable** (à la main) : ferme NEXUS, télécharge le nouveau ZIP, puis remplace seulement
-`NEXUS.exe` et le dossier `_internal\`. Garde `config.json`, `deck.json`, `jeux.json`, `data\`, `logs\`,
-`profils\` et `actions\`.
+**Mettre à jour le portable** : comme l'application Windows, il se met à jour **tout seul** (depuis la
+version 1.9.0). Une nouvelle version allume la pastille de version ; **Installer**, mot de passe du panel, puis
+**Valider**. NEXUS télécharge `NEXUS-Portable-x.y.z.zip` (pré-release « version portable »), vérifie son
+empreinte SHA256 et son contenu, sauvegarde `NEXUS.exe` et `_internal\` dans `majollback\`, se ferme,
+remplace seulement les fichiers du programme et se relance. Tes données (`config.json`, `deck.json`, `jeux.json`,
+`data\`, `logs\`, `profils\`, `actions\`) ne sont jamais touchées. Si la nouvelle version ne démarre pas,
+l'ancienne revient toute seule ; **↶ Revenir à la version précédente** marche aussi.
+
+Il faut que le dossier du portable soit modifiable (pas une clé verrouillée ni `C:\Program Files`) ; sinon
+NEXUS le dit et la mise à jour se fait à la main : ferme NEXUS, télécharge le nouveau ZIP, puis remplace
+seulement `NEXUS.exe` et le dossier `_internal\`. C'est aussi le cas une seule fois pour passer d'un portable
+antérieur à 1.9.0 à la 1.9.0.
 
 ---
 

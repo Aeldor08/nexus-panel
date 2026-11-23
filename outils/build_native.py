@@ -135,7 +135,13 @@ def write_portable(ver: str) -> Path:
 4. Tes données restent dans ce dossier : config.json, data\\, logs\\, profils\\, actions\\.
    Aucune installation, aucun raccourci et aucune entrée de démarrage automatique ne sont créés.
 
-Mise à jour manuelle :
+Mise à jour automatique (depuis la version 1.9.0) :
+- quand une nouvelle version existe, NEXUS propose de l'installer (pastille de version) ; il télécharge la
+  nouvelle archive portable, la vérifie (SHA256), sauvegarde NEXUS.exe et _internal\\ dans maj\\rollback\\,
+  remplace seulement ces fichiers du programme et se relance ; tes données ne sont jamais touchées ;
+- il faut que ce dossier soit modifiable (pas une clé verrouillée ni C:\\Program Files).
+
+Mise à jour manuelle (dossier en lecture seule, ou portable antérieur à 1.9.0) :
 - ferme NEXUS ;
 - décompresse la nouvelle version dans un autre dossier, puis recopie NEXUS.exe et _internal\\
   par-dessus l'ancienne, sans supprimer config.json, data\\, logs\\, profils\\ ni actions\\ ;
@@ -143,7 +149,6 @@ Mise à jour manuelle :
 
 À savoir :
 - Microsoft Edge WebView2 est nécessaire (présent sur Windows 11 et la plupart des Windows 10).
-- La mise à jour automatique par installeur est désactivée en mode portable.
 - NEXUS n'est pas signé pour l'instant : Windows SmartScreen peut afficher un avertissement.
 - Pour supprimer NEXUS, ferme-le et supprime simplement ce dossier.
 """
