@@ -15,6 +15,9 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 - **Demi-écran** : onglet PC en cases 2 par 2, en-tête compact, onglets sur une ligne
 
 ### Corrigé
+- Philibert : le bouton **« Le faire revenir »** (Philibert en pension chez la voisine) répond de nouveau : le calque
+  invisible des crottes, posé sur toute la scène de l'île, captait le clic à sa place (seules les crottes le captent
+  maintenant)
 - Application Windows et portable : LibreHardwareMonitor (dossier `LibreHardwareMonitor` à côté de `NEXUS.exe`) est maintenant démarré au lancement, comme en version source ; avant, la version exe ne profitait que d'un LibreHardwareMonitor déjà lancé ailleurs
 - Fenêtre native : activer ou couper l'accès téléphone ne ferme plus NEXUS ; le pare-feu Windows (NEXUS.exe ≠ Python) est détecté et une règle par port est proposée
 

@@ -143,6 +143,10 @@
   container-type: inline-size; contain: layout paint; }
 .phb-decor, .phb-crottes, .phb-effets { position: absolute; inset: 0; }
 .phb-effets { pointer-events: none; z-index: 4; overflow: hidden; }
+/* le calque des crottes couvre toute la scène : seules les crottes captent le clic (sinon il cache le bouton
+   « Le faire revenir » de la pancarte et tout ce qui est cliquable dans le décor) */
+.phb-crottes { pointer-events: none; }
+.phb-crottes .phb-crotte { pointer-events: auto; }
 .phb-l { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .phb-decor svg.phb-l { overflow: hidden; }
 .phb-nuit { background: #061230; pointer-events: none; transition: opacity 1s; }
