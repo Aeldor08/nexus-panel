@@ -40,12 +40,11 @@ import store
 
 FORMAT = 2
 REPEATS = ("none", "daily", "weekly", "monthly", "yearly")
-REPEAT_LABELS = {"none": "Une fois", "daily": "Tous les jours", "weekly": "Toutes les semaines",
-                 "monthly": "Tous les mois", "yearly": "Tous les ans"}
+REPEAT_LABELS = {"none": "Une fois", "daily": "Tous les jours", "weekly": "Toutes les semaines", "monthly": "Tous les mois", "yearly": "Tous les ans"}
 SCOPES = ("one", "following", "all")
 MAX_EVENTS = 3000
-MAX_REMINDER_MIN = 28 * 24 * 60           # 4 semaines
-MAX_DURATION_MIN = 14 * 24 * 60           # 2 semaines
+MAX_REMINDER_MIN = 28 * 24 * 60  # 4 semaines
+MAX_DURATION_MIN = 14 * 24 * 60  # 2 semaines
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 BACKUP_DIR = store.DATA_DIR / "backups"
@@ -135,14 +134,23 @@ def occurrences(db: dict, start: dt.date, end: dt.date) -> list[dict]:
             if not (start <= day <= end):
                 continue
             o = {
-                "id": f"{e['id']}@{ks}", "event_id": e["id"], "original_date": ks, "date": day.isoformat(),
+                "id": f"{e['id']}@{ks}",
+                "event_id": e["id"],
+                "original_date": ks,
+                "date": day.isoformat(),
                 "time": x.get("time", e.get("time")) if not e.get("birthday") else None,
                 "duration": x.get("duration", e.get("duration")),
-                "title": x.get("title", e["title"]), "description": x.get("description", e.get("description", "")),
+                "title": x.get("title", e["title"]),
+                "description": x.get("description", e.get("description", "")),
                 "reminders": x.get("reminders", e.get("reminders")),
-                "birthday": bool(e.get("birthday")), "age": _age(e, day), "birth_year": e.get("birth_year"),
-                "repeat": e.get("repeat") or "none", "until": e.get("until"), "series_start": e["date"],
-                "exception": bool(x), "updated": max(e.get("updated") or 0, x.get("updated") or 0),
+                "birthday": bool(e.get("birthday")),
+                "age": _age(e, day),
+                "birth_year": e.get("birth_year"),
+                "repeat": e.get("repeat") or "none",
+                "until": e.get("until"),
+                "series_start": e["date"],
+                "exception": bool(x),
+                "updated": max(e.get("updated") or 0, x.get("updated") or 0),
             }
             out.append(o)
     out.sort(key=lambda o: (o["date"], 0 if o["time"] is None else 1, o["time"] or "", o["title"].lower()))
@@ -173,7 +181,9 @@ def migrate(raw) -> tuple[dict, bool]:
     """Format 1 -> 2, sans rien perdre. Renvoie (données, migré ?)."""
     raw = raw if isinstance(raw, dict) else {}
     if raw.get("format") == FORMAT:
-        raw.setdefault("events", []); raw.setdefault("todos", []); raw.setdefault("notes", [])
+        raw.setdefault("events", [])
+        raw.setdefault("todos", [])
+        raw.setdefault("notes", [])
         return raw, False
     now = time.time()
     events = []
@@ -186,15 +196,20 @@ def migrate(raw) -> tuple[dict, bool]:
             "id": str(e.get("id") or secrets.token_hex(6)),
             "title": str(e.get("title") or "Sans titre")[:120],
             "date": e["date"],
-            "time": None if birthday else (e.get("time") or None),     # anniversaire = journée entière
-            "duration": None, "description": "",
+            "time": None if birthday else (e.get("time") or None),  # anniversaire = journée entière
+            "duration": None,
+            "description": "",
             "repeat": "yearly" if birthday else (e.get("repeat") if e.get("repeat") in REPEATS else "none"),
             "until": e.get("until") or None,
-            "birthday": birthday, "birth_year": e.get("birth_year") if birthday else None,
-            "reminders": None, "exceptions": exc, "created": now, "updated": now,
+            "birthday": birthday,
+            "birth_year": e.get("birth_year") if birthday else None,
+            "reminders": None,
+            "exceptions": exc,
+            "created": now,
+            "updated": now,
         }
         if birthday and e.get("time"):
-            ne["ancienne_heure"] = e["time"]          # gardée pour mémoire (format 1)
+            ne["ancienne_heure"] = e["time"]  # gardée pour mémoire (format 1)
         events.append(ne)
     n_old = sum(1 for e in raw.get("events") or [] if isinstance(e, dict) and e.get("date"))
     if len(events) != n_old:
@@ -210,8 +225,7 @@ def load() -> dict:
         if migrated and (raw.get("events") or raw.get("todos") or raw.get("notes")):
             path = _backup(raw, "avant-format2")
             store.save("agenda", db)
-            print(f"[Agenda] Données passées au format 2 ({len(db['events'])} évènement(s)) ; "
-                  f"sauvegarde de l'ancien fichier : data\\backups\\{path.name}")
+            print(f"[Agenda] Données passées au format 2 ({len(db['events'])} évènement(s)) ; sauvegarde de l'ancien fichier : data\\backups\\{path.name}")
         return db
 
 
@@ -387,14 +401,16 @@ def update(eid: str, fields: dict, occ: str | None = None, scope: str = "all") -
         if scope != "all" or "date" in fields:
             occ = _check_occ(e, occ) if (repeating and occ) else (occ or e["date"])
         if scope == "following" and occ == e["date"]:
-            scope = "all"                       # depuis la 1re occurrence : c'est toute la série
+            scope = "all"  # depuis la 1re occurrence : c'est toute la série
 
         if scope == "one":
             bad = [k for k in fields if k not in ONE_FIELDS]
             if bad:
-                raise AgendaError("Pour une seule occurrence, on peut changer le titre, la date, l'heure, la durée, "
-                                  "la description et les rappels. Pour la répétition, choisis « toute la série » "
-                                  "ou « cette occurrence et les suivantes ».")
+                raise AgendaError(
+                    "Pour une seule occurrence, on peut changer le titre, la date, l'heure, la durée, "
+                    "la description et les rappels. Pour la répétition, choisis « toute la série » "
+                    "ou « cette occurrence et les suivantes »."
+                )
             f = validate(fields, base={**e, "date": occ})
             x = dict((e.get("exceptions") or {}).get(occ) or {})
             x.pop("cancelled", None)
@@ -415,7 +431,7 @@ def update(eid: str, fields: dict, occ: str | None = None, scope: str = "all") -
         f = validate(fields, base=e)
         if scope == "all":
             if "date" in f and repeating and occ:
-                delta = (parse_date(f["date"]) - parse_date(occ)).days    # on décale toute la série
+                delta = (parse_date(f["date"]) - parse_date(occ)).days  # on décale toute la série
                 f["date"] = _shift(e["date"], delta)
                 if delta:
                     e["exceptions"] = {_shift(k, delta): v for k, v in (e.get("exceptions") or {}).items()}
@@ -437,8 +453,7 @@ def update(eid: str, fields: dict, occ: str | None = None, scope: str = "all") -
         delta = (parse_date(new_start) - parse_date(occ)).days
         new.update({k: v for k, v in f.items() if k != "date"})
         new["date"] = new_start
-        new["exceptions"] = {_shift(k, delta): v for k, v in (e.get("exceptions") or {}).items()
-                             if k >= occ and v.get("cancelled")}
+        new["exceptions"] = {_shift(k, delta): v for k, v in (e.get("exceptions") or {}).items() if k >= occ and v.get("cancelled")}
         if "until" not in f:
             new["until"] = _shift(e["until"], delta) if e.get("until") else None
         if new.get("until") and new["until"] < new["date"]:

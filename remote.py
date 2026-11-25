@@ -24,9 +24,9 @@ import store
 
 COOKIE = "nexus_token"
 COOKIE_MAX_AGE = 365 * 24 * 3600
-PAIR_TTL = 120          # s de validité d'un code d'appairage
+PAIR_TTL = 120  # s de validité d'un code d'appairage
 PAIR_MAX_TRIES = 5
-CLAIM_RATE = 10         # essais d'appairage max par minute et par adresse IP
+CLAIM_RATE = 10  # essais d'appairage max par minute et par adresse IP
 
 
 def _hash(token: str) -> str:
@@ -52,10 +52,34 @@ def is_private(ip: str | None) -> bool:
 
 def device_label(user_agent: str) -> str:
     ua = user_agent or ""
-    os_ = ("iPhone" if "iPhone" in ua else "iPad" if "iPad" in ua else "Android" if "Android" in ua
-           else "Windows" if "Windows" in ua else "Mac" if "Mac OS" in ua else "Appareil")
-    br = ("Opera" if "OPR/" in ua else "Edge" if "Edg/" in ua else "Samsung Internet" if "SamsungBrowser" in ua
-          else "Chrome" if "Chrome/" in ua else "Firefox" if "Firefox/" in ua else "Safari" if "Safari/" in ua else "")
+    os_ = (
+        "iPhone"
+        if "iPhone" in ua
+        else "iPad"
+        if "iPad" in ua
+        else "Android"
+        if "Android" in ua
+        else "Windows"
+        if "Windows" in ua
+        else "Mac"
+        if "Mac OS" in ua
+        else "Appareil"
+    )
+    br = (
+        "Opera"
+        if "OPR/" in ua
+        else "Edge"
+        if "Edg/" in ua
+        else "Samsung Internet"
+        if "SamsungBrowser" in ua
+        else "Chrome"
+        if "Chrome/" in ua
+        else "Firefox"
+        if "Firefox/" in ua
+        else "Safari"
+        if "Safari/" in ua
+        else ""
+    )
     return f"{os_} · {br}" if br else os_
 
 
@@ -65,8 +89,8 @@ class Remote:
         cfg = store.load("remote") or {}
         self.enabled = bool(cfg.get("enabled", False))
         self.devices: list[dict] = list(cfg.get("devices", []))
-        self.active = False           # le serveur écoute-t-il vraiment sur le réseau ? (fixé au démarrage)
-        self._pairing = None          # {"secret", "code", "expires", "tries"}
+        self.active = False  # le serveur écoute-t-il vraiment sur le réseau ? (fixé au démarrage)
+        self._pairing = None  # {"secret", "code", "expires", "tries"}
         self._claims: dict[str, list[float]] = {}
         self._dirty_seen = 0.0
 
@@ -83,8 +107,7 @@ class Remote:
 
     def start_pairing(self) -> dict:
         with self._lock:
-            self._pairing = {"secret": secrets.token_urlsafe(24), "code": f"{secrets.randbelow(10**6):06d}",
-                             "expires": time.time() + PAIR_TTL, "tries": 0}
+            self._pairing = {"secret": secrets.token_urlsafe(24), "code": f"{secrets.randbelow(10**6):06d}", "expires": time.time() + PAIR_TTL, "tries": 0}
             return dict(self._pairing)
 
     def pairing(self) -> dict | None:
@@ -130,19 +153,24 @@ class Remote:
                 self._pairing = None
                 return None
             p["tries"] += 1
-            ok = (secret and hmac.compare_digest(secret, p["secret"])) or \
-                 (code and hmac.compare_digest(code.strip(), p["code"]))
+            ok = (secret and hmac.compare_digest(secret, p["secret"])) or (code and hmac.compare_digest(code.strip(), p["code"]))
             if not ok:
                 if p["tries"] >= PAIR_MAX_TRIES:
                     self._pairing = None
                 return None
-            self._pairing = None                     # usage unique
+            self._pairing = None  # usage unique
             token = secrets.token_urlsafe(32)
-            self.devices.append({
-                "id": secrets.token_hex(6), "name": (name or device_label(user_agent))[:40],
-                "token_hash": _hash(token), "created": now, "last_seen": now, "last_ip": ip,
-                "agent": device_label(user_agent),
-            })
+            self.devices.append(
+                {
+                    "id": secrets.token_hex(6),
+                    "name": (name or device_label(user_agent))[:40],
+                    "token_hash": _hash(token),
+                    "created": now,
+                    "last_seen": now,
+                    "last_ip": ip,
+                    "agent": device_label(user_agent),
+                }
+            )
             self._save()
             return token
 
@@ -156,7 +184,7 @@ class Remote:
                 if hmac.compare_digest(d["token_hash"], h):
                     now = time.time()
                     d["last_seen"], d["last_ip"] = now, ip
-                    if now - self._dirty_seen > 300:     # on n'écrit « vu à » que toutes les 5 min
+                    if now - self._dirty_seen > 300:  # on n'écrit « vu à » que toutes les 5 min
                         self._dirty_seen = now
                         self._save()
                     return d
@@ -165,6 +193,8 @@ class Remote:
     def state(self) -> dict:
         with self._lock:
             return {
-                "enabled": self.enabled, "active": self.active, "restart_needed": self.enabled != self.active,
+                "enabled": self.enabled,
+                "active": self.active,
+                "restart_needed": self.enabled != self.active,
                 "devices": [{k: v for k, v in d.items() if k != "token_hash"} for d in self.devices],
             }

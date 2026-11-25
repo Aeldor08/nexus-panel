@@ -29,10 +29,36 @@ BASE = paths.APP_DIR
 MAJ_DIR = paths.MAJ_DIR
 EN_COURS = MAJ_DIR / "en_cours.json"
 RESULTAT = MAJ_DIR / "resultat.json"
-PROTEGES = {"data", "config.json", "deck.json", "jeux.json", "fan_names.json", "runtime.json", ".env",
-            ".venv", ".venv-build", "venv", "runtime", "runtime.neuf", "runtime.tmp", "logs",
-            "versions", "partage", "maj", "sauvegardes-maj", "LibreHardwareMonitor", "actions", ".git",
-            "dist", ".ruff_cache", ".pytest_cache", "sauvegardes", "backups", "reference", "references"}
+PROTEGES = {
+    "data",
+    "config.json",
+    "deck.json",
+    "jeux.json",
+    "fan_names.json",
+    "runtime.json",
+    ".env",
+    ".venv",
+    ".venv-build",
+    "venv",
+    "runtime",
+    "runtime.neuf",
+    "runtime.tmp",
+    "logs",
+    "versions",
+    "partage",
+    "maj",
+    "sauvegardes-maj",
+    "LibreHardwareMonitor",
+    "actions",
+    ".git",
+    "dist",
+    ".ruff_cache",
+    ".pytest_cache",
+    "sauvegardes",
+    "backups",
+    "reference",
+    "references",
+}
 TEST_TIMEOUT = 150
 
 
@@ -100,18 +126,17 @@ def restaurer(sauvegarde: Path, code_seulement: bool) -> None:
 
 
 def _pip_si_besoin(sauvegarde: Path) -> None:
-    if paths.FROZEN:                                  # dépendances embarquées dans l'exécutable
+    if paths.FROZEN:  # dépendances embarquées dans l'exécutable
         return
     ancien, nouveau = sauvegarde / "code" / "requirements.txt", BASE / "requirements.txt"
     if nouveau.exists() and (not ancien.exists() or not filecmp.cmp(ancien, nouveau, shallow=False)):
         _dire("nouvelles dépendances : installation (Internet nécessaire)…")
-        subprocess.run([sys.executable, "-m", "pip", "install", "--disable-pip-version-check", "-q", "-r", str(nouveau)],
-                       cwd=BASE, timeout=900, check=True)
-        try:                                      # Python privé (runtime\) : marque à côté de l'interpréteur
+        subprocess.run([sys.executable, "-m", "pip", "install", "--disable-pip-version-check", "-q", "-r", str(nouveau)], cwd=BASE, timeout=900, check=True)
+        try:  # Python privé (runtime\) : marque à côté de l'interpréteur
             shutil.copyfile(nouveau, Path(sys.prefix) / "requirements.installe")
         except OSError:
             pass
-        try:                                      # mode source avec .venv : évite une réinstallation inutile
+        try:  # mode source avec .venv : évite une réinstallation inutile
             marque = BASE / ".venv" / ".requirements.sha256"
             if marque.parent.is_dir():
                 marque.write_text(hashlib.sha256(nouveau.read_bytes()).hexdigest(), encoding="utf-8")
@@ -121,12 +146,18 @@ def _pip_si_besoin(sauvegarde: Path) -> None:
 
 def tester_demarrage(attendue: str) -> tuple[bool, str]:
     """Démarre la version installée dans un processus séparé et vérifie qu'elle répond la bonne version."""
-    cmd = ([sys.executable, "--test-demarrage", attendue] if paths.FROZEN
-           else [sys.executable, str(BASE / "app.py"), "--test-demarrage", attendue])
+    cmd = [sys.executable, "--test-demarrage", attendue] if paths.FROZEN else [sys.executable, str(BASE / "app.py"), "--test-demarrage", attendue]
     try:
-        p = subprocess.run(cmd, cwd=BASE,
-                           capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=TEST_TIMEOUT,
-                           env={**os.environ, "NEXUS_OPEN_BROWSER": "0", "NEXUS_NO_BOT": "1"})
+        p = subprocess.run(
+            cmd,
+            cwd=BASE,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=TEST_TIMEOUT,
+            env={**os.environ, "NEXUS_OPEN_BROWSER": "0", "NEXUS_NO_BOT": "1"},
+        )
     except subprocess.TimeoutExpired:
         return False, "le test de démarrage n'a pas répondu à temps"
     if p.returncode == 0:
@@ -147,8 +178,17 @@ def main() -> int:
         if etat == "a_restaurer":
             _dire(f"retour à la version {vers}…")
             restaurer(sauv, code_seulement=bool(travail.get("code_seulement", True)))
-            _ecrire(RESULTAT, {"ok": True, "type": "retour", "de": de, "vers": vers, "date": time.time(),
-                               "message": f"Retour à la version {vers} effectué (tes données sont conservées)."})
+            _ecrire(
+                RESULTAT,
+                {
+                    "ok": True,
+                    "type": "retour",
+                    "de": de,
+                    "vers": vers,
+                    "date": time.time(),
+                    "message": f"Retour à la version {vers} effectué (tes données sont conservées).",
+                },
+            )
             EN_COURS.unlink(missing_ok=True)
             return 0
         if etat == "a_appliquer":
@@ -167,8 +207,10 @@ def main() -> int:
             ok, err = tester_demarrage(vers)
             if not ok:
                 raise RuntimeError(f"test de démarrage échoué : {err}")
-            _ecrire(RESULTAT, {"ok": True, "type": "installation", "de": de, "vers": vers, "date": time.time(),
-                               "message": f"Mise à jour vers la version {vers} réussie."})
+            _ecrire(
+                RESULTAT,
+                {"ok": True, "type": "installation", "de": de, "vers": vers, "date": time.time(), "message": f"Mise à jour vers la version {vers} réussie."},
+            )
             EN_COURS.unlink(missing_ok=True)
             shutil.rmtree(MAJ_DIR / str(vers), ignore_errors=True)
             _dire(f"version {vers} installée et testée ✔")
@@ -187,7 +229,7 @@ def main() -> int:
         _ecrire(RESULTAT, {"ok": False, "type": "installation", "de": de, "vers": vers, "date": time.time(), "message": msg})
         EN_COURS.unlink(missing_ok=True)
         if vers:
-            shutil.rmtree(MAJ_DIR / str(vers), ignore_errors=True)   # archive téléchargée : inutile désormais
+            shutil.rmtree(MAJ_DIR / str(vers), ignore_errors=True)  # archive téléchargée : inutile désormais
         _dire(msg)
     return 0
 

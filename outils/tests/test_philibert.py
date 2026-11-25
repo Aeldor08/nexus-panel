@@ -5,6 +5,7 @@ Couvre : saisons, course au rocher chaud, album et étapes, éclosion et temps q
 carte postale, coût jamais bloquant), aucune mort même après des semaines, pension et vacances, évolution et
 variantes, boutique et garde-robe, mini-jeux et anti-triche, réglages, recommencer, sauvegarde, routes de l'API.
 Usage : python outils/tests/test_philibert.py [dossier de NEXUS]"""
+
 import os
 import sys
 import tempfile
@@ -29,10 +30,10 @@ def ok(c, m):
 
 
 H, J = 3600, 86400
-horloge = [datetime(2026, 6, 1, 10, 0).timestamp()]          # un lundi, 10 h (heure locale)
+horloge = [datetime(2026, 6, 1, 10, 0).timestamp()]  # un lundi, 10 h (heure locale)
 P.maintenant = lambda: horloge[0]
-P.SAISON_FORCEE = "printemps"                                # saison neutre (chaleur +0) sauf dans les tests des saisons
-P.SAISON_ILE_FORCEE = "aucune"                               # pas de saison spéciale de l'île sauf dans leurs tests
+P.SAISON_FORCEE = "printemps"  # saison neutre (chaleur +0) sauf dans les tests des saisons
+P.SAISON_ILE_FORCEE = "aucune"  # pas de saison spéciale de l'île sauf dans leurs tests
 notes, discord = [], []
 
 
@@ -155,7 +156,7 @@ e = p.etat()
 ok(e["jauges"]["chaleur"] < 35 and any(b["id"] == "froid" for b in e["besoins"]), f"nuit sans lampe : il a froid ({e['jauges']['chaleur']})")
 f2 = p.s["j"]["faim"]
 r = p.action("nourrir", {"aliment": "trefle"})
-ok("froid" in r["message"] and p.s["j"]["faim"] - f2 <= 15 * .6 + .1, "froid : peu d'appétit (repas à 60 %)")
+ok("froid" in r["message"] and p.s["j"]["faim"] - f2 <= 15 * 0.6 + 0.1, "froid : peu d'appétit (repas à 60 %)")
 ok(erreur(p.action, "lampe", {"on": True}) is not None, "pas de lampe sans l'acheter")
 p.s["coquillages"] = 100
 p.action("acheter", {"article": "lampe"})
@@ -174,10 +175,14 @@ ok(erreur(p.action, "nourrir", {"aliment": "grillon"}) is not None, "un grillon 
 p.s["evenement"] = {"id": "croquettes", "t": horloge[0]}
 f3, c3 = p.s["j"]["faim"], p.s["coquillages"]
 r = p.action("nourrir", {"aliment": "croquettes"})
-ok(r["reaction"] == "refus" and p.s["j"]["faim"] == f3 and "herbivore" in r["message"] + r["astuce"] or "chats" in r["astuce"],
-   "piège : il refuse les croquettes (mimique + astuce)")
-ok(p.s["stats"]["refus"] == 1 and "refus" in p.s["succes"] and "refus" in p.s["faits"] and p.s["coquillages"] == c3 + 2 + P.SUCCES["refus"][2],
-   "refus : succès, fiche débloquée, +2 coquillages pour la leçon")
+ok(
+    r["reaction"] == "refus" and p.s["j"]["faim"] == f3 and "herbivore" in r["message"] + r["astuce"] or "chats" in r["astuce"],
+    "piège : il refuse les croquettes (mimique + astuce)",
+)
+ok(
+    p.s["stats"]["refus"] == 1 and "refus" in p.s["succes"] and "refus" in p.s["faits"] and p.s["coquillages"] == c3 + 2 + P.SUCCES["refus"][2],
+    "refus : succès, fiche débloquée, +2 coquillages pour la leçon",
+)
 p.s["evenement"] = {"id": "poisson", "t": horloge[0]}
 r = p.action("evenement", {"choix": "jeter"})
 ok(p.s["evenement"] is None and "coquillages" in r["message"], "évènement : rendre le poisson à la mer")
@@ -257,7 +262,7 @@ p.s["causes"] = {"froid": 8, "faim": 5}
 p.s["coquillages"] = 5
 horloge[0] += 15 * 60
 p.etat()
-for _ in range(25):                                    # malade, et on le laisse ainsi (mais on passe le voir)
+for _ in range(25):  # malade, et on le laisse ainsi (mais on passe le voir)
     horloge[0] += H
     p.s["contact"] = horloge[0]
     p.s["j"]["chaleur"] = 30
@@ -276,13 +281,15 @@ horloge[0] += 8 * H
 p.etat()
 ok(p.s["j"] == gel and p.s["age_s"] == age, "pendant le séjour : jauges et âge figés")
 horloge[0] = v["retour"] + 60
-p.s["contact"] = v["retour"]                          # (quelqu'un est passé entre-temps)
+p.s["contact"] = v["retour"]  # (quelqu'un est passé entre-temps)
 e = p.etat()
 ok(e["veto"] is None and e["vacances"] is None and e["position"] in ("plage", "palmier"), "retour sur l'île")
 ok(all(e["jauges"][g] >= 60 for g in P.JAUGES) and not e["malade"], f"jauges remises à un bon niveau ({e['jauges']})")
 c = e["carte"]
-ok(c and "froid" in c["texte"] and c["conseil"] and c["cout"] == 5 and p.s["coquillages"] == 0 + (P.SUCCES['comme_neuf'][2]),
-   "carte postale : ce qui a manqué + conseil ; coût plafonné à ce qu'on a")
+ok(
+    c and "froid" in c["texte"] and c["conseil"] and c["cout"] == 5 and p.s["coquillages"] == 0 + (P.SUCCES["comme_neuf"][2]),
+    "carte postale : ce qui a manqué + conseil ; coût plafonné à ce qu'on a",
+)
 ok(p.s["stats"]["sejours_veto"] == 1 and "comme_neuf" in p.s["succes"], "séjour compté (succès « Comme neuf »)")
 p.action("carte_lue")
 ok(p.etat()["carte"] is None, "carte postale marquée lue")
@@ -303,8 +310,10 @@ for semaines in (1, 3, 8):
     horloge[0] += semaines * 7 * J
     e = p.etat()
     s = p.instantane()
-    ok(e["niveau"] in ("pension", "veto") and all(0 <= s["j"][g] <= 100 for g in P.JAUGES) and s["j"]["sante"] >= P.SANTE_MIN,
-       f"{semaines} semaine(s) d'absence : il va bien ({e['niveau']}, santé {e['jauges']['sante']})")
+    ok(
+        e["niveau"] in ("pension", "veto") and all(0 <= s["j"][g] <= 100 for g in P.JAUGES) and s["j"]["sante"] >= P.SANTE_MIN,
+        f"{semaines} semaine(s) d'absence : il va bien ({e['niveau']}, santé {e['jauges']['sante']})",
+    )
     ok(s["age_s"] <= 3.1 * J and s["stats"]["sejours_veto"] <= 1, f"  au plus un séjour chez le vétérinaire, âge figé en pension ({s['age_s'] / J:.1f} j)")
     ok(e["vacances"] is None or all(e["jauges"][g] >= 60 for g in P.JAUGES), "  la voisine s'en occupe bien : il t'attend en forme")
     ok("mort" not in str(s).lower() and "game over" not in str(s).lower(), "  aucune mort, aucun « game over »")
@@ -346,11 +355,13 @@ ok({"juvenile", "adulte", "semaine"} <= set(p.s["succes"]), "succès des étapes
 ok(e["poids_g"] > 500, f"il a grandi ({e['poids_g']} g)")
 ok(p.s["stats"]["mues"] >= 1, f"il a mué ({p.s['stats']['mues']} fois)")
 ok(e["niveau"] != "veto" and p.s["stats"]["sejours_veto"] == 0, "bien soigné : jamais chez le vétérinaire")
-for var, prep in (("convalescent", lambda s: s["stats"].update(sejours_veto=2)),
-                  ("gourmand", lambda s: s["stats"].update(repas=10, friandises=5)),
-                  ("nageur", lambda s: s["stats"].update(repas=10, bains_mer=9)),
-                  ("royal", lambda s: s.update(moy={"sante": 90, "bonheur": 80, "n": 1})),
-                  ("insulaire", lambda s: s.update(moy={"sante": 60, "bonheur": 60, "n": 1}))):
+for var, prep in (
+    ("convalescent", lambda s: s["stats"].update(sejours_veto=2)),
+    ("gourmand", lambda s: s["stats"].update(repas=10, friandises=5)),
+    ("nageur", lambda s: s["stats"].update(repas=10, bains_mer=9)),
+    ("royal", lambda s: s.update(moy={"sante": 90, "bonheur": 80, "n": 1})),
+    ("insulaire", lambda s: s.update(moy={"sante": 60, "bonheur": 60, "n": 1})),
+):
     p = nouveau()
     p.s["stats"].update(repas=10)
     p.s["moy"] = {"sante": 60, "bonheur": 60, "n": 1}
@@ -403,7 +414,10 @@ p.s["coquillages"] = 2000
 p.action("acheter", {"article": "cape"})
 p.action("porter", {"article": "cape"})
 p.etat()
-ok("cape" in p.s["accessoires"] and p.s["portes"]["cou"] == "cape" and "collection" in p.s["succes"], "cape royale achetée, portée, succès « Pièce de collection »")
+ok(
+    "cape" in p.s["accessoires"] and p.s["portes"]["cou"] == "cape" and "collection" in p.s["succes"],
+    "cape royale achetée, portée, succès « Pièce de collection »",
+)
 ok(erreur(p.action, "acheter", {"article": "cape"}) is not None, "une pièce unique ne s'achète qu'une fois")
 p.action("acheter", {"article": "benitier"})
 ok("benitier" in p.s["deco"], "le bénitier se pose sur l'île")
@@ -413,24 +427,31 @@ p.action("reglages", {"theme": "violet"})
 ok(p.s["reglages"]["theme"] == "sombre", "réglage de couleurs inconnu : ignoré")
 ok("raretes" in p.catalogue() and p.catalogue()["objets"]["diademe"]["rarete"] == "legendaire", "le catalogue donne la rareté")
 
+
 # ---- mini-jeux et anti-triche --------------------------------------------------------------
 def gain_attendu(jeu, sc, pal, arrive=False):
     g0 = P.recompense_jeu(jeu, sc, pal, arrive)[0]
-    return {g0, round(g0 * 1.25)}                                 # × 1,25 s'il est bien au chaud
+    return {g0, round(g0 * 1.25)}  # × 1,25 s'il est bien au chaud
 
 
 p = nouveau()
 a_heure(11)
 p.etat()
 g = p.jeu_debut("feuilles")
-ok(g["duree"] == 180 and g["jeton"] and g["regles"]["palier_s"] == 20 and g["compte"] == P.JEU_COMPTE, "Pluie de feuilles : partie ouverte par le serveur (3 min au plus, règles envoyées à la page)")
+ok(
+    g["duree"] == 180 and g["jeton"] and g["regles"]["palier_s"] == 20 and g["compte"] == P.JEU_COMPTE,
+    "Pluie de feuilles : partie ouverte par le serveur (3 min au plus, règles envoyées à la page)",
+)
 horloge[0] += 5
 ok(erreur(p.jeu_fin, g["jeton"], 3, 0) is not None and p.s["jeu"] is None, "partie trop courte : refusée, et la partie est close")
 p.s["j"]["energie"] = 100
 g = p.jeu_debut("feuilles")
 horloge[0] += 33
 c0 = p.s["coquillages"]
-ok(erreur(p.jeu_fin, g["jeton"], 9999, 2, None, 2) is not None and p.s["jeu"] is None and p.s["coquillages"] == c0, "score impossible pour 30 s de jeu : refusé, rien gagné, partie close")
+ok(
+    erreur(p.jeu_fin, g["jeton"], 9999, 2, None, 2) is not None and p.s["jeu"] is None and p.s["coquillages"] == c0,
+    "score impossible pour 30 s de jeu : refusé, rien gagné, partie close",
+)
 ok(erreur(p.jeu_fin, g["jeton"], 10, 0) is not None, "jeton à usage unique (même après un refus)")
 g = p.jeu_debut("feuilles")
 horloge[0] += 33
@@ -442,24 +463,39 @@ horloge[0] += 33
 c0 = p.s["coquillages"]
 r = p.jeu_fin(g["jeton"], 28, 2, None, 2)
 court = r["gain"]
-ok(r["palier"] == 2 and r["gain"] in gain_attendu("feuilles", 28, 2) and p.s["coquillages"] - c0 == r["gain"], f"partie de 30 s : palier 2, gain calculé par le serveur (+{r['gain']})")
+ok(
+    r["palier"] == 2 and r["gain"] in gain_attendu("feuilles", 28, 2) and p.s["coquillages"] - c0 == r["gain"],
+    f"partie de 30 s : palier 2, gain calculé par le serveur (+{r['gain']})",
+)
 p.s["j"]["energie"] = 100
 g = p.jeu_debut("feuilles")
 horloge[0] += 153
 r = p.jeu_fin(g["jeton"], 140, 6, None, 8)
-ok(r["palier"] == 8 and r["gain"] > court * 2 and "feuilles" in p.s["succes"], f"bonne partie de 2 min 30 : palier 8, bien plus de coquillages (+{r['gain']} contre +{court}) et succès « Attrape-feuilles »")
+ok(
+    r["palier"] == 8 and r["gain"] > court * 2 and "feuilles" in p.s["succes"],
+    f"bonne partie de 2 min 30 : palier 8, bien plus de coquillages (+{r['gain']} contre +{court}) et succès « Attrape-feuilles »",
+)
 ok(P.feuilles_objets_max(150) * 1.3 + 4 >= 200 > P.feuilles_objets_max(30) * 1.3 + 4, "un score de 200 est possible en 2 min 30, pas en 30 s")
 ok([P.feuilles_palier(t) for t in (0, 19, 20, 59, 100, 179)] == [1, 1, 2, 3, 6, 9], "Pluie de feuilles : un palier de plus toutes les 20 s (9 au plus)")
 vit = [P.feuilles_vitesse(P.feuilles_palier(t)) for t in range(0, 180, 20)]
 cad = [P.feuilles_cadence(P.feuilles_palier(t)) for t in range(0, 180, 20)]
-ok(all(a < b for a, b in zip(vit, vit[1:])) and all(a < b for a, b in zip(cad, cad[1:])) and vit[-1] > 2, f"la vitesse et le nombre de feuilles augmentent avec le temps (vitesse ×{vit[-1]:.2f} au palier 9)")
+ok(
+    all(a < b for a, b in zip(vit, vit[1:])) and all(a < b for a, b in zip(cad, cad[1:])) and vit[-1] > 2,
+    f"la vitesse et le nombre de feuilles augmentent avec le temps (vitesse ×{vit[-1]:.2f} au palier 9)",
+)
 R = P.FEUILLES
-ok(R["insectes"] + R["insectes_pas"] * (R["palier_max"] - 1) < .5 and R["fleurs"] + R["insectes"] + R["insectes_pas"] * 8 < .75, "même au dernier palier, il tombe plus de feuilles et de fleurs que d'insectes")
+ok(
+    R["insectes"] + R["insectes_pas"] * (R["palier_max"] - 1) < 0.5 and R["fleurs"] + R["insectes"] + R["insectes_pas"] * 8 < 0.75,
+    "même au dernier palier, il tombe plus de feuilles et de fleurs que d'insectes",
+)
 ok(R["vies"] == 5 and R["ratees_par_vie"] == 6, "fin naturelle : 5 vies (insecte mangé, ou 6 feuilles ratées = une vie)")
 # Gauche ou droite ? : partie courte (5 manches, 3 vies), aucun indice, côté tiré au moment du choix
 p.s["j"]["energie"] = 100
 g = p.jeu_debut("devin")
-ok(g["manches"] == 5 and g["vies"] == 3 and not any(k in g for k in ("indice", "indice_ms", "cote")), "Gauche ou droite ? : 5 manches, 3 vies, aucun indice envoyé à la page")
+ok(
+    g["manches"] == 5 and g["vies"] == 3 and not any(k in g for k in ("indice", "indice_ms", "cote")),
+    "Gauche ou droite ? : 5 manches, 3 vies, aucun indice envoyé à la page",
+)
 ok(erreur(p.jeu_coup, g["jeton"], "gauche") is not None, "répondre à toute vitesse : refusé")
 while True:
     horloge[0] += 2
@@ -471,10 +507,16 @@ ok((r["manche"] == 5 and r["erreurs"] < 3) or r["erreurs"] == 3, f"fin : 5 manch
 ok(r["vies"] == 3 - r["erreurs"] and r["score"] + r["erreurs"] == r["manche"], "chaque erreur coûte une vie")
 ok(erreur(p.jeu_coup, g["jeton"], "triche") is None, "(partie finie : plus de coup compté)")
 r2 = p.jeu_fin(g["jeton"])
-ok(r2["gain"] in gain_attendu("devin", r["score"], r["erreurs"]), f"récompense selon les vies perdues ({r['score']} bonnes, {r['erreurs']} erreurs : +{r2['gain']})")
+ok(
+    r2["gain"] in gain_attendu("devin", r["score"], r["erreurs"]),
+    f"récompense selon les vies perdues ({r['score']} bonnes, {r['erreurs']} erreurs : +{r2['gain']})",
+)
 # récompense : la partie parfaite rapporte le plus, chaque vie perdue en coûte ; 3 vies perdues : presque rien
 G = {e: P.recompense_devin(5 - e, e)[0] for e in range(3)}
-ok(G[0] > G[1] > G[2] > P.recompense_devin(2, 3)[0] and G[0] == 15, f"partie parfaite : {G[0]} ; 1 vie perdue : {G[1]} ; 2 : {G[2]} ; perdu : {P.recompense_devin(2, 3)[0]}")
+ok(
+    G[0] > G[1] > G[2] > P.recompense_devin(2, 3)[0] and G[0] == 15,
+    f"partie parfaite : {G[0]} ; 1 vie perdue : {G[1]} ; 2 : {G[2]} ; perdu : {P.recompense_devin(2, 3)[0]}",
+)
 ok(P.recompense_devin(5, 0)[1] > P.recompense_devin(4, 1)[1], "partie parfaite : plus de bonheur aussi")
 # le côté est vraiment au hasard (environ une chance sur deux) : on ne peut pas tricher en répondant toujours pareil
 bons = tous = parfaits = fins = 0
@@ -490,18 +532,27 @@ for _ in range(120):
     parfaits += r["erreurs"] == 0
     fins += r["erreurs"] == 3
     p.jeu_fin(g["jeton"])
-ok(.4 < bons / tous < .6 and parfaits < 15 and fins > 20, f"pur hasard : {bons}/{tous} bonnes réponses, {parfaits} parties parfaites et {fins} parties perdues sur 120")
+ok(
+    0.4 < bons / tous < 0.6 and parfaits < 15 and fins > 20,
+    f"pur hasard : {bons}/{tous} bonnes réponses, {parfaits} parties parfaites et {fins} parties perdues sur 120",
+)
 p.s["stats"]["meilleur_devin"], p.s["succes"] = 0, {k: v for k, v in p.s["succes"].items() if k != "devin"}
 p.s["j"]["energie"] = 100
 g = p.jeu_debut("devin")
 p.s["jeu"]["score"], p.s["jeu"]["manche"], p.s["jeu"]["erreurs"], p.s["jeu"]["fini"] = 5, 5, 0, True
 r = p.jeu_fin(g["jeton"])
-ok("parfaite" in r["message"] and "devin" in p.s["succes"] and p.s["stats"]["devin_parfaits"] >= 1, "partie parfaite : message, succès « Devin de l'île » et compteur")
+ok(
+    "parfaite" in r["message"] and "devin" in p.s["succes"] and p.s["stats"]["devin_parfaits"] >= 1,
+    "partie parfaite : message, succès « Devin de l'île » et compteur",
+)
 p.s["jeux_jour"] = {"jour": P._jour(horloge[0]), "gagnes": 0}
 # En rythme
 p.s["j"]["energie"] = 100
 g = p.jeu_debut("rythme")
-ok(len(g["suite"]) == 3 and set(g["suite"]) <= set(P.GESTES) and g["tempo"] == P.tempo_rythme(0) and g["palier"] == 1 and g["max"] == P.RYTHME_MAX, "En rythme : suite de 3, au rythme de départ, palier 1")
+ok(
+    len(g["suite"]) == 3 and set(g["suite"]) <= set(P.GESTES) and g["tempo"] == P.tempo_rythme(0) and g["palier"] == 1 and g["max"] == P.RYTHME_MAX,
+    "En rythme : suite de 3, au rythme de départ, palier 1",
+)
 ok(erreur(p.jeu_coup, g["jeton"], None, g["suite"]) is not None, "répondre avant d'avoir vu la suite : refusé")
 suite, tempos, suites, paliers = g["suite"], [g["tempo"]], [g["suite"]], [1]
 for _ in range(6):
@@ -514,17 +565,23 @@ for _ in range(6):
 ok(r["bon"] and r["score"] == 8 and paliers == list(range(1, 8)), f"suites réussies jusqu'à 8, palier affiché ({r['score']}, {paliers})")
 ok(all(a > b for a, b in zip(tempos, tempos[1:])), f"hochements ET fanon de plus en plus rapides ({tempos})")
 ok(all(len(b) == len(a) + 1 for a, b in zip(suites, suites[1:])), "un geste de plus à chaque manche")
-ok(P.RYTHME_MAX == 14 and P.tempo_rythme(P.RYTHME_MAX) == .3 and P.tempo_rythme(5) < P.tempo_rythme(4), "de 3 à 14 gestes, un temps jusqu'à 0,3 s")
+ok(P.RYTHME_MAX == 14 and P.tempo_rythme(P.RYTHME_MAX) == 0.3 and P.tempo_rythme(5) < P.tempo_rythme(4), "de 3 à 14 gestes, un temps jusqu'à 0,3 s")
 gros = [P._suite_hochements(8) for _ in range(300)]
 ok(all(not any(x[i] == x[i + 1] == x[i + 2] for i in range(6)) for x in gros), "jamais trois fois le même geste d'affilée")
 ok(all(len(set(x)) >= 2 for x in gros) and {g for x in gros for g in x} == set(P.GESTES), "suites variées : petit, grand et fanon")
 ok(len({tuple(x) for x in gros}) > 250, "suites vraiment au hasard (presque jamais deux fois la même)")
-ok(sum(x[:7] != y[:7] for x, y in zip(suites[1:], [s + ["?"] for s in suites[:-1]])) >= 1, "chaque manche tire une nouvelle suite (pas seulement un geste ajouté)")
-horloge[0] += 12   # assez pour avoir vu toute la suite, même longue (gestes tirés au hasard)
+ok(
+    sum(x[:7] != y[:7] for x, y in zip(suites[1:], [s + ["?"] for s in suites[:-1]])) >= 1,
+    "chaque manche tire une nouvelle suite (pas seulement un geste ajouté)",
+)
+horloge[0] += 12  # assez pour avoir vu toute la suite, même longue (gestes tirés au hasard)
 r = p.jeu_coup(g["jeton"], None, ["faux"])
 ok(r["fini"] and not r["bon"], "erreur : partie finie")
 r = p.jeu_fin(g["jeton"])
-ok("rythme" in p.s["succes"] and r["palier"] == 7 and r["gain"] in gain_attendu("rythme", 8, 7), f"succès « Dans le rythme », gain selon la suite et le palier (+{r['gain']})")
+ok(
+    "rythme" in p.s["succes"] and r["palier"] == 7 and r["gain"] in gain_attendu("rythme", 8, 7),
+    f"succès « Dans le rythme », gain selon la suite et le palier (+{r['gain']})",
+)
 p.s["j"]["energie"] = 100
 g = p.jeu_debut("rythme")
 suite = g["suite"]
@@ -540,7 +597,10 @@ ok(r["gain"] in gain_attendu("rythme", 14, 12) and r["palier"] == 12 and r["gain
 # récompenses : elles grandissent avec le palier (donc la durée), avec des plafonds par partie
 for jeu, sc in (("feuilles", 60), ("course", 40), ("rythme", 6)):
     ok(P.recompense_jeu(jeu, sc, 4)[0] > P.recompense_jeu(jeu, sc, 1)[0], f"{P.JEUX[jeu]} : à score égal, un palier plus haut rapporte plus")
-ok(max(P.recompense_jeu(j, 999, 99, True)[0] for j in P.JEUX) <= 30 and max(P.recompense_jeu(j, 999, 99, True)[1] for j in P.JEUX) <= 25, "plafond par partie : 30 coquillages et +25 de bonheur au plus")
+ok(
+    max(P.recompense_jeu(j, 999, 99, True)[0] for j in P.JEUX) <= 30 and max(P.recompense_jeu(j, 999, 99, True)[1] for j in P.JEUX) <= 25,
+    "plafond par partie : 30 coquillages et +25 de bonheur au plus",
+)
 p.s["jeux_jour"] = {"jour": P._jour(horloge[0]), "gagnes": P.GAINS_JEUX_JOUR - 2}
 p.s["j"]["energie"] = 100
 g = p.jeu_debut("feuilles")
@@ -579,7 +639,7 @@ soigner_bien(p, 1)
 p.s["j"]["bonheur"], p.s["discipline"] = 80, 0
 p.s["appel"], p.s["appel_pause"] = None, 0
 caprices = 0
-for _ in range(400):                                        # ≈ 66 h simulées, toujours content
+for _ in range(400):  # ≈ 66 h simulées, toujours content
     horloge[0] += 600
     p.s["j"]["bonheur"] = 80
     p.s["j"]["faim"] = p.s["j"]["energie"] = p.s["j"]["proprete"] = p.s["j"]["sante"] = p.s["j"]["chaleur"] = 90
@@ -603,7 +663,7 @@ e = p.etat()
 ok(e["appel"] and e["appel"]["type"] == "caprice", "bonheur à 20 : le caprice est montré")
 
 p = nouveau()
-p.s["j"]["bonheur"] = 25                                    # (un caprice n'existe que quand il est malheureux)
+p.s["j"]["bonheur"] = 25  # (un caprice n'existe que quand il est malheureux)
 p.s["appel"] = {"t": horloge[0], "type": "caprice", "raison": "caprice"}
 d0 = p.s["discipline"]
 r = p.action("gronder")
@@ -621,13 +681,19 @@ ok(p.s["discipline"] > d0 + 10 and r["reaction"] == "fier", "féliciter juste ap
 p = nouveau()
 p.action("reglages", {"visible": False, "sons": False, "notif_windows": True, "vitesse": "turbo"})
 ok(p.s["reglages"]["visible"] is False and p.s["reglages"]["notif_windows"] and p.s["reglages"]["vitesse"] == "normale", "réglages (valeur inconnue ignorée)")
-ok(p.s["reglages"]["volume_ambiance"] == P.VOLUME_DEFAUT == 60 and p.s["reglages"]["volume_jeux"] == 60, "volumes par défaut : bruits de l'île et mini-jeux à 60")
+ok(
+    p.s["reglages"]["volume_ambiance"] == P.VOLUME_DEFAUT == 60 and p.s["reglages"]["volume_jeux"] == 60,
+    "volumes par défaut : bruits de l'île et mini-jeux à 60",
+)
 p.action("reglages", {"volume_ambiance": 35, "volume_jeux": "80"})
 ok(p.s["reglages"]["volume_ambiance"] == 35 and p.s["reglages"]["volume_jeux"] == 80, "volumes réglables (bruits de l'île, petits sons et mini-jeux)")
 p.action("reglages", {"volume_ambiance": 250, "volume_jeux": -4})
 ok(p.s["reglages"]["volume_ambiance"] == 100 and p.s["reglages"]["volume_jeux"] == 0, "volumes bornés de 0 à 100")
 p.action("reglages", {"volume_ambiance": "fort", "volume_jeux": None})
-ok(p.s["reglages"]["volume_ambiance"] == 100 and p.s["reglages"]["volume_jeux"] == 0 and p.etat()["reglages"]["volume_jeux"] == 0, "volume illisible : ignoré ; les volumes sont envoyés à la page")
+ok(
+    p.s["reglages"]["volume_ambiance"] == 100 and p.s["reglages"]["volume_jeux"] == 0 and p.etat()["reglages"]["volume_jeux"] == 0,
+    "volume illisible : ignoré ; les volumes sont envoyés à la page",
+)
 ok(erreur(p.action, "recommencer", {}) is not None and p.s["stade"] == "bebe", "recommencer sans confirmation : refusé")
 r = p.action("recommencer", {"confirmer": "NOUVEL OEUF"})
 ok(r["etat"]["stade"] == "oeuf" and p.s["reglages"]["visible"] is False, "nouvel œuf (réglages gardés)")
@@ -643,14 +709,23 @@ while t < P.ROTATION_DEBUT + 200 * P.JOUR:
     periodes.append((sa, deb, fin))
     t = fin + 1
 durees = [(f - d) / P.JOUR for _, d, f in periodes]
-ok(all(3 <= x <= 6 for x in durees) and max(durees) - min(durees) > 1.5, f"chaque saison dure de 3 à 6 jours, au hasard ({min(durees):.1f} à {max(durees):.1f} j)")
+ok(
+    all(3 <= x <= 6 for x in durees) and max(durees) - min(durees) > 1.5,
+    f"chaque saison dure de 3 à 6 jours, au hasard ({min(durees):.1f} à {max(durees):.1f} j)",
+)
 ordre = [x[0] for x in periodes]
-ok(all(P.ANNEE[(P.ANNEE.index(a) + 1) % 4] == b for a, b in zip(ordre, ordre[1:])), "dans l'ordre : printemps → été → saison des pluies → saison fraîche → printemps…")
+ok(
+    all(P.ANNEE[(P.ANNEE.index(a) + 1) % 4] == b for a, b in zip(ordre, ordre[1:])),
+    "dans l'ordre : printemps → été → saison des pluies → saison fraîche → printemps…",
+)
 ok(all(a[2] == b[1] for a, b in zip(periodes, periodes[1:])), "les saisons s'enchaînent sans trou")
 nov = [P.saison(datetime(2026, 11, j, 12).timestamp(), "graine-test") for j in range(1, 31)]
 ok(len(set(nov)) == 4, f"en un mois réel (novembre), l'île passe par les quatre saisons ({sorted(set(nov))})")
 ok(len({P.saison(P.ROTATION_DEBUT + 1, f"ile-{k}") for k in range(12)}) >= 3, "chaque île commence son année à une saison différente")
-ok(P.periode_saison(P.ROTATION_DEBUT + 40 * P.JOUR, "graine-test") == P.periode_saison(P.ROTATION_DEBUT + 40 * P.JOUR, "graine-test"), "roulement reproductible (même saison sur le PC et le téléphone)")
+ok(
+    P.periode_saison(P.ROTATION_DEBUT + 40 * P.JOUR, "graine-test") == P.periode_saison(P.ROTATION_DEBUT + 40 * P.JOUR, "graine-test"),
+    "roulement reproductible (même saison sur le PC et le téléphone)",
+)
 P.METEO_FORCEE = None
 P.SAISON_FORCEE = "ete"
 ete = sum(P._ciel_brut("graine-test", b) == "pluie" for b in range(1000, 1360))
@@ -669,7 +744,10 @@ for sa in ("ete", "hiver"):
     temps[sa] = p.etat()["jauges"]["chaleur"]
 ok(temps["ete"] - temps["hiver"] >= 8, f"nuit d'été plus douce que nuit de saison fraîche ({temps['ete']} / {temps['hiver']})")
 e = p.etat()
-ok(e["ciel"]["saison"] == "hiver" and e["ciel"]["saison_nom"] == "Saison fraîche" and e["promo"] == "chou_vert", "saison exposée à la page (nom, texte, produit de saison)")
+ok(
+    e["ciel"]["saison"] == "hiver" and e["ciel"]["saison_nom"] == "Saison fraîche" and e["promo"] == "chou_vert",
+    "saison exposée à la page (nom, texte, produit de saison)",
+)
 p.s["coquillages"] = 10
 p.action("acheter", {"article": "chou_vert"})
 ok(p.s["coquillages"] == 9, "produit de saison : un coquillage de moins à la boutique")
@@ -692,12 +770,21 @@ while t < P.ROTATION_DEBUT + 400 * P.JOUR:
 durees = [(f - d) / P.JOUR for _, d, f in periodes]
 ok(all(2 <= x <= 7 for x in durees) and max(durees) - min(durees) > 3, f"saisons de l'île de 2 à 7 jours, au hasard ({min(durees):.1f} à {max(durees):.1f} j)")
 ok(all(a[0] != b[0] for a, b in zip(periodes, periodes[1:])), "jamais deux fois la même saison de l'île de suite")
-ok({x[0] for x in periodes} == {*P.SAISONS_ILE, None} and len(P.SAISONS_ILE) == 4, "les 4 saisons de l'île reviennent toutes, avec des périodes de temps ordinaire")
+ok(
+    {x[0] for x in periodes} == {*P.SAISONS_ILE, None} and len(P.SAISONS_ILE) == 4,
+    "les 4 saisons de l'île reviennent toutes, avec des périodes de temps ordinaire",
+)
 ok(all(a[2] == b[1] for a, b in zip(periodes, periodes[1:])), "les périodes s'enchaînent sans trou")
 mois = {datetime.fromtimestamp(d).month for sp, d, _ in periodes if sp == "tempetes"}
 ok(len(mois) >= 4, "la saison des tempêtes tombe à n'importe quel mois (pas liée au calendrier)")
-ok(P.periode_saison_ile(P.ROTATION_DEBUT + 50 * P.JOUR, "graine-test") == P.periode_saison_ile(P.ROTATION_DEBUT + 50 * P.JOUR, "graine-test"), "roulement reproductible")
-ok(any(P.saison_ile(P.ROTATION_DEBUT + k * P.JOUR, "autre-ile") != P.saison_ile(P.ROTATION_DEBUT + k * P.JOUR, "graine-test") for k in range(0, 60, 3)), "chaque île a son propre roulement")
+ok(
+    P.periode_saison_ile(P.ROTATION_DEBUT + 50 * P.JOUR, "graine-test") == P.periode_saison_ile(P.ROTATION_DEBUT + 50 * P.JOUR, "graine-test"),
+    "roulement reproductible",
+)
+ok(
+    any(P.saison_ile(P.ROTATION_DEBUT + k * P.JOUR, "autre-ile") != P.saison_ile(P.ROTATION_DEBUT + k * P.JOUR, "graine-test") for k in range(0, 60, 3)),
+    "chaque île a son propre roulement",
+)
 ok(all(P.saison(d) == P.saison(d, "autre-ile") for _, d, _ in periodes[:20]), "la saison du calendrier reste la même pour toutes les îles")
 P.SAISON_FORCEE = "ete"
 P.SAISON_ILE_FORCEE = "aucune"
@@ -722,12 +809,21 @@ for sp in ("tortues", "tempetes"):
     temps[sp] = p.etat()["jauges"]["chaleur"]
 ok(temps["tortues"] - temps["tempetes"] >= 4, f"la saison de l'île s'ajoute à la chaleur du calendrier ({temps['tortues']} / {temps['tempetes']})")
 e = p.etat()
-ok(e["ciel"]["saison"] == "printemps" and e["ciel"]["saison_ile"]["id"] == "tempetes" and e["ciel"]["saison_ile"]["nom"] == "Saison des tempêtes"
-   and e["promo"] == "fleur_pissenlit" and e["promo_ile"] == "feuilles_murier", "les deux saisons sont exposées à la page (calendrier + île)")
+ok(
+    e["ciel"]["saison"] == "printemps"
+    and e["ciel"]["saison_ile"]["id"] == "tempetes"
+    and e["ciel"]["saison_ile"]["nom"] == "Saison des tempêtes"
+    and e["promo"] == "fleur_pissenlit"
+    and e["promo_ile"] == "feuilles_murier",
+    "les deux saisons sont exposées à la page (calendrier + île)",
+)
 p.s["coquillages"] = 10
 p.action("acheter", {"article": "feuilles_murier"})
 p.action("acheter", {"article": "fleur_pissenlit"})
-ok(p.s["coquillages"] == 10 - (P.ALIMENTS["feuilles_murier"]["prix"] - 1) - (P.ALIMENTS["fleur_pissenlit"]["prix"] - 1), "deux produits de saison à la fois (calendrier + île)")
+ok(
+    p.s["coquillages"] == 10 - (P.ALIMENTS["feuilles_murier"]["prix"] - 1) - (P.ALIMENTS["fleur_pissenlit"]["prix"] - 1),
+    "deux produits de saison à la fois (calendrier + île)",
+)
 P.SAISON_ILE_FORCEE = "aucune"
 ok(p.etat()["ciel"]["saison_ile"] is None and p.etat()["promo_ile"] is None, "temps ordinaire : pas de saison de l'île")
 P.SAISON_ILE_FORCEE = None
@@ -735,10 +831,16 @@ P.SAISON_FORCEE = None
 p = nouveau()
 e = p.etat()
 si = e["ciel"]["saison_ile"]
-ok(e["ciel"]["saison"] == P.saison(horloge[0], p.s["graine"]) and (si or {}).get("id") == P.saison_ile(horloge[0], p.s["graine"]), "la page sait quelle saison de l'île il fait")
+ok(
+    e["ciel"]["saison"] == P.saison(horloge[0], p.s["graine"]) and (si or {}).get("id") == P.saison_ile(horloge[0], p.s["graine"]),
+    "la page sait quelle saison de l'île il fait",
+)
 P.SAISON_ILE_FORCEE = "brumes"
 e = nouveau().etat()
-ok(set(e["ciel"]["saison_ile"]) == {"id", "nom", "texte"} and not any(k for k in e["ciel"] if "reste" in k or "fin" in k), "aucune durée ni compte à rebours de saison n'est envoyé à la page")
+ok(
+    set(e["ciel"]["saison_ile"]) == {"id", "nom", "texte"} and not any(k for k in e["ciel"] if "reste" in k or "fin" in k),
+    "aucune durée ni compte à rebours de saison n'est envoyé à la page",
+)
 P.SAISON_ILE_FORCEE = None
 p = nouveau()
 P.SAISON_FORCEE = "printemps"
@@ -747,9 +849,15 @@ p.s["saisons_ile_vues"] = ["floraison", "brumes", "tortues"]
 P.SAISON_ILE_FORCEE = "tempetes"
 horloge[0] += H
 p.etat()
-ok("tour_saisons" in p.s["succes"] and "saisons" not in p.s["succes"], "succès « Saisons de l'île » (les 4 spéciales), distinct des quatre saisons du calendrier")
+ok(
+    "tour_saisons" in p.s["succes"] and "saisons" not in p.s["succes"],
+    "succès « Saisons de l'île » (les 4 spéciales), distinct des quatre saisons du calendrier",
+)
 cat = p.catalogue()
-ok(sorted(cat["saisons"]) == ["automne", "ete", "hiver", "printemps"] and sorted(cat["saisons_ile"]) == sorted(P.SAISONS_ILE), "catalogue : 4 saisons du calendrier + 4 saisons de l'île")
+ok(
+    sorted(cat["saisons"]) == ["automne", "ete", "hiver", "printemps"] and sorted(cat["saisons_ile"]) == sorted(P.SAISONS_ILE),
+    "catalogue : 4 saisons du calendrier + 4 saisons de l'île",
+)
 P.SAISON_ILE_FORCEE = "aucune"
 P.SAISON_FORCEE = "printemps"
 P.METEO_FORCEE = "soleil"
@@ -766,7 +874,10 @@ ok(e["dort"] and e["sieste"] and e["position"] == "rocher", "fatigué en plein s
 c0 = p.s["j"]["chaleur"]
 horloge[0] += 3 * H
 e = p.etat()
-ok(e["position"] == "rocher" and p.s["j"]["chaleur"] > c0 + 25, f"il dort sur le rocher plus de 2 h et s'y réchauffe ({round(c0)} → {round(p.s['j']['chaleur'])})")
+ok(
+    e["position"] == "rocher" and p.s["j"]["chaleur"] > c0 + 25,
+    f"il dort sur le rocher plus de 2 h et s'y réchauffe ({round(c0)} → {round(p.s['j']['chaleur'])})",
+)
 horloge[0] += 3 * H
 e = p.etat()
 ok(not e["sieste"] and e["position"] == "plage", "réveillé (énergie revenue), il redescend sur la plage")
@@ -818,20 +929,35 @@ for _ in range(36):
 ok(q.s["stats"]["heures_froid"] > 4, "les heures passées à avoir froid sont comptées")
 ok(all(k in P.MUTATIONS for k in p.catalogue()["mutations"]) and len(P.MUTATIONS) >= 8, "le catalogue décrit les mutations")
 # ---- marques (fanon, crête, queue, yeux, motif), en plus de la couleur du corps ------------------------------
-ok(len(P.MARQUES) >= 10 and {m["cat"] for m in P.MARQUES.values()} == set(P.CATEGORIES_MARQUES)
-   and {m["rarete"] for m in P.MARQUES.values()} == {"commun", "rare", "tres_rare"}, "12 marques sur 5 parties du corps, trois raretés")
-ok(all(sum(1 for m in P.MARQUES.values() if m["cat"] == c and m["rarete"] == "commun") + sum(1 for m in P.MARQUES.values() if m["cat"] == c) >= 2 for c in P.CATEGORIES_MARQUES),
-   "chaque partie du corps a au moins deux marques possibles (ou une commune)")
+ok(
+    len(P.MARQUES) >= 10
+    and {m["cat"] for m in P.MARQUES.values()} == set(P.CATEGORIES_MARQUES)
+    and {m["rarete"] for m in P.MARQUES.values()} == {"commun", "rare", "tres_rare"},
+    "12 marques sur 5 parties du corps, trois raretés",
+)
+ok(
+    all(
+        sum(1 for m in P.MARQUES.values() if m["cat"] == c and m["rarete"] == "commun") + sum(1 for m in P.MARQUES.values() if m["cat"] == c) >= 2
+        for c in P.CATEGORIES_MARQUES
+    ),
+    "chaque partie du corps a au moins deux marques possibles (ou une commune)",
+)
 q = nouveau()
 q.s["stade"] = "adulte"
 ok(all(v < 1 for v in q.scores_marques().values()) and q.etat()["marques"] == [], "pas de marque au départ")
 q.s["stats"].update(nuits_eteintes=14)
 q._fin_mue(horloge[0], bain=False)
-ok(q.etat()["marques"] == ["queue_annelee"] and "queue_annelee" in q.carnet()["marques_vues"], "dormir souvent dans le noir : queue annelée (vue dans le carnet)")
+ok(
+    q.etat()["marques"] == ["queue_annelee"] and "queue_annelee" in q.carnet()["marques_vues"],
+    "dormir souvent dans le noir : queue annelée (vue dans le carnet)",
+)
 ok(q.s["mutation"] is None and "mutation" in q.s["succes"], "une marque sans changement de couleur du corps, succès « Couleurs uniques » quand même")
 q.s["stats"].update(caresses=60, heures_chaud=35)
 q._fin_mue(horloge[0], bain=False)
-ok(len(q.s["marques"]) == 2 and q.s["marques"]["motif"] == "motif_taches", "au plus une nouvelle marque par mue : la plus méritée d'abord (caresses : moucheté)")
+ok(
+    len(q.s["marques"]) == 2 and q.s["marques"]["motif"] == "motif_taches",
+    "au plus une nouvelle marque par mue : la plus méritée d'abord (caresses : moucheté)",
+)
 q._fin_mue(horloge[0], bain=False)
 ok(q.s["marques"].get("crete") == "crete_orange", "à la mue suivante, la suivante (beaucoup de chaleur : crête orangée)")
 q.s["stats"].update(caresses=500)
@@ -839,9 +965,15 @@ q._fin_mue(horloge[0], bain=False)
 ok(q.s["marques"]["motif"] == "motif_taches", "une partie du corps garde sa marque (pas de remplacement)")
 q.s["stats"].update(repas=60, oranges=30, bains_mer=40)
 q._fin_mue(horloge[0], bain=True)
-ok(q.s["mutation"]["id"] == "turquoise" and q.s["marques"]["fanon"] == "fanon_orange", "la couleur du corps et les marques se combinent (Turquoise + fanon orangé)")
+ok(
+    q.s["mutation"]["id"] == "turquoise" and q.s["marques"]["fanon"] == "fanon_orange",
+    "la couleur du corps et les marques se combinent (Turquoise + fanon orangé)",
+)
 v = q.etat()
-ok(set(v["marques"]) >= {"queue_annelee", "motif_taches", "crete_orange", "fanon_orange"} and all(d["nom"] for d in v["marques_detail"]), "les marques sont envoyées à la page (dessin)")
+ok(
+    set(v["marques"]) >= {"queue_annelee", "motif_taches", "crete_orange", "fanon_orange"} and all(d["nom"] for d in v["marques_detail"]),
+    "les marques sont envoyées à la page (dessin)",
+)
 q.s["stats"].update(devin_parfaits=3)
 q._fin_mue(horloge[0], bain=False)
 ok(q.s["marques"]["yeux"] == "yeux_rubis" and "marques" in q.s["succes"], "une marque sur chaque partie du corps : succès « Un iguane unique »")
@@ -863,7 +995,10 @@ b0.s["stats"]["nuits_eteintes"] = 40
 b0._fin_mue(horloge[0], bain=False)
 ok(b0.s["marques"] == {}, "un bébé ne reçoit pas encore de marque")
 cat = b0.catalogue()
-ok(set(cat["marques"]) == set(P.MARQUES) and cat["categories_marques"] == P.CATEGORIES_MARQUES and all(m["condition"] for m in cat["marques"].values()), "le catalogue décrit les marques (onglet « Couleurs »)")
+ok(
+    set(cat["marques"]) == set(P.MARQUES) and cat["categories_marques"] == P.CATEGORIES_MARQUES and all(m["condition"] for m in cat["marques"].values()),
+    "le catalogue décrit les marques (onglet « Couleurs »)",
+)
 
 # ---- course au rocher chaud ---------------------------------------------------------------------
 p = nouveau()
@@ -892,20 +1027,32 @@ g = p.jeu_debut("course")
 horloge[0] += 145
 c0 = p.s["coquillages"]
 r = p.jeu_fin(g["jeton"], 80, 0, True, 10, but)
-ok(r["palier"] == 10 and p.s["position"] == "rocher" and p.s["j"]["chaleur"] >= 55, f"arrivé au bout des 10 étapes : il finit sur le rocher chaud ({p.s['j']['chaleur']:.0f})")
-ok(p.s["coquillages"] - c0 == r["gain"] + P.SUCCES["coureur"][2] and r["gain"] in gain_attendu("course", 80, 10, True) and "coureur" in p.s["succes"], f"gain calculé par le serveur (+{r['gain']}) et succès « Coureur du soleil »")
+ok(
+    r["palier"] == 10 and p.s["position"] == "rocher" and p.s["j"]["chaleur"] >= 55,
+    f"arrivé au bout des 10 étapes : il finit sur le rocher chaud ({p.s['j']['chaleur']:.0f})",
+)
+ok(
+    p.s["coquillages"] - c0 == r["gain"] + P.SUCCES["coureur"][2] and r["gain"] in gain_attendu("course", 80, 10, True) and "coureur" in p.s["succes"],
+    f"gain calculé par le serveur (+{r['gain']}) et succès « Coureur du soleil »",
+)
 p.s["j"]["energie"] = 100
 g = p.jeu_debut("course")
 horloge[0] += 60
 r = p.jeu_fin(g["jeton"], 20, 0, False, 3, 11000)
-ok(r["palier"] == 3 and r["gain"] in gain_attendu("course", 20, 3) and p.s["stats"]["courses_gagnees"] == 1, f"pas arrivé (étape 3) : récompense selon l'étape (+{r['gain']})")
+ok(
+    r["palier"] == 3 and r["gain"] in gain_attendu("course", 20, 3) and p.s["stats"]["courses_gagnees"] == 1,
+    f"pas arrivé (étape 3) : récompense selon l'étape (+{r['gain']})",
+)
 ok([P.course_etape(d) for d in (0, 3999, 4000, 20000, 39999, 50000)] == [1, 1, 2, 6, 10, 10], "une étape tous les 4 000 px")
 vit = [P.course_vitesse(k) for k in range(1, 11)]
 ecart = [P.course_ecart(k) for k in range(1, 11)]
-ok(all(a < b for a, b in zip(vit, vit[1:])) and all(a > b for a, b in zip(ecart, ecart[1:])), f"plus rapide et obstacles plus fréquents à chaque étape (vitesse ×{vit[-1]:.2f}, écart ×{ecart[-1]:.2f})")
+ok(
+    all(a < b for a, b in zip(vit, vit[1:])) and all(a > b for a, b in zip(ecart, ecart[1:])),
+    f"plus rapide et obstacles plus fréquents à chaque étape (vitesse ×{vit[-1]:.2f}, écart ×{ecart[-1]:.2f})",
+)
 vmax = sum(P.COURSE["vitesse"]) * vit[-1]
-ok(P.COURSE["ecart_min"] >= .55 * vmax, "jamais injuste : deux obstacles restent toujours assez écartés pour sauter entre eux")
-ok(but / (sum(P.COURSE["vitesse"]) * .8 * sum(vit) / len(vit)) > 100, "une course complète dure environ deux minutes et demie")
+ok(P.COURSE["ecart_min"] >= 0.55 * vmax, "jamais injuste : deux obstacles restent toujours assez écartés pour sauter entre eux")
+ok(but / (sum(P.COURSE["vitesse"]) * 0.8 * sum(vit) / len(vit)) > 100, "une course complète dure environ deux minutes et demie")
 
 # ---- album et étapes de la vie -------------------------------------------------------------------
 p = nouveau()
@@ -917,8 +1064,10 @@ ok([x["stade"] for x in p.s["etapes"]] == ["bebe", "juvenile", "adulte"] and p.s
 p.s["portes"] = {"tete": "chapeau"}
 titre = p.titre()
 p.action("recommencer", {"confirmer": "NOUVEL OEUF"})
-ok(len(p.s["album"]) == 1 and p.s["album"][0]["titre"] == titre and p.s["album"][0]["portes"] == {"tete": "chapeau"}
-   and p.s["album"][0]["age_jours"] >= 8, "nouvel œuf : l'ancien Philibert entre dans l'album")
+ok(
+    len(p.s["album"]) == 1 and p.s["album"][0]["titre"] == titre and p.s["album"][0]["portes"] == {"tete": "chapeau"} and p.s["album"][0]["age_jours"] >= 8,
+    "nouvel œuf : l'ancien Philibert entre dans l'album",
+)
 p.action("recommencer", {"confirmer": "NOUVEL OEUF"})
 ok(len(p.s["album"]) == 1, "un œuf qui n'a pas éclos n'entre pas dans l'album")
 horloge[0] += 700
@@ -931,10 +1080,15 @@ ok(len(c["album"]) == 2 and c["album"][0]["stade"] == "bebe" and c["etapes"] == 
 doc = (BASE / "docs" / "PHILIBERT-REGLES.md").read_text(encoding="utf-8")
 sons = Path(__file__).resolve().parents[2] / "static" / "sons"
 doc_ph = (Path(__file__).resolve().parents[2] / "docs" / "PHILIBERT.md").read_text(encoding="utf-8")
-ok(all((sons / f).is_file() and (sons / f).stat().st_size < 1_500_000 and f"`{f}`" in doc_ph for f in ("pluie.mp3", "orage.ogg")) and "CC0" in doc_ph,
-   "sons de pluie et d'orage présents, légers, et crédités (licence CC0) dans la doc")
+ok(
+    all((sons / f).is_file() and (sons / f).stat().st_size < 1_500_000 and f"`{f}`" in doc_ph for f in ("pluie.mp3", "orage.ogg")) and "CC0" in doc_ph,
+    "sons de pluie et d'orage présents, légers, et crédités (licence CC0) dans la doc",
+)
 ok(f"**−{P.ENERGIE_JEU} énergie au lancement**" in doc and f"**{P.GAINS_JEUX_JOUR} coquillages par jour**" in doc, "doc admin : coût et plafond des jeux")
-ok(all(f"**{v}**" in doc for v in (P.PLANCHERS["faim"], P.PLANCHERS["bonheur"])) and f"bonheur est à {P.SEUIL_ATTENTION} ou moins**" in doc, "doc admin : planchers et seuil d'attention")
+ok(
+    all(f"**{v}**" in doc for v in (P.PLANCHERS["faim"], P.PLANCHERS["bonheur"])) and f"bonheur est à {P.SEUIL_ATTENTION} ou moins**" in doc,
+    "doc admin : planchers et seuil d'attention",
+)
 ok(all(f"{P.ALIMENTS[k]['nom']}" in doc for k in ("trefle", "feuilles_murier", "courge", "hibiscus", "banane")), "doc admin : tableau des aliments")
 ok("**+5**" in doc and "**−6**" in doc and P.SAISONS["ete"]["chaleur"] == 5 and P.SAISONS["hiver"]["chaleur"] == -6, "doc admin : chaleur des saisons")
 ok("**76 le jour, 72 la nuit**" in doc, "doc admin : lampe chauffante")

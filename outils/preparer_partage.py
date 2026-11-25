@@ -23,22 +23,55 @@ BASE = Path(__file__).resolve().parent.parent
 OUT_ROOT = BASE / "partage"
 
 # Liste autorisée (tout le reste est ignoré)
-ROOT_FILES = ["*.py", "*.bat", "nexus.spec", "installer.iss", "requirements.txt", "requirements-native.txt", "README.md", "LICENSE", "CHANGELOG.md", "VERSION",
-              "panel.ico", "config.example.json", "deck.example.json", "jeux.example.json", ".gitignore", "NE_PAS_PARTAGER.md",
-              "THIRD_PARTY.md", "ruff.toml", "requirements-dev.txt"]
+ROOT_FILES = [
+    "*.py",
+    "*.bat",
+    "nexus.spec",
+    "installer.iss",
+    "requirements.txt",
+    "requirements-native.txt",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "VERSION",
+    "panel.ico",
+    "config.example.json",
+    "deck.example.json",
+    "jeux.example.json",
+    ".gitignore",
+    "NE_PAS_PARTAGER.md",
+    "THIRD_PARTY.md",
+    "ruff.toml",
+    "requirements-dev.txt",
+]
 TREES = ["static", "outils", "profils", "docs"]
 EXTRA = ["actions/exemple.bat"]
 
 # Jamais copiés, même s'ils correspondent à la liste autorisée
 NEVER_NAMES = {"config.json", "deck.json", ".env", "fan_names.json", "jeux.json", "nexus.db", "rappels.json", "runtime.json"}
 # data\ contient tout le personnel : souvenirs (photos), statistiques, journal (nexus.db), agenda, sauvegardes…
-NEVER_DIRS = {"data", "souvenirs", "backups", "logs", "versions", ".venv", ".venv-build", "runtime", "runtime.neuf",
-              "runtime.tmp", "__pycache__", "LibreHardwareMonitor",
-              "partage", ".git", "maj", "sauvegardes-maj", "dist"}
+NEVER_DIRS = {
+    "data",
+    "souvenirs",
+    "backups",
+    "logs",
+    "versions",
+    ".venv",
+    ".venv-build",
+    "runtime",
+    "runtime.neuf",
+    "runtime.tmp",
+    "__pycache__",
+    "LibreHardwareMonitor",
+    "partage",
+    ".git",
+    "maj",
+    "sauvegardes-maj",
+    "dist",
+}
 NEVER_SUFFIXES = {".log", ".lnk", ".tmp", ".pyc", ".zip", ".db", ".db-wal", ".db-shm", ".sqlite"}
 
-TEXT_SUFFIXES = {".py", ".bat", ".md", ".txt", ".json", ".html", ".css", ".js", ".svg", ".webmanifest",
-                 ".config", "", ".gitignore"}
+TEXT_SUFFIXES = {".py", ".bat", ".md", ".txt", ".json", ".html", ".css", ".js", ".svg", ".webmanifest", ".config", "", ".gitignore"}
 
 
 def version() -> str:
@@ -76,22 +109,25 @@ def sensitive_values() -> list[tuple[str, str]]:
     try:
         cfg = json.loads((BASE / "config.json").read_text(encoding="utf-8"))
         d, k = cfg.get("discord") or {}, cfg.get("deck") or {}
-        add("jeton Discord", d.get("token")); add("ID Discord", d.get("user_id"))
+        add("jeton Discord", d.get("token"))
+        add("ID Discord", d.get("user_id"))
         add("ID de salon Discord", d.get("alert_channel_id"))
-        add("mot de passe du deck", k.get("password")); add("empreinte du mot de passe", k.get("password_hash"))
+        add("mot de passe du deck", k.get("password"))
+        add("empreinte du mot de passe", k.get("password_hash"))
     except (OSError, ValueError):
         pass
     for name in ("USERNAME", "COMPUTERNAME", "USERDOMAIN"):
         add(f"variable Windows {name}", os.environ.get(name))
     add("dossier personnel", os.path.expanduser("~"))
     add("chemin de ton installation", str(BASE))
-    for f in ("remote.json", "devices.json"):         # noms d'appareils appairés / du réseau local
+    for f in ("remote.json", "devices.json"):  # noms d'appareils appairés / du réseau local
         try:
             data = json.loads((BASE / "data" / f).read_text(encoding="utf-8"))
             items = data.get("devices", data) if isinstance(data, dict) else data
-            for it in (items.values() if isinstance(items, dict) else items or []):
+            for it in items.values() if isinstance(items, dict) else items or []:
                 if isinstance(it, dict):
-                    add("nom d'appareil", it.get("name")); add("nom d'appareil", it.get("hostname"))
+                    add("nom d'appareil", it.get("name"))
+                    add("nom d'appareil", it.get("hostname"))
                     add("adresse MAC", it.get("mac"))
         except (OSError, ValueError, AttributeError):
             pass

@@ -29,16 +29,15 @@ import store
 
 STATE_FILE = store.DATA_DIR / "rappels.json"
 TICK_SECONDS = 15
-KEEP_SECONDS = 3 * 86400          # on oublie les rappels de plus de 3 jours
-FIRED_KEEP = 40                   # derniers rappels gardés pour le panel
-START_GRACE = 60                  # un rappel « 0 min avant » part encore jusqu'à 1 min après le début
+KEEP_SECONDS = 3 * 86400  # on oublie les rappels de plus de 3 jours
+FIRED_KEEP = 40  # derniers rappels gardés pour le panel
+START_GRACE = 60  # un rappel « 0 min avant » part encore jusqu'à 1 min après le début
 
 
 def settings() -> tuple[list[int], str, bool]:
     cfg = config.get("agenda")
     try:
-        mins = sorted({int(x) for x in cfg.get("rappels_minutes", [60, 30]) if 0 <= int(x) <= agenda.MAX_REMINDER_MIN},
-                      reverse=True)
+        mins = sorted({int(x) for x in cfg.get("rappels_minutes", [60, 30]) if 0 <= int(x) <= agenda.MAX_REMINDER_MIN}, reverse=True)
     except (TypeError, ValueError):
         mins = [60, 30]
     ref = str(cfg.get("heure_reference") or "09:00")
@@ -69,8 +68,7 @@ def message(o: dict, start: dt.datetime, now: dt.datetime) -> tuple[str, str]:
     """(titre, texte) du rappel."""
     remaining = max(0, round((start - now).total_seconds() / 60))
     day = agenda.parse_date(o["date"])
-    when_day = "aujourd'hui" if day == now.date() else ("demain" if day == now.date() + dt.timedelta(days=1)
-                                                          else day.strftime("le %d/%m"))
+    when_day = "aujourd'hui" if day == now.date() else ("demain" if day == now.date() + dt.timedelta(days=1) else day.strftime("le %d/%m"))
     if o["birthday"]:
         age = f" ({o['age']} an{'s' if o['age'] > 1 else ''})" if o.get("age") else ""
         return "🎂 Anniversaire", f"Anniversaire de {o['title']}{age} {when_day}"
@@ -82,7 +80,7 @@ def message(o: dict, start: dt.datetime, now: dt.datetime) -> tuple[str, str]:
 
 class ReminderService:
     def __init__(self, notifier: Callable[[str, str], bool | None] | None = None) -> None:
-        self.notifier = notifier          # envoi Discord : True envoyé, False à réessayer, None pas de bot
+        self.notifier = notifier  # envoi Discord : True envoyé, False à réessayer, None pas de bot
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._thread = None
@@ -93,8 +91,7 @@ class ReminderService:
         try:
             s = json.loads(STATE_FILE.read_text(encoding="utf-8"))
             if isinstance(s, dict):
-                return {"seen": s.get("seen") or {}, "sent": s.get("sent") or {},
-                        "fired": s.get("fired") or [], "discord": s.get("discord") or {}}
+                return {"seen": s.get("seen") or {}, "sent": s.get("sent") or {}, "fired": s.get("fired") or [], "discord": s.get("discord") or {}}
         except (OSError, ValueError):
             pass
         return {"seen": {}, "sent": {}, "fired": [], "discord": {}}
@@ -113,15 +110,14 @@ class ReminderService:
         defaults, ref, use_discord = settings()
         db = agenda.load()
         max_off = max([*defaults, *[max(e.get("reminders") or [0]) for e in db["events"]], 0])
-        occs = agenda.occurrences(db, (now - dt.timedelta(days=1)).date(),
-                                  (now + dt.timedelta(minutes=max_off, days=2)).date())
+        occs = agenda.occurrences(db, (now - dt.timedelta(days=1)).date(), (now + dt.timedelta(minutes=max_off, days=2)).date())
         fired = []
         with self._lock:
             seen, sent = self.state["seen"], self.state["sent"]
             for o in occs:
                 start = occurrence_start(o, ref)
                 if start.timestamp() + START_GRACE < now_ts:
-                    continue                                    # déjà commencé
+                    continue  # déjà commencé
                 offsets = o["reminders"] if o["reminders"] is not None else defaults
                 if not offsets:
                     continue
@@ -138,7 +134,7 @@ class ReminderService:
                         continue
                     at = start - dt.timedelta(minutes=off)
                     if at.timestamp() > now_ts:
-                        continue                                # pas encore l'heure
+                        continue  # pas encore l'heure
                     if at.timestamp() < first - 30:
                         sent[key] = {"t": now_ts, "etat": "trop tard (créé ou modifié après l'heure du rappel)"}
                         continue
@@ -146,14 +142,23 @@ class ReminderService:
                 if not due:
                     continue
                 due.sort()
-                for _, _, key in due[:-1]:                      # NEXUS éteint : seul le plus récent part
+                for _, _, key in due[:-1]:  # NEXUS éteint : seul le plus récent part
                     sent[key] = {"t": now_ts, "etat": "remplacé par un rappel plus récent"}
                 at, off, key = due[-1]
                 title, text = message(o, start, now)
-                item = {"id": key, "titre": title, "texte": text, "occurrence": o["id"], "date": o["date"],
-                        "heure": o["time"], "debut": start.isoformat(timespec="minutes"), "delai": off,
-                        "anniversaire": o["birthday"], "envoye": now_ts,
-                        "en_retard": (now - at).total_seconds() > 2 * TICK_SECONDS + 5}
+                item = {
+                    "id": key,
+                    "titre": title,
+                    "texte": text,
+                    "occurrence": o["id"],
+                    "date": o["date"],
+                    "heure": o["time"],
+                    "debut": start.isoformat(timespec="minutes"),
+                    "delai": off,
+                    "anniversaire": o["birthday"],
+                    "envoye": now_ts,
+                    "en_retard": (now - at).total_seconds() > 2 * TICK_SECONDS + 5,
+                }
                 sent[key] = {"t": now_ts, "etat": "envoyé"}
                 self.state["fired"].append(item)
                 if use_discord and self.notifier:
@@ -167,14 +172,14 @@ class ReminderService:
     def _flush_discord(self, now_ts: float) -> None:
         for key, m in list(self.state["discord"].items()):
             if m["fin"] < now_ts:
-                del self.state["discord"][key]                  # trop tard : on abandonne
+                del self.state["discord"][key]  # trop tard : on abandonne
                 continue
             try:
                 ok = self.notifier(m["titre"], m["texte"]) if self.notifier else None
             except Exception as exc:
                 print(f"[Rappels] envoi Discord impossible : {exc}")
                 ok = False
-            if ok is None or ok:                                # envoyé, ou pas de bot : rien à réessayer
+            if ok is None or ok:  # envoyé, ou pas de bot : rien à réessayer
                 del self.state["discord"][key]
 
     def _prune(self, now_ts: float) -> None:
@@ -198,7 +203,7 @@ class ReminderService:
             while not self._stop.is_set():
                 try:
                     self.tick()
-                except Exception as exc:              # un agenda illisible ne doit pas arrêter le serveur
+                except Exception as exc:  # un agenda illisible ne doit pas arrêter le serveur
                     print(f"[Rappels] erreur : {exc}")
                 self._stop.wait(TICK_SECONDS)
 

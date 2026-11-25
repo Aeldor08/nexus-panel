@@ -27,20 +27,33 @@ _iphlpapi = ctypes.WinDLL("iphlpapi")
 
 
 class _IPOptions(ctypes.Structure):
-    _fields_ = [("Ttl", ctypes.c_ubyte), ("Tos", ctypes.c_ubyte), ("Flags", ctypes.c_ubyte),
-                ("OptionsSize", ctypes.c_ubyte), ("OptionsData", ctypes.c_void_p)]
+    _fields_ = [("Ttl", ctypes.c_ubyte), ("Tos", ctypes.c_ubyte), ("Flags", ctypes.c_ubyte), ("OptionsSize", ctypes.c_ubyte), ("OptionsData", ctypes.c_void_p)]
 
 
 class _EchoReply(ctypes.Structure):
-    _fields_ = [("Address", ctypes.c_ulong), ("Status", ctypes.c_ulong),
-                ("RoundTripTime", ctypes.c_ulong), ("DataSize", ctypes.c_ushort),
-                ("Reserved", ctypes.c_ushort), ("Data", ctypes.c_void_p), ("Options", _IPOptions)]
+    _fields_ = [
+        ("Address", ctypes.c_ulong),
+        ("Status", ctypes.c_ulong),
+        ("RoundTripTime", ctypes.c_ulong),
+        ("DataSize", ctypes.c_ushort),
+        ("Reserved", ctypes.c_ushort),
+        ("Data", ctypes.c_void_p),
+        ("Options", _IPOptions),
+    ]
 
 
 _iphlpapi.IcmpCreateFile.restype = wintypes.HANDLE
 _iphlpapi.IcmpCloseHandle.argtypes = [wintypes.HANDLE]
-_iphlpapi.IcmpSendEcho.argtypes = [wintypes.HANDLE, ctypes.c_ulong, ctypes.c_void_p, ctypes.c_ushort,
-                                   ctypes.c_void_p, ctypes.c_void_p, ctypes.c_ulong, ctypes.c_ulong]
+_iphlpapi.IcmpSendEcho.argtypes = [
+    wintypes.HANDLE,
+    ctypes.c_ulong,
+    ctypes.c_void_p,
+    ctypes.c_ushort,
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.c_ulong,
+    ctypes.c_ulong,
+]
 _iphlpapi.IcmpSendEcho.restype = ctypes.c_ulong
 
 
@@ -73,8 +86,9 @@ def ping(ip: str, timeout_ms: int = 1000) -> float | None:
 
 def default_gateway() -> str | None:
     try:
-        out = subprocess.run(["route", "print", "-4", "0.0.0.0"], capture_output=True, text=True, encoding="oem", errors="replace",
-                             timeout=5, creationflags=CREATE_NO_WINDOW).stdout
+        out = subprocess.run(
+            ["route", "print", "-4", "0.0.0.0"], capture_output=True, text=True, encoding="oem", errors="replace", timeout=5, creationflags=CREATE_NO_WINDOW
+        ).stdout
     except Exception:
         return None
     for line in out.splitlines():
@@ -91,18 +105,16 @@ def default_gateway() -> str | None:
 # --------------------------------------------------------------------------- #
 #  Surveillance du ping et de la qualité
 # --------------------------------------------------------------------------- #
-HISTORY = 300           # 5 minutes à 1 mesure/s
-STATS_WINDOW = 60       # statistiques sur la dernière minute
-OUTAGE_MIN = 3          # coupure si 3 s consécutives sans réponse d'Internet
+HISTORY = 300  # 5 minutes à 1 mesure/s
+STATS_WINDOW = 60  # statistiques sur la dernière minute
+OUTAGE_MIN = 3  # coupure si 3 s consécutives sans réponse d'Internet
 
 
 class PingMonitor:
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self.gateway = default_gateway()
-        self.targets = [("gateway", "Box / routeur", self.gateway),
-                        ("cloudflare", "Cloudflare", "1.1.1.1"),
-                        ("google", "Google", "8.8.8.8")]
+        self.targets = [("gateway", "Box / routeur", self.gateway), ("cloudflare", "Cloudflare", "1.1.1.1"), ("google", "Google", "8.8.8.8")]
         self.hist = {k: deque(maxlen=HISTORY) for k, _, _ in self.targets}
         self.outages: deque = deque(maxlen=30)
         self._down_since = None
@@ -120,7 +132,7 @@ class PingMonitor:
                 last_gw = time.time()
             try:
                 futs = {k: pool.submit(ping, ip, 900) if ip else None for k, _, ip in self.targets}
-            except RuntimeError:      # arrêt de Python en cours
+            except RuntimeError:  # arrêt de Python en cours
                 return
             res = {k: (f.result() if f else None) for k, f in futs.items()}
             with self._lock:
@@ -132,8 +144,7 @@ class PingMonitor:
                     if self._down_count == 1:
                         self._down_since = t0
                     if self._down_count == OUTAGE_MIN:
-                        self.outages.appendleft({"start": self._down_since, "end": None,
-                                                 "box_ok": res["gateway"] is not None})
+                        self.outages.appendleft({"start": self._down_since, "end": None, "box_ok": res["gateway"] is not None})
                 else:
                     if self._down_count >= OUTAGE_MIN and self.outages and self.outages[0]["end"] is None:
                         self.outages[0]["end"] = t0
@@ -159,17 +170,19 @@ class PingMonitor:
             targets = []
             for key, label, ip in self.targets:
                 values = list(self.hist[key])
-                targets.append({"key": key, "label": label, "ip": ip,
-                                "history": values, **self._stats(values[-STATS_WINDOW:])})
+                targets.append({"key": key, "label": label, "ip": ip, "history": values, **self._stats(values[-STATS_WINDOW:])})
             outages = list(self.outages)
             down = self._down_count >= OUTAGE_MIN
         net = [t for t in targets if t["key"] != "gateway"]
         avg = [t["avg"] for t in net if t["avg"] is not None]
         jit = [t["jitter"] for t in net if t["jitter"] is not None]
         loss = [t["loss"] for t in net if t["loss"] is not None]
-        return {"targets": targets, "outages": outages, "internet_down": down,
-                "quality": _quality(min(avg) if avg else None, min(jit) if jit else None,
-                                    min(loss) if loss else None, down)}
+        return {
+            "targets": targets,
+            "outages": outages,
+            "internet_down": down,
+            "quality": _quality(min(avg) if avg else None, min(jit) if jit else None, min(loss) if loss else None, down),
+        }
 
 
 def _quality(avg, jitter, loss, down) -> dict:
@@ -178,12 +191,11 @@ def _quality(avg, jitter, loss, down) -> dict:
     if avg is None:
         return {"grade": "inconnu", "label": "Mesure en cours…", "score": None}
     score = 100
-    score -= max(0, min(40, (avg - 15) * 0.5))          # latence
-    score -= max(0, min(30, ((jitter or 0) - 2) * 2))   # gigue
-    score -= max(0, min(50, (loss or 0) * 6))           # pertes
+    score -= max(0, min(40, (avg - 15) * 0.5))  # latence
+    score -= max(0, min(30, ((jitter or 0) - 2) * 2))  # gigue
+    score -= max(0, min(50, (loss or 0) * 6))  # pertes
     score = round(max(0, score))
-    for limit, grade, label in ((90, "excellente", "Excellente"), (75, "bonne", "Bonne"),
-                                (50, "moyenne", "Moyenne"), (-1, "mauvaise", "Mauvaise")):
+    for limit, grade, label in ((90, "excellente", "Excellente"), (75, "bonne", "Bonne"), (50, "moyenne", "Moyenne"), (-1, "mauvaise", "Mauvaise")):
         if score >= limit:
             return {"grade": grade, "label": label, "score": score}
 
@@ -210,8 +222,7 @@ def _local_network() -> tuple[str, str, ipaddress.IPv4Network] | None:
 
 def _arp_table() -> dict[str, str]:
     try:
-        out = subprocess.run(["arp", "-a"], capture_output=True, text=True, encoding="oem", errors="replace", timeout=10,
-                             creationflags=CREATE_NO_WINDOW).stdout
+        out = subprocess.run(["arp", "-a"], capture_output=True, text=True, encoding="oem", errors="replace", timeout=10, creationflags=CREATE_NO_WINDOW).stdout
     except Exception:
         return {}
     table = {}
@@ -235,12 +246,12 @@ class LanScanner:
     def __init__(self, gateway_getter, paused=lambda: False) -> None:
         self._lock = threading.Lock()
         self._gateway = gateway_getter
-        self._paused = paused           # mode jeu : pas de scan automatique (64 pings en parallèle)
+        self._paused = paused  # mode jeu : pas de scan automatique (64 pings en parallèle)
         self._manual = False
         self._scanning = False
         self.last_scan = None
         self.error = None
-        self.devices: dict[str, dict] = {}         # mac -> infos du dernier scan
+        self.devices: dict[str, dict] = {}  # mac -> infos du dernier scan
         self.known = store.load("devices", {}) or {}  # mac -> {label, first_seen, last_seen, ...}
         self._wake = threading.Event()
         threading.Thread(target=self._loop, daemon=True).start()
@@ -281,7 +292,7 @@ class LanScanner:
             arp = _arp_table()
             online = {ip: mac for ip, mac in arp.items() if ipaddress.IPv4Address(ip) in net}
             online[my_ip] = my_mac
-            for ip in rtts:                      # répond au ping mais absent de l'ARP (rare)
+            for ip in rtts:  # répond au ping mais absent de l'ARP (rare)
                 online.setdefault(ip, f"ip:{ip}")
             with ThreadPoolExecutor(32) as pool:
                 names = dict(zip(online, pool.map(_hostname, online)))
@@ -293,8 +304,7 @@ class LanScanner:
                 k.update(last_seen=now, last_ip=ip)
                 if names.get(ip):
                     k["hostname"] = names[ip]
-                devices[mac] = {"mac": mac, "ip": ip, "rtt": rtts.get(ip), "hostname": k.get("hostname"),
-                                "is_self": ip == my_ip, "is_gateway": ip == gw}
+                devices[mac] = {"mac": mac, "ip": ip, "rtt": rtts.get(ip), "hostname": k.get("hostname"), "is_self": ip == my_ip, "is_gateway": ip == gw}
             with self._lock:
                 self.devices = devices
                 self.last_scan = now
@@ -332,14 +342,20 @@ class LanScanner:
                     private = bool(int(mac[1], 16) & 0x2) if not mac.startswith("ip:") else False
                 except ValueError:
                     private = False
-                out.append({
-                    "mac": mac, "online": d is not None, "ip": d["ip"] if d else k.get("last_ip"),
-                    "rtt": d["rtt"] if d else None, "hostname": k.get("hostname"),
-                    "label": k.get("label"), "first_seen": k.get("first_seen"),
-                    "last_seen": k.get("last_seen"), "private_mac": private,
-                    "is_self": bool(d and d["is_self"]), "is_gateway": bool(d and d["is_gateway"]),
-                })
-            out.sort(key=lambda x: (not x["online"], not x["is_gateway"], not x["is_self"],
-                                    tuple(int(p) for p in (x["ip"] or "0.0.0.0").split("."))))
-            return {"devices": out, "last_scan": self.last_scan, "scanning": self._scanning,
-                    "error": self.error, "network": getattr(self, "network", None)}
+                out.append(
+                    {
+                        "mac": mac,
+                        "online": d is not None,
+                        "ip": d["ip"] if d else k.get("last_ip"),
+                        "rtt": d["rtt"] if d else None,
+                        "hostname": k.get("hostname"),
+                        "label": k.get("label"),
+                        "first_seen": k.get("first_seen"),
+                        "last_seen": k.get("last_seen"),
+                        "private_mac": private,
+                        "is_self": bool(d and d["is_self"]),
+                        "is_gateway": bool(d and d["is_gateway"]),
+                    }
+                )
+            out.sort(key=lambda x: (not x["online"], not x["is_gateway"], not x["is_self"], tuple(int(p) for p in (x["ip"] or "0.0.0.0").split("."))))
+            return {"devices": out, "last_scan": self.last_scan, "scanning": self._scanning, "error": self.error, "network": getattr(self, "network", None)}

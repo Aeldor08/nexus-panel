@@ -1,4 +1,5 @@
 """Tests du mode portable : détection du drapeau, mutex par dossier, archive ZIP."""
+
 from __future__ import annotations
 
 import os

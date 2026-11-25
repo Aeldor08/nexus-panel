@@ -14,11 +14,42 @@ BASE = paths.APP_DIR
 VERSIONS_DIR = paths.VERSIONS_DIR
 # Ce qui fait partie du « code » du panel (les données dans data/ ne sont jamais incluses)
 # (config.json et deck.json, personnels, ne sont jamais inclus : seuls les modèles *.example.json le sont)
-CODE_GLOBS = ["*.py", "*.bat", "*.spec", "*.iss", "*.md", "*.txt", "*.ico", "*.example.json", ".gitignore", "VERSION",
-              "LICENSE", "static/**/*", "outils/*", "profils/**/*", "docs/**/*", "actions/*.bat", "actions/*.cmd",
-              "actions/*.ps1", "actions/*.py"]
-EXCLUDE_PARTS = {".venv", ".venv-build", "runtime", "runtime.neuf", "runtime.tmp", "data", "versions", "__pycache__",
-                 "LibreHardwareMonitor", "partage", "maj", "sauvegardes-maj", "dist"}
+CODE_GLOBS = [
+    "*.py",
+    "*.bat",
+    "*.spec",
+    "*.iss",
+    "*.md",
+    "*.txt",
+    "*.ico",
+    "*.example.json",
+    ".gitignore",
+    "VERSION",
+    "LICENSE",
+    "static/**/*",
+    "outils/*",
+    "profils/**/*",
+    "docs/**/*",
+    "actions/*.bat",
+    "actions/*.cmd",
+    "actions/*.ps1",
+    "actions/*.py",
+]
+EXCLUDE_PARTS = {
+    ".venv",
+    ".venv-build",
+    "runtime",
+    "runtime.neuf",
+    "runtime.tmp",
+    "data",
+    "versions",
+    "__pycache__",
+    "LibreHardwareMonitor",
+    "partage",
+    "maj",
+    "sauvegardes-maj",
+    "dist",
+}
 
 
 def current() -> str:
@@ -38,7 +69,7 @@ def changelog() -> list[dict]:
     for block in re.split(r"^## ", text, flags=re.M)[1:]:
         head, _, body = block.partition("\n")
         m = re.match(r"\[(.+?)\](?:\s*-\s*(\d{4}-\d{2}-\d{2}))?(?:\s*-\s*(.+))?", head.strip())
-        if not m or not re.match(r"^\d+\.\d+\.\d+", m.group(1)):     # [Non publié] / [Unreleased] : ignoré
+        if not m or not re.match(r"^\d+\.\d+\.\d+", m.group(1)):  # [Non publié] / [Unreleased] : ignoré
             continue
         items: list[str] = []
         rubrique = ""
@@ -48,7 +79,7 @@ def changelog() -> list[dict]:
                 rubrique = s[4:].strip()
             elif s.startswith("- "):
                 items.append((f"{rubrique} : " if rubrique else "") + s[2:].strip())
-            elif s and items and line[:1] in (" ", "\t"):    # ligne de suite (indentée) du point précédent
+            elif s and items and line[:1] in (" ", "\t"):  # ligne de suite (indentée) du point précédent
                 items[-1] += " " + s
         entries.append({"version": m.group(1), "date": m.group(2) or "", "title": (m.group(3) or "").strip(), "items": items})
     return entries
@@ -90,7 +121,7 @@ def snapshot(force: bool = False) -> Path | None:
     return target
 
 
-VERSIONS_A_GARDER = 8           # sauvegardes de code gardées dans versions\ (les plus récentes)
+VERSIONS_A_GARDER = 8  # sauvegardes de code gardées dans versions\ (les plus récentes)
 
 
 def nettoyer(garder: int = VERSIONS_A_GARDER) -> list[str]:
@@ -100,7 +131,7 @@ def nettoyer(garder: int = VERSIONS_A_GARDER) -> list[str]:
     for motif, n in (("panel-v*.zip", garder), ("avant-restauration-*.zip", 3)):
         fichiers = sorted(VERSIONS_DIR.glob(motif), key=lambda f: f.stat().st_mtime, reverse=True)
         actuelle = VERSIONS_DIR / f"panel-v{current()}.zip"
-        for f in fichiers[max(1, n):]:
+        for f in fichiers[max(1, n) :]:
             if f == actuelle:
                 continue
             try:
@@ -116,8 +147,7 @@ def snapshots() -> list[dict]:
     for z in VERSIONS_DIR.glob("*.zip"):
         m = re.match(r"panel-v(.+)\.zip$", z.name)
         st = z.stat()
-        out.append({"file": z.name, "version": m.group(1) if m else None,
-                     "size": st.st_size, "time": st.st_mtime})
+        out.append({"file": z.name, "version": m.group(1) if m else None, "size": st.st_size, "time": st.st_mtime})
     out.sort(key=lambda s: s["time"], reverse=True)
     return out
 
@@ -145,7 +175,7 @@ def restore(archive: Path) -> int:
                 continue
             dest = (BASE / member.filename).resolve()
             rel = dest.relative_to(BASE) if dest.is_relative_to(BASE) else None
-            if rel is None or set(rel.parts) & EXCLUDE_PARTS:     # chemin hors du dossier : ignoré
+            if rel is None or set(rel.parts) & EXCLUDE_PARTS:  # chemin hors du dossier : ignoré
                 continue
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_bytes(z.read(member))
@@ -183,5 +213,4 @@ if __name__ == "__main__":
 
 
 def info() -> dict:
-    return {"version": current(), "date": date_version(), "changelog": changelog(), "snapshots": snapshots(),
-            "checked": time.time()}
+    return {"version": current(), "date": date_version(), "changelog": changelog(), "snapshots": snapshots(), "checked": time.time()}

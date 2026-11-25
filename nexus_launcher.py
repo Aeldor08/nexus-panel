@@ -86,6 +86,7 @@ def _mutex_name() -> str:
     suffixe = ""
     if os.environ.get("NEXUS_PORTABLE") == "1":
         import hashlib
+
         dossier = str(Path(sys.executable).resolve().parent).lower()
         suffixe = "-" + hashlib.sha1(dossier.encode("utf-8")).hexdigest()[:10]
     return f"Local\\NEXUS-{user}{suffixe}"
@@ -104,12 +105,13 @@ def _single_instance() -> bool:
     _MUTEX_HANDLE = kernel32.CreateMutexW(None, False, _mutex_name())
     if not _MUTEX_HANDLE:
         return True
-    return kernel32.GetLastError() != 183          # ERROR_ALREADY_EXISTS
+    return kernel32.GetLastError() != 183  # ERROR_ALREADY_EXISTS
 
 
 def _activate_existing() -> bool:
     """Demande à l'instance déjà lancée de montrer sa fenêtre ; repli : navigateur."""
     import paths
+
     runtime = paths.read_runtime()
     try:
         port = int(runtime.get("port") or 0)
@@ -123,15 +125,15 @@ def _activate_existing() -> bool:
         url += "?token=" + urllib.parse.quote(token, safe="")
     for _ in range(12):
         try:
-            req = urllib.request.Request(url, data=b"{}", method="POST",
-                                         headers={"Content-Type": "application/json"})
+            req = urllib.request.Request(url, data=b"{}", method="POST", headers={"Content-Type": "application/json"})
             with urllib.request.urlopen(req, timeout=1.5) as rep:
                 if 200 <= rep.status < 300:
                     return True
         except Exception:
-            time.sleep(.25)
-    try:                                           # repli : ouvrir l'interface dans le navigateur
+            time.sleep(0.25)
+    try:  # repli : ouvrir l'interface dans le navigateur
         import webbrowser
+
         q = ("/?token=" + urllib.parse.quote(token, safe="")) if token else "/"
         webbrowser.open(f"http://127.0.0.1:{port}{q}")
         return True
@@ -286,23 +288,19 @@ class _SetupApi:
 
             old_deck = cfg.get("deck") if isinstance(cfg.get("deck"), dict) else {}
             rate = old_deck.get("rate_limit_per_minute", config.DEFAULTS["deck"]["rate_limit_per_minute"])
-            cfg["deck"] = {"password_hash": hash_password(password), "password": "",
-                           "rate_limit_per_minute": rate}
-            cfg["discord"] = {"enabled": bool(token and user_id and channel_id), "token": token,
-                              "user_id": user_id, "alert_channel_id": channel_id}
+            cfg["deck"] = {"password_hash": hash_password(password), "password": "", "rate_limit_per_minute": rate}
+            cfg["discord"] = {"enabled": bool(token and user_id and channel_id), "token": token, "user_id": user_id, "alert_channel_id": channel_id}
             for key in ("alerts", "agenda", "journal"):
                 cfg.setdefault(key, copy.deepcopy(config.DEFAULTS[key]))
             maj = dict(cfg.get("mises_a_jour") or {})
-            maj.update({"depot": depot, "actif": True,
-                        "intervalle_heures": maj.get("intervalle_heures", 6),
-                        "discord": bool(maj.get("discord", False))})
+            maj.update({"depot": depot, "actif": True, "intervalle_heures": maj.get("intervalle_heures", 6), "discord": bool(maj.get("discord", False))})
             cfg["mises_a_jour"] = maj
 
             paths.CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
             tmp = paths.CONFIG_FILE.with_suffix(".tmp")
             tmp.write_text(json.dumps(cfg, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             tmp.replace(paths.CONFIG_FILE)
-            try:                                  # mot de passe changé : anciennes sessions invalides
+            try:  # mot de passe changé : anciennes sessions invalides
                 (paths.DATA_DIR / "deck_sessions.json").unlink(missing_ok=True)
             except OSError:
                 pass
@@ -324,11 +322,14 @@ def _run_setup() -> int:
     """Ouvre la fenêtre de configuration native (processus séparé au premier lancement)."""
     global _SETUP_WINDOW
     import paths
+
     paths.prepare()
     import logs
+
     logs.install()
     try:
         import config
+
         config.migrer()
         config.load(force=True)
     except Exception as exc:
@@ -336,19 +337,27 @@ def _run_setup() -> int:
     try:
         import webview
     except Exception as exc:
-        _message("La fenêtre de configuration nécessite pywebview.\n\n"
-                 f"{type(exc).__name__}: {exc}\n\nLance lancer_native.bat pour l'installer.")
+        _message(f"La fenêtre de configuration nécessite pywebview.\n\n{type(exc).__name__}: {exc}\n\nLance lancer_native.bat pour l'installer.")
         return 1
     _SETUP_WINDOW = webview.create_window(
-        "Configuration NEXUS", html=_SETUP_HTML, js_api=_SetupApi(),
-        width=680, height=840, min_size=(560, 620), resizable=True,
-        background_color="#06060a", text_select=True,
+        "Configuration NEXUS",
+        html=_SETUP_HTML,
+        js_api=_SetupApi(),
+        width=680,
+        height=840,
+        min_size=(560, 620),
+        resizable=True,
+        background_color="#06060a",
+        text_select=True,
     )
     try:
         (paths.DATA_DIR / "webview").mkdir(parents=True, exist_ok=True)
-        webview.start(debug=bool(_ARGS and _ARGS.debug), private_mode=False,
-                      storage_path=str(paths.DATA_DIR / "webview"),
-                      icon=str(paths.APP_DIR / "panel.ico") if (paths.APP_DIR / "panel.ico").is_file() else None)
+        webview.start(
+            debug=bool(_ARGS and _ARGS.debug),
+            private_mode=False,
+            storage_path=str(paths.DATA_DIR / "webview"),
+            icon=str(paths.APP_DIR / "panel.ico") if (paths.APP_DIR / "panel.ico").is_file() else None,
+        )
     except Exception as exc:
         _message(f"Impossible d'ouvrir la configuration : {type(exc).__name__}: {exc}")
         return 1
@@ -362,7 +371,7 @@ def _autostart_command() -> str:
     if getattr(sys, "frozen", False):
         return f'"{sys.executable}" --minimized'
     exe = Path(sys.executable)
-    pythonw = exe.with_name("pythonw.exe")          # pas de console au démarrage
+    pythonw = exe.with_name("pythonw.exe")  # pas de console au démarrage
     if pythonw.is_file():
         exe = pythonw
     return f'"{exe}" "{Path(__file__).resolve()}" --minimized'
@@ -374,6 +383,7 @@ def _set_autostart(actif: bool) -> bool:
     if actif and os.environ.get("NEXUS_PORTABLE") == "1":
         return False
     import winreg
+
     key = r"Software\Microsoft\Windows\CurrentVersion\Run"
     try:
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key, 0, winreg.KEY_SET_VALUE) as k:
@@ -401,17 +411,18 @@ def _init_native_notifier():
         print(f"[Notifications] winotify indisponible : {exc}")
         return None
     import paths
+
     icon = paths.APP_DIR / "panel.ico"
 
     def notify(titre: str, texte: str) -> bool:
         try:
-            n = Notification(app_id=APP_NAME, title=str(titre)[:64], msg=str(texte)[:256],
-                             icon=str(icon) if icon.is_file() else "")
+            n = Notification(app_id=APP_NAME, title=str(titre)[:64], msg=str(texte)[:256], icon=str(icon) if icon.is_file() else "")
             n.show()
             return True
         except Exception as exc:
             print(f"[Notifications] {exc}")
             return False
+
     return notify
 
 
@@ -431,8 +442,7 @@ def _find_window_handle(require_title: bool = False) -> int | None:
     from ctypes import wintypes
 
     class RECT(ctypes.Structure):
-        _fields_ = [("left", wintypes.LONG), ("top", wintypes.LONG),
-                    ("right", wintypes.LONG), ("bottom", wintypes.LONG)]
+        _fields_ = [("left", wintypes.LONG), ("top", wintypes.LONG), ("right", wintypes.LONG), ("bottom", wintypes.LONG)]
 
     user32 = ctypes.windll.user32
     pid = os.getpid()
@@ -469,11 +479,11 @@ def _watch_window() -> None:
         _WINDOW_HANDLE = _find_window_handle(require_title=True)
         if _WINDOW_HANDLE:
             break
-        time.sleep(.1)
-    if _WINDOW_HANDLE is None:                    # titre pas encore posé : repli
+        time.sleep(0.1)
+    if _WINDOW_HANDLE is None:  # titre pas encore posé : repli
         _WINDOW_HANDLE = _find_window_handle()
     if _ARGS is not None and _ARGS.minimized and _WINDOW_HANDLE and sys.platform == "win32":
-        ctypes.windll.user32.ShowWindow(_WINDOW_HANDLE, 0)      # SW_HIDE : démarrage dans le tray
+        ctypes.windll.user32.ShowWindow(_WINDOW_HANDLE, 0)  # SW_HIDE : démarrage dans le tray
 
 
 def _show_window(*_args) -> None:
@@ -502,12 +512,14 @@ def _show_window(*_args) -> None:
 
 def _show_tab(tab: str, *_args) -> None:
     _show_window()
-    if _WINDOW is not None:                       # dans un fil : ne bloque jamais le tray
+    if _WINDOW is not None:  # dans un fil : ne bloque jamais le tray
+
         def aller():
             try:
                 _WINDOW.evaluate_js(f"location.hash = '#{tab}'")
             except Exception:
                 pass
+
         threading.Thread(target=aller, daemon=True, name="onglet").start()
 
 
@@ -517,7 +529,7 @@ def _on_closing() -> bool:
     if sys.platform == "win32":
         handle = _WINDOW_HANDLE or _find_window_handle(require_title=True)
         if handle and ctypes.windll.user32.IsWindow(handle):
-            ctypes.windll.user32.ShowWindow(handle, 0)          # SW_HIDE (le handle reste vivant)
+            ctypes.windll.user32.ShowWindow(handle, 0)  # SW_HIDE (le handle reste vivant)
             try:
                 _TRAY.notify("NEXUS continue en arrière-plan", APP_NAME)
             except Exception:
@@ -543,7 +555,7 @@ def _quit(*_args) -> None:
     if sys.platform == "win32":
         handle = _WINDOW_HANDLE or _find_window_handle(require_title=True)
         if handle and ctypes.windll.user32.IsWindow(handle):
-            if ctypes.windll.user32.PostMessageW(handle, 0x0010, 0, 0):   # WM_CLOSE
+            if ctypes.windll.user32.PostMessageW(handle, 0x0010, 0, 0):  # WM_CLOSE
                 return
     if _WINDOW is not None:
         try:
@@ -560,6 +572,7 @@ def _start_tray() -> None:
         import pystray
         from PIL import Image
         import paths
+
         icon_path = paths.APP_DIR / "panel.ico"
         image = Image.open(icon_path).convert("RGBA") if icon_path.is_file() else Image.new("RGBA", (64, 64), (0, 240, 255, 255))
         menu = pystray.Menu(
@@ -583,6 +596,7 @@ def _run_server(host: str, port: int) -> None:
     global _SERVER
     import uvicorn
     import app
+
     config = uvicorn.Config(app.app, host=host, port=port, log_level="warning", access_log=False)
     _SERVER = uvicorn.Server(config)
     _SERVER.run()
@@ -598,19 +612,22 @@ def _demarrer_lhm() -> None:
         return
     try:
         import paths
+
         exe = paths.INSTALL_DIR / "LibreHardwareMonitor" / "LibreHardwareMonitor.exe"
         if not exe.is_file():
             return
         cfg = exe.with_name("LibreHardwareMonitor.config")
-        modele = paths.APP_DIR / "outils" / "LibreHardwareMonitor.config"     # serveur web 8085 activé, réduit
+        modele = paths.APP_DIR / "outils" / "LibreHardwareMonitor.config"  # serveur web 8085 activé, réduit
         if not cfg.exists() and modele.is_file():
             import shutil
+
             shutil.copyfile(modele, cfg)
         import psutil
+
         if any((p.info.get("name") or "").lower() == "librehardwaremonitor.exe" for p in psutil.process_iter(["name"])):
             return
         print("[Matériel] démarrage de LibreHardwareMonitor (fenêtre administrateur de Windows)")
-        r = ctypes.windll.shell32.ShellExecuteW(None, "runas", str(exe), None, str(exe.parent), 7)   # 7 : réduit
+        r = ctypes.windll.shell32.ShellExecuteW(None, "runas", str(exe), None, str(exe.parent), 7)  # 7 : réduit
         if r <= 32:
             print("[Matériel] LibreHardwareMonitor non démarré (autorisation refusée ?) : températures CPU indisponibles")
     except Exception as exc:
@@ -622,6 +639,7 @@ def _restart_server(port: int) -> None:
     sans quitter NEXUS. La fenêtre garde son jeton et retrouve le serveur sur le même port."""
     global _SERVER, _SERVER_THREAD
     import app
+
     if _QUITTING:
         return
     ancien, fil = _SERVER, _SERVER_THREAD
@@ -631,14 +649,14 @@ def _restart_server(port: int) -> None:
         fil.join(10)
     app.remote_svc.active = app.remote_svc.enabled
     host = "0.0.0.0" if app.remote_svc.enabled else "127.0.0.1"
-    for _essai in range(20):                  # le port peut rester occupé un court instant
-        _SERVER = None                        # sinon _server_ready verrait l'ancien serveur « started »
+    for _essai in range(20):  # le port peut rester occupé un court instant
+        _SERVER = None  # sinon _server_ready verrait l'ancien serveur « started »
         _SERVER_THREAD = threading.Thread(target=_run_server, args=(host, port), daemon=True, name="serveur")
         _SERVER_THREAD.start()
         if _server_ready(10):
             print(f"[Serveur] relancé sur {host}:{port} (accès téléphone {'activé' if app.remote_svc.active else 'désactivé'})")
             return
-        time.sleep(.5)
+        time.sleep(0.5)
     print("[Serveur] ERREUR : relance impossible, redémarre NEXUS")
 
 
@@ -649,7 +667,7 @@ def _server_ready(timeout: float = 30.0) -> bool:
             return True
         if _SERVER_THREAD is not None and not _SERVER_THREAD.is_alive():
             return False
-        time.sleep(.1)
+        time.sleep(0.1)
     return False
 
 
@@ -665,11 +683,13 @@ def _shutdown() -> None:
         _SERVER_THREAD.join(5)
     try:
         import app
+
         app.stop_services()
     except Exception:
         pass
     try:
         import paths
+
         paths.clear_runtime()
     except Exception:
         pass
@@ -723,14 +743,18 @@ def main() -> int:
     os.environ["NEXUS_PORT"] = str(port)
 
     import paths
-    paths.prepare()                    # _dire() est sûr même avec pythonw (stdout None)
-    paths.clear_runtime()              # enlève un éventuel runtime.json laissé par un crash
+
+    paths.prepare()  # _dire() est sûr même avec pythonw (stdout None)
+    paths.clear_runtime()  # enlève un éventuel runtime.json laissé par un crash
     import logs
+
     log_path = logs.install()
     import sante
+
     sante.install()
 
     import config
+
     try:
         config.migrer()
     except Exception as exc:
@@ -742,20 +766,23 @@ def main() -> int:
     # Première installation : la fenêtre de configuration s'ouvre dans un processus séparé
     # (pywebview ne peut démarrer qu'une fois par processus).
     from deck import Deck
+
     if not Deck.password_set(config.get("deck")) and not _ARGS.smoke_test:
-        cmd = ([sys.executable, "--configure"] if getattr(sys, "frozen", False)
-               else [sys.executable, str(Path(__file__).resolve()), "--configure"])
+        cmd = [sys.executable, "--configure"] if getattr(sys, "frozen", False) else [sys.executable, str(Path(__file__).resolve()), "--configure"]
         try:
             subprocess.run(cmd, cwd=str(Path(__file__).resolve().parent), timeout=900)
         except Exception as exc:
             print(f"[Config] fenêtre de configuration impossible : {type(exc).__name__}: {exc}")
         config.load(force=True)
         if not Deck.password_set(config.get("deck")):
-            _message("Le mot de passe du stream deck n'est pas défini.\n"
-                     "Le Deck restera désactivé jusqu'à la configuration "
-                     "(menu Démarrer → Configurer NEXUS, ou NEXUS.exe --configure).")
+            _message(
+                "Le mot de passe du stream deck n'est pas défini.\n"
+                "Le Deck restera désactivé jusqu'à la configuration "
+                "(menu Démarrer → Configurer NEXUS, ou NEXUS.exe --configure)."
+            )
 
     import app
+
     app.PORT = port
     try:
         app._journaliser_resultat_maj()
@@ -785,9 +812,12 @@ def main() -> int:
     except Exception as exc:
         print(f"[Fenêtre] pywebview indisponible : {exc}")
         import webbrowser
+
         q = "/?token=" + urllib.parse.quote(token, safe="") + ("&native=1" if notifier is not None else "&native=0")
         webbrowser.open(f"http://127.0.0.1:{port}{q}")
-        _message("La fenêtre native n'est pas disponible (pywebview manquant).\nL'interface s'ouvre dans le navigateur.\n\nFermez cette fenêtre pour arrêter NEXUS.")
+        _message(
+            "La fenêtre native n'est pas disponible (pywebview manquant).\nL'interface s'ouvre dans le navigateur.\n\nFermez cette fenêtre pour arrêter NEXUS."
+        )
         try:
             while not _STOP.wait(1):
                 pass
@@ -802,26 +832,36 @@ def main() -> int:
     q += "&native=1" if notifier is not None else "&native=0"
     url = f"http://127.0.0.1:{port}{q}"
     _WINDOW = webview.create_window(
-        APP_NAME, url,
-        width=1280, height=860, min_size=(1024, 700),
-        minimized=demarre_reduit, focus=not demarre_reduit,
+        APP_NAME,
+        url,
+        width=1280,
+        height=860,
+        min_size=(1024, 700),
+        minimized=demarre_reduit,
+        focus=not demarre_reduit,
         background_color="#06060a",
         text_select=True,
     )
     _WINDOW.events.closing += _on_closing
 
     if _ARGS.smoke_test:
+
         def _fermer_bientot():
             time.sleep(4)
             _quit()
+
         threading.Thread(target=_fermer_bientot, daemon=True, name="smoke-test").start()
 
     try:
         webview_dir = paths.DATA_DIR / "webview"
         webview_dir.mkdir(parents=True, exist_ok=True)
-        webview.start(_watch_window, debug=_ARGS.debug, private_mode=False,
-                      storage_path=str(webview_dir),
-                      icon=str(paths.APP_DIR / "panel.ico") if (paths.APP_DIR / "panel.ico").is_file() else None)
+        webview.start(
+            _watch_window,
+            debug=_ARGS.debug,
+            private_mode=False,
+            storage_path=str(webview_dir),
+            icon=str(paths.APP_DIR / "panel.ico") if (paths.APP_DIR / "panel.ico").is_file() else None,
+        )
     finally:
         _shutdown()
     return 0
@@ -856,11 +896,11 @@ if __name__ == "__main__":
         raise SystemExit(main())
     except Exception as exc:
         import traceback
+
         traceback.print_exc()
         try:
             _shutdown()
         except Exception:
             pass
-        _message(f"NEXUS n'a pas pu démarrer.\n\n{type(exc).__name__}: {exc}\n\n"
-                 "Consultez logs\\nexus.log pour le détail.")
+        _message(f"NEXUS n'a pas pu démarrer.\n\n{type(exc).__name__}: {exc}\n\nConsultez logs\\nexus.log pour le détail.")
         raise SystemExit(1)

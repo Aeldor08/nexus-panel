@@ -120,12 +120,8 @@ def write_portable(ver: str) -> Path:
         raise BuildError(f"exe introuvable pour l'archive portable : {source / 'NEXUS.exe'}")
     cible = DIST / f"NEXUS-Portable-{ver}.zip"
     racine = f"NEXUS-Portable-{ver}"
-    flag = ("NEXUS portable\n"
-            "Les données (config.json, data, logs, profils, actions) restent dans ce dossier.\n")
-    lanceur = ("@echo off\r\n"
-               "setlocal\r\n"
-               "cd /d \"%~dp0\"\r\n"
-               "start \"\" \"NEXUS.exe\" --portable\r\n")
+    flag = "NEXUS portable\nLes données (config.json, data, logs, profils, actions) restent dans ce dossier.\n"
+    lanceur = '@echo off\r\nsetlocal\r\ncd /d "%~dp0"\r\nstart "" "NEXUS.exe" --portable\r\n'
     notice = f"""NEXUS {ver} — version portable
 ================================
 
@@ -170,8 +166,7 @@ Mise à jour manuelle (dossier en lecture seule, ou portable antérieur à 1.9.0
 def depot_origin() -> str:
     """propriétaire/nom du remote origin GitHub, ou chaîne vide."""
     try:
-        url = subprocess.run(["git", "remote", "get-url", "origin"], cwd=BASE, capture_output=True,
-                             text=True, timeout=10).stdout.strip()
+        url = subprocess.run(["git", "remote", "get-url", "origin"], cwd=BASE, capture_output=True, text=True, timeout=10).stdout.strip()
     except (OSError, subprocess.TimeoutExpired):
         return ""
     m = re.search(r"github\.com[:/]([A-Za-z0-9-]{1,39}/[A-Za-z0-9._-]{1,100}?)(?:\.git)?/?$", url)
@@ -188,8 +183,7 @@ def main() -> int:
     ap.add_argument("--pfx", default="", help="fichier .pfx pour signer")
     ap.add_argument("--pfx-password", default="", help="mot de passe du .pfx")
     ap.add_argument("--hashes-only", action="store_true", help="réécrire seulement les fichiers .sha256")
-    ap.add_argument("--depot", default="", help="dépôt GitHub surveillé pour les mises à jour (propriétaire/nom) ; "
-                                                 "par défaut : le remote origin")
+    ap.add_argument("--depot", default="", help="dépôt GitHub surveillé pour les mises à jour (propriétaire/nom) ; par défaut : le remote origin")
     args = ap.parse_args()
 
     ver = version()
@@ -247,8 +241,7 @@ def main() -> int:
         print("\n[4/6] Installeur Inno Setup")
         iscc = find_iscc()
         if not iscc:
-            raise BuildError("Inno Setup 6 introuvable (ISCC.exe). Installe-le depuis jrsoftware.org, "
-                             "ou construis seulement l'exe sans --installer.")
+            raise BuildError("Inno Setup 6 introuvable (ISCC.exe). Installe-le depuis jrsoftware.org, ou construis seulement l'exe sans --installer.")
         run([iscc, f"/DMyVersion={ver}", str(BASE / "installer.iss")])
         if not installer.is_file():
             raise BuildError(f"installeur introuvable après Inno Setup : {installer}")

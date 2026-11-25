@@ -31,20 +31,20 @@ import winproc
 # 127.0.0.1 plutôt que "localhost" : sous Windows, "localhost" peut d'abord essayer
 # l'IPv6 (::1) et attendre le délai d'expiration avant de passer à l'IPv4.
 LHM_URL = "http://127.0.0.1:8085/data.json"
-LHM_TIMEOUT = 0.8          # secondes
-LHM_POLL_INTERVAL = 2.0    # secondes entre deux lectures de LibreHardwareMonitor
+LHM_TIMEOUT = 0.8  # secondes
+LHM_POLL_INTERVAL = 2.0  # secondes entre deux lectures de LibreHardwareMonitor
 
 # Seuils des alertes (modifiables)
 ALERTS = {
-    "cpu_temp": (80, 90),        # °C : avertissement, critique
-    "gpu_temp": (80, 87),        # °C
-    "disk_temp": (55, 65),       # °C
-    "ram_percent": (90, 96),     # %
-    "disk_percent": (90, 97),    # % d'espace utilisé
-    "disk_free_gb": 10,          # critique sous ce nombre de Go libres
+    "cpu_temp": (80, 90),  # °C : avertissement, critique
+    "gpu_temp": (80, 87),  # °C
+    "disk_temp": (55, 65),  # °C
+    "ram_percent": (90, 96),  # %
+    "disk_percent": (90, 97),  # % d'espace utilisé
+    "disk_free_gb": 10,  # critique sous ce nombre de Go libres
 }
 
-FAN_NAMES_FILE = paths.FAN_NAMES_FILE                    # noms personnalisés des ventilateurs (données perso)
+FAN_NAMES_FILE = paths.FAN_NAMES_FILE  # noms personnalisés des ventilateurs (données perso)
 _OLD_FAN_NAMES_FILE = paths.LEGACY_DIR / "fan_names.json"  # ancien emplacement, encore lu s'il existe
 
 
@@ -55,8 +55,7 @@ _OLD_FAN_NAMES_FILE = paths.LEGACY_DIR / "fan_names.json"  # ancien emplacement,
 #   3. Sinon   : compteurs de performances de Windows (charge et VRAM, comme le Gestionnaire des tâches)
 # --------------------------------------------------------------------------- #
 GPU_VENDORS = {"10de": "NVIDIA", "1002": "AMD", "1022": "AMD", "8086": "Intel", "5143": "Qualcomm"}
-SOURCE_LABELS = {"nvml": "pilote NVIDIA (NVML)", "smi": "nvidia-smi", "lhm": "LibreHardwareMonitor",
-                 "windows": "compteurs Windows"}
+SOURCE_LABELS = {"nvml": "pilote NVIDIA (NVML)", "smi": "nvidia-smi", "lhm": "LibreHardwareMonitor", "windows": "compteurs Windows"}
 
 
 def _vendor_of(text: str) -> str:
@@ -64,8 +63,16 @@ def _vendor_of(text: str) -> str:
     m = re.search(r"ven_([0-9a-f]{4})", t)
     if m and m.group(1) in GPU_VENDORS:
         return GPU_VENDORS[m.group(1)]
-    for key, name in (("nvidia", "NVIDIA"), ("geforce", "NVIDIA"), ("radeon", "AMD"), ("amd", "AMD"),
-                      ("gpu-amd", "AMD"), ("ati", "AMD"), ("intel", "Intel"), ("arc", "Intel")):
+    for key, name in (
+        ("nvidia", "NVIDIA"),
+        ("geforce", "NVIDIA"),
+        ("radeon", "AMD"),
+        ("amd", "AMD"),
+        ("gpu-amd", "AMD"),
+        ("ati", "AMD"),
+        ("intel", "Intel"),
+        ("arc", "Intel"),
+    ):
         if key in t:
             return name
     return "autre"
@@ -81,20 +88,27 @@ def detect_gpus() -> list[dict]:
     import winreg
 
     class DISPLAY_DEVICEW(ctypes.Structure):
-        _fields_ = [("cb", wintypes.DWORD), ("DeviceName", wintypes.WCHAR * 32), ("DeviceString", wintypes.WCHAR * 128),
-                    ("StateFlags", wintypes.DWORD), ("DeviceID", wintypes.WCHAR * 128), ("DeviceKey", wintypes.WCHAR * 128)]
+        _fields_ = [
+            ("cb", wintypes.DWORD),
+            ("DeviceName", wintypes.WCHAR * 32),
+            ("DeviceString", wintypes.WCHAR * 128),
+            ("StateFlags", wintypes.DWORD),
+            ("DeviceID", wintypes.WCHAR * 128),
+            ("DeviceKey", wintypes.WCHAR * 128),
+        ]
 
     found: dict[str, dict] = {}
     try:
         enum = ctypes.windll.user32.EnumDisplayDevicesW
         i = 0
         while i < 32:
-            dd = DISPLAY_DEVICEW(); dd.cb = ctypes.sizeof(dd)
+            dd = DISPLAY_DEVICEW()
+            dd.cb = ctypes.sizeof(dd)
             if not enum(None, i, ctypes.byref(dd), 0):
                 break
             i += 1
             dev_id = dd.DeviceID.upper()
-            if not dev_id.startswith("PCI\\") or dd.StateFlags & 0x8:      # virtuelles, miroirs, bureau à distance
+            if not dev_id.startswith("PCI\\") or dd.StateFlags & 0x8:  # virtuelles, miroirs, bureau à distance
                 continue
             key = dev_id.split("&SUBSYS")[0]
             if key in found:
@@ -116,8 +130,7 @@ def detect_gpus() -> list[dict]:
                                 break
                 except OSError:
                     pass
-            found[key] = {"name": dd.DeviceString.strip(), "vendor": _vendor_of(dev_id + " " + dd.DeviceString),
-                          "vram_total": vram, "pci_id": key}
+            found[key] = {"name": dd.DeviceString.strip(), "vendor": _vendor_of(dev_id + " " + dd.DeviceString), "vram_total": vram, "pci_id": key}
     except Exception:
         return list(found.values())
     # carte dédiée (plus de VRAM) en premier
@@ -140,6 +153,7 @@ class WindowsGpuCounters:
         try:
             import ctypes
             from ctypes import wintypes
+
             self._ct, self._wt = ctypes, wintypes
 
             class FMT(ctypes.Structure):
@@ -153,8 +167,13 @@ class WindowsGpuCounters:
             pdh.PdhOpenQueryW.argtypes = [ctypes.c_wchar_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_void_p)]
             pdh.PdhAddEnglishCounterW.argtypes = [ctypes.c_void_p, ctypes.c_wchar_p, ctypes.c_void_p, ctypes.POINTER(ctypes.c_void_p)]
             pdh.PdhCollectQueryData.argtypes = [ctypes.c_void_p]
-            pdh.PdhGetFormattedCounterArrayW.argtypes = [ctypes.c_void_p, wintypes.DWORD, ctypes.POINTER(wintypes.DWORD),
-                                                         ctypes.POINTER(wintypes.DWORD), ctypes.c_void_p]
+            pdh.PdhGetFormattedCounterArrayW.argtypes = [
+                ctypes.c_void_p,
+                wintypes.DWORD,
+                ctypes.POINTER(wintypes.DWORD),
+                ctypes.POINTER(wintypes.DWORD),
+                ctypes.c_void_p,
+            ]
             for fn in ("PdhOpenQueryW", "PdhAddEnglishCounterW", "PdhCollectQueryData", "PdhGetFormattedCounterArrayW"):
                 getattr(pdh, fn).restype = wintypes.DWORD
             self._pdh = pdh
@@ -162,12 +181,11 @@ class WindowsGpuCounters:
             if pdh.PdhOpenQueryW(None, None, ctypes.byref(self._q)):
                 raise OSError("ouverture des compteurs impossible")
             self._eng, self._mem = ctypes.c_void_p(), ctypes.c_void_p()
-            for path, handle in ((r"\GPU Engine(*)\Utilization Percentage", self._eng),
-                                 (r"\GPU Adapter Memory(*)\Dedicated Usage", self._mem)):
+            for path, handle in ((r"\GPU Engine(*)\Utilization Percentage", self._eng), (r"\GPU Adapter Memory(*)\Dedicated Usage", self._mem)):
                 st = pdh.PdhAddEnglishCounterW(self._q, path, None, ctypes.byref(handle))
                 if st:
                     raise OSError(f"compteur « {path} » absent (Windows 10 1709 ou plus récent requis), code {st:#x}")
-            pdh.PdhCollectQueryData(self._q)       # 1re mesure : la charge se calcule entre deux mesures
+            pdh.PdhCollectQueryData(self._q)  # 1re mesure : la charge se calcule entre deux mesures
             self.ok = True
         except Exception as exc:
             self.error = str(exc)
@@ -182,8 +200,7 @@ class WindowsGpuCounters:
         if self._pdh.PdhGetFormattedCounterArrayW(counter, self.PDH_FMT_DOUBLE, ct.byref(size), ct.byref(count), buf):
             return {}
         items = ct.cast(buf, ct.POINTER(self._ITEM))
-        return {items[i].szName: items[i].FmtValue.doubleValue for i in range(count.value)
-                if items[i].FmtValue.CStatus in (0, 1) and items[i].szName}
+        return {items[i].szName: items[i].FmtValue.doubleValue for i in range(count.value) if items[i].FmtValue.CStatus in (0, 1) and items[i].szName}
 
     def read(self) -> list[dict]:
         """[{luid, load_percent, vram_used}] par carte, la plus utilisée en mémoire d'abord."""
@@ -200,7 +217,7 @@ class WindowsGpuCounters:
                 k = (m.group(1).lower(), m.group(2))
                 per_engine[k] = per_engine.get(k, 0.0) + v
         load: dict[str, float] = {}
-        for (luid, _), v in per_engine.items():         # comme le Gestionnaire des tâches : moteur le plus chargé
+        for (luid, _), v in per_engine.items():  # comme le Gestionnaire des tâches : moteur le plus chargé
             load[luid] = max(load.get(luid, 0.0), v)
         used: dict[str, float] = {}
         for name, v in mem.items():
@@ -208,16 +225,30 @@ class WindowsGpuCounters:
             if m:
                 used[m.group(1).lower()] = used.get(m.group(1).lower(), 0.0) + v
         luids = set(load) | set(used)
-        rows = [{"luid": l, "load_percent": round(min(100.0, load.get(l, 0.0)), 1), "vram_used": int(used.get(l, 0))}
-                for l in luids]
+        rows = [{"luid": l, "load_percent": round(min(100.0, load.get(l, 0.0)), 1), "vram_used": int(used.get(l, 0))} for l in luids]
         return sorted(rows, key=lambda r: (-r["vram_used"], -r["load_percent"]))
 
 
 def _blank_gpu(i: int, name: str, vendor: str, source: str) -> dict:
-    return {"index": i, "name": name, "vendor": vendor, "source": source, "load_percent": None,
-            "vram_used": None, "vram_total": None, "vram_percent": None, "temperature": None, "hotspot": None,
-            "power_w": None, "power_limit_w": None, "clock_core_mhz": None, "clock_mem_mhz": None,
-            "fan_percent": None, "fan_rpm": None, "throttle": None}
+    return {
+        "index": i,
+        "name": name,
+        "vendor": vendor,
+        "source": source,
+        "load_percent": None,
+        "vram_used": None,
+        "vram_total": None,
+        "vram_percent": None,
+        "temperature": None,
+        "hotspot": None,
+        "power_w": None,
+        "power_limit_w": None,
+        "clock_core_mhz": None,
+        "clock_mem_mhz": None,
+        "fan_percent": None,
+        "fan_rpm": None,
+        "throttle": None,
+    }
 
 
 def _finish_gpu(g: dict) -> dict:
@@ -260,6 +291,7 @@ def lhm_gpus(nodes: list[dict], adapters: list[dict]) -> list[dict]:
                     mult = {"gb": 1024**3, "mb": 1024**2, "kb": 1024}.get((unit or ("gb" if st == "data" else "mb")).lower(), 1024**2)
                     return int(v * mult)
             return None
+
         g["vram_used"] = mem("gpu memory used", "d3d dedicated memory used")
         g["vram_total"] = mem("gpu memory total")
         g["power_w"] = pick("power", "gpu package", "gpu core", "gpu power")[0] or first("power")[0]
@@ -270,9 +302,8 @@ def lhm_gpus(nodes: list[dict], adapters: list[dict]) -> list[dict]:
         fp = first("control")[0]
         g["fan_percent"] = round(fp) if fp is not None else None
         g["fan_rpm"] = first("fan")[0]
-        if not g["vram_total"]:                       # complète avec la taille connue de Windows
-            a = next((a for a in adapters if a["name"].lower() == n["name"].lower()), None) or \
-                next((a for a in adapters if a["vendor"] == g["vendor"]), None)
+        if not g["vram_total"]:  # complète avec la taille connue de Windows
+            a = next((a for a in adapters if a["name"].lower() == n["name"].lower()), None) or next((a for a in adapters if a["vendor"] == g["vendor"]), None)
             if a:
                 g["vram_total"] = a["vram_total"]
         out.append(_finish_gpu(g))
@@ -287,7 +318,7 @@ class GpuReader:
     """Choisit automatiquement la meilleure source selon la carte détectée (voir plus haut)."""
 
     def __init__(self) -> None:
-        self.mode = None          # "nvml" ou "smi" (NVIDIA) ; sinon lhm / windows choisi à chaque lecture
+        self.mode = None  # "nvml" ou "smi" (NVIDIA) ; sinon lhm / windows choisi à chaque lecture
         self.error = None
         self.last_source = None
         self._nvml = None
@@ -296,7 +327,7 @@ class GpuReader:
             self.adapters = detect_gpus()
         except Exception:
             self.adapters = []
-        self._win = None          # compteurs Windows : créés seulement si nécessaire
+        self._win = None  # compteurs Windows : créés seulement si nécessaire
         try:
             import pynvml  # fourni par le paquet nvidia-ml-py
 
@@ -360,44 +391,52 @@ class GpuReader:
                 name = name.decode(errors="replace")
             util = nv.nvmlDeviceGetUtilizationRates(h)
             mem = nv.nvmlDeviceGetMemoryInfo(h)
+
             def opt(fn, *args):
                 try:
                     return fn(h, *args)
                 except Exception:
                     return None
+
             temp = opt(nv.nvmlDeviceGetTemperature, nv.NVML_TEMPERATURE_GPU)
-            power = opt(nv.nvmlDeviceGetPowerUsage)                 # milliwatts
-            limit = opt(nv.nvmlDeviceGetEnforcedPowerLimit)         # milliwatts
+            power = opt(nv.nvmlDeviceGetPowerUsage)  # milliwatts
+            limit = opt(nv.nvmlDeviceGetEnforcedPowerLimit)  # milliwatts
             clock_core = opt(nv.nvmlDeviceGetClockInfo, nv.NVML_CLOCK_GRAPHICS)
             clock_mem = opt(nv.nvmlDeviceGetClockInfo, nv.NVML_CLOCK_MEM)
             fan = opt(nv.nvmlDeviceGetFanSpeed)
-            reasons_fn = getattr(nv, "nvmlDeviceGetCurrentClocksEventReasons", None) \
-                or getattr(nv, "nvmlDeviceGetCurrentClocksThrottleReasons", None)
+            reasons_fn = getattr(nv, "nvmlDeviceGetCurrentClocksEventReasons", None) or getattr(nv, "nvmlDeviceGetCurrentClocksThrottleReasons", None)
             reasons = opt(reasons_fn) if reasons_fn else None
-            gpus.append({
-                "power_w": round(power / 1000, 1) if power is not None else None,
-                "power_limit_w": round(limit / 1000) if limit else None,
-                "clock_core_mhz": clock_core,
-                "clock_mem_mhz": clock_mem,
-                "fan_percent": fan,
-                "throttle": _throttle_text(reasons),
-                "index": i,
-                "name": name,
-                "vendor": "NVIDIA", "source": "nvml", "hotspot": None, "fan_rpm": None,
-                "load_percent": float(util.gpu),
-                "vram_used": int(mem.used),
-                "vram_total": int(mem.total),
-                "vram_percent": round(mem.used / mem.total * 100, 1) if mem.total else 0.0,
-                "temperature": float(temp) if temp is not None else None,
-            })
+            gpus.append(
+                {
+                    "power_w": round(power / 1000, 1) if power is not None else None,
+                    "power_limit_w": round(limit / 1000) if limit else None,
+                    "clock_core_mhz": clock_core,
+                    "clock_mem_mhz": clock_mem,
+                    "fan_percent": fan,
+                    "throttle": _throttle_text(reasons),
+                    "index": i,
+                    "name": name,
+                    "vendor": "NVIDIA",
+                    "source": "nvml",
+                    "hotspot": None,
+                    "fan_rpm": None,
+                    "load_percent": float(util.gpu),
+                    "vram_used": int(mem.used),
+                    "vram_total": int(mem.total),
+                    "vram_percent": round(mem.used / mem.total * 100, 1) if mem.total else 0.0,
+                    "temperature": float(temp) if temp is not None else None,
+                }
+            )
         return gpus
 
     def _read_smi(self) -> list[dict]:
         out = subprocess.run(
-            ["nvidia-smi",
-             "--query-gpu=index,name,utilization.gpu,memory.used,memory.total,temperature.gpu",
-             "--format=csv,noheader,nounits"],
-            capture_output=True, text=True, encoding="oem", errors="replace", timeout=3,
+            ["nvidia-smi", "--query-gpu=index,name,utilization.gpu,memory.used,memory.total,temperature.gpu", "--format=csv,noheader,nounits"],
+            capture_output=True,
+            text=True,
+            encoding="oem",
+            errors="replace",
+            timeout=3,
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
         if out.returncode != 0:
@@ -406,28 +445,37 @@ class GpuReader:
         for line in out.stdout.strip().splitlines():
             idx, name, util, used, total, temp = [p.strip() for p in line.split(",")]
             used_b, total_b = float(used) * 1024**2, float(total) * 1024**2
-            gpus.append({
-                "index": int(idx),
-                "name": name,
-                "load_percent": _num(util),
-                "vram_used": int(used_b),
-                "vram_total": int(total_b),
-                "vram_percent": round(used_b / total_b * 100, 1) if total_b else 0.0,
-                "temperature": _num(temp),
-                "power_w": None, "power_limit_w": None, "clock_core_mhz": None,
-                "clock_mem_mhz": None, "fan_percent": None, "throttle": None,
-                "vendor": "NVIDIA", "source": "smi", "hotspot": None, "fan_rpm": None,
-            })
+            gpus.append(
+                {
+                    "index": int(idx),
+                    "name": name,
+                    "load_percent": _num(util),
+                    "vram_used": int(used_b),
+                    "vram_total": int(total_b),
+                    "vram_percent": round(used_b / total_b * 100, 1) if total_b else 0.0,
+                    "temperature": _num(temp),
+                    "power_w": None,
+                    "power_limit_w": None,
+                    "clock_core_mhz": None,
+                    "clock_mem_mhz": None,
+                    "fan_percent": None,
+                    "throttle": None,
+                    "vendor": "NVIDIA",
+                    "source": "smi",
+                    "hotspot": None,
+                    "fan_rpm": None,
+                }
+            )
         return gpus
 
 
 # Raisons de bridage des fréquences GPU (masques NVML)
 THROTTLE_BITS = [
-    (0x0004, "limite de puissance"),          # SW power cap
-    (0x0008, "ralentissement matériel"),      # HW slowdown
-    (0x0020, "bridage thermique logiciel"),   # SW thermal
-    (0x0040, "bridage thermique matériel"),   # HW thermal
-    (0x0080, "frein d'alimentation"),         # HW power brake
+    (0x0004, "limite de puissance"),  # SW power cap
+    (0x0008, "ralentissement matériel"),  # HW slowdown
+    (0x0020, "bridage thermique logiciel"),  # SW thermal
+    (0x0040, "bridage thermique matériel"),  # HW thermal
+    (0x0080, "frein d'alimentation"),  # HW power brake
 ]
 
 
@@ -457,8 +505,7 @@ CPU_IDS = ("/intelcpu", "/amdcpu")
 GPU_IDS = ("/gpu-nvidia", "/gpu-amd", "/gpu-intel", "/gpu")
 BOARD_IDS = ("/lpc", "/motherboard", "/ec", "/superio")
 # Nom des groupes de capteurs LHM -> type de capteur (pour les versions sans champ "Type")
-GROUP_TYPES = {"temperatures": "temperature", "fans": "fan", "powers": "power",
-               "clocks": "clock", "controls": "control", "loads": "load", "load": "load"}
+GROUP_TYPES = {"temperatures": "temperature", "fans": "fan", "powers": "power", "clocks": "clock", "controls": "control", "loads": "load", "load": "load"}
 # Icônes des nœuds « matériel » dans les anciennes versions de LHM (sans HardwareId)
 HW_ICONS = ("cpu", "mainboard", "chip", "nvidia", "ati", "amd", "intel", "hdd", "ram", "nic", "bigng")
 
@@ -494,7 +541,7 @@ def parse_lhm(data: dict) -> dict:
     controls: dict[tuple[str, str], float] = {}
     cpu_power = None
     cpu_clocks: list[float] = []
-    gpu_nodes: dict[str, dict] = {}      # carte graphique -> capteurs (pour AMD / Intel)
+    gpu_nodes: dict[str, dict] = {}  # carte graphique -> capteurs (pour AMD / Intel)
 
     def walk(node: dict, hw: tuple[str, str] | None, group: str) -> None:
         nonlocal cpu_power
@@ -503,8 +550,7 @@ def parse_lhm(data: dict) -> dict:
         if _is_hardware(node):
             hw = (_hw_kind(str(node.get("HardwareId", "")), str(node.get("ImageURL", ""))), text)
             if hw[0] == "gpu":
-                gpu_nodes.setdefault(text, {"name": text, "hid": str(node.get("HardwareId", "")),
-                                            "img": str(node.get("ImageURL", "")), "sensors": []})
+                gpu_nodes.setdefault(text, {"name": text, "hid": str(node.get("HardwareId", "")), "img": str(node.get("ImageURL", "")), "sensors": []})
         elif not children and hw:
             stype = str(node.get("Type", "")).lower() or GROUP_TYPES.get(group.lower(), "")
             if not stype and group.lower() in ("data", "smalldata"):
@@ -528,8 +574,7 @@ def parse_lhm(data: dict) -> dict:
                 elif kind == "disk":
                     disks.setdefault(hw_name, []).append((text, value))
             elif stype == "fan":
-                fans[(hw_name, text)] = {"kind": kind, "hardware": hw_name, "name": text,
-                                         "rpm": value, "percent": None}
+                fans[(hw_name, text)] = {"kind": kind, "hardware": hw_name, "name": text, "rpm": value, "percent": None}
             elif stype == "control":
                 controls[(hw_name, text)] = value
             elif stype == "power" and kind == "cpu" and low in ("cpu package", "package"):
@@ -549,9 +594,11 @@ def parse_lhm(data: dict) -> dict:
             cpu_source, cpu_temp = hit
             break
     if cpu_temp is None:
-        cores = [v for low, n, v in lowered
-                 if low.startswith(("core #", "cpu core #", "core")) and "distance" not in low
-                 and "max" not in low and "average" not in low]
+        cores = [
+            v
+            for low, n, v in lowered
+            if low.startswith(("core #", "cpu core #", "core")) and "distance" not in low and "max" not in low and "average" not in low
+        ]
         if cores:
             cpu_temp = round(sum(cores) / len(cores), 1)
             cpu_source = f"moyenne de {len(cores)} cœurs"
@@ -563,8 +610,7 @@ def parse_lhm(data: dict) -> dict:
     disk_temps = []
     for name, sensors in disks.items():
         # Priorité au capteur nommé "Temperature" / "Composite", sinon le premier.
-        best = next((v for n, v in sensors if n.lower() in ("temperature", "composite temperature",
-                                                             "composite")), sensors[0][1])
+        best = next((v for n, v in sensors if n.lower() in ("temperature", "composite temperature", "composite")), sensors[0][1])
         disk_temps.append({"name": name.strip(), "temperature": best})
 
     fan_list = []
@@ -573,7 +619,9 @@ def parse_lhm(data: dict) -> dict:
         fan_list.append(f)
 
     return {
-        "cpu": cpu_temp, "cpu_source": cpu_source, "disks": disk_temps,
+        "cpu": cpu_temp,
+        "cpu_source": cpu_source,
+        "disks": disk_temps,
         "fans": fan_list,
         "gpus": list(gpu_nodes.values()),
         "cpu_power": cpu_power,
@@ -592,9 +640,18 @@ class LhmPoller:
 
     @staticmethod
     def _empty(error: str) -> dict:
-        return {"available": False, "error": error, "cpu": None, "cpu_source": None,
-                "disks": [], "fans": [], "gpus": [], "cpu_power": None,
-                "cpu_clock_avg": None, "cpu_clock_max": None}
+        return {
+            "available": False,
+            "error": error,
+            "cpu": None,
+            "cpu_source": None,
+            "disks": [],
+            "fans": [],
+            "gpus": [],
+            "cpu_power": None,
+            "cpu_clock_avg": None,
+            "cpu_clock_max": None,
+        }
 
     def _loop(self) -> None:
         while True:
@@ -645,30 +702,34 @@ class NetMonitor:
             if st is None or not st.isup:
                 continue
             p = prev.get(name, c)
-            ipv4 = next((a.address for a in addrs.get(name, [])
-                         if a.family == socket.AF_INET), None)
-            mac = next((a.address for a in addrs.get(name, [])
-                        if a.family == psutil.AF_LINK), None)
+            ipv4 = next((a.address for a in addrs.get(name, []) if a.family == socket.AF_INET), None)
+            mac = next((a.address for a in addrs.get(name, []) if a.family == psutil.AF_LINK), None)
             low = name.lower()
-            kind = ("wifi" if ("wi-fi" in low or "wifi" in low or "wlan" in low)
-                    else "virtual" if ("vethernet" in low or "virtual" in low or "vmware" in low
-                                       or "vpn" in low or "tailscale" in low or "zerotier" in low)
-                    else "ethernet")
-            interfaces.append({
-                "name": name,
-                "kind": kind,
-                "speed_mbps": st.speed or None,
-                "ipv4": ipv4,
-                "mac": mac,
-                "rx_rate": max(0.0, (c.bytes_recv - p.bytes_recv) / dt),
-                "tx_rate": max(0.0, (c.bytes_sent - p.bytes_sent) / dt),
-                "rx_total": c.bytes_recv,
-                "tx_total": c.bytes_sent,
-            })
+            kind = (
+                "wifi"
+                if ("wi-fi" in low or "wifi" in low or "wlan" in low)
+                else "virtual"
+                if ("vethernet" in low or "virtual" in low or "vmware" in low or "vpn" in low or "tailscale" in low or "zerotier" in low)
+                else "ethernet"
+            )
+            interfaces.append(
+                {
+                    "name": name,
+                    "kind": kind,
+                    "speed_mbps": st.speed or None,
+                    "ipv4": ipv4,
+                    "mac": mac,
+                    "rx_rate": max(0.0, (c.bytes_recv - p.bytes_recv) / dt),
+                    "tx_rate": max(0.0, (c.bytes_sent - p.bytes_sent) / dt),
+                    "rx_total": c.bytes_recv,
+                    "tx_total": c.bytes_sent,
+                }
+            )
 
         # Interface principale : Ethernet physique avec IPv4 en priorité, puis la plus active.
         def rank(i):
             return (i["kind"] == "ethernet", i["ipv4"] is not None, i["rx_total"] + i["tx_total"])
+
         interfaces.sort(key=rank, reverse=True)
         return {
             "rx_rate": sum(i["rx_rate"] for i in interfaces if i["kind"] != "virtual"),
@@ -684,23 +745,51 @@ class NetMonitor:
 PROC_INTERVAL = 2.0
 PROC_IGNORE = {"system idle process", "idle", "system", "registry", "memory compression"}
 # Jamais fermés depuis le panel : processus vitaux de Windows (les fermer planterait ou déconnecterait la session)
-PROC_PROTEGES = {"system", "registry", "smss.exe", "csrss.exe", "wininit.exe", "winlogon.exe", "services.exe",
-                 "lsass.exe", "lsaiso.exe", "svchost.exe", "fontdrvhost.exe", "dwm.exe", "explorer.exe", "sihost.exe",
-                 "ctfmon.exe", "spoolsv.exe", "audiodg.exe", "secure system", "memory compression", "wudfhost.exe",
-                 "msmpeng.exe", "searchindexer.exe", "taskhostw.exe", "runtimebroker.exe", "startmenuexperiencehost.exe",
-                 "shellexperiencehost.exe", "textinputhost.exe", "conhost.exe", "dllhost.exe", "lsm.exe", "wlanext.exe"}
+PROC_PROTEGES = {
+    "system",
+    "registry",
+    "smss.exe",
+    "csrss.exe",
+    "wininit.exe",
+    "winlogon.exe",
+    "services.exe",
+    "lsass.exe",
+    "lsaiso.exe",
+    "svchost.exe",
+    "fontdrvhost.exe",
+    "dwm.exe",
+    "explorer.exe",
+    "sihost.exe",
+    "ctfmon.exe",
+    "spoolsv.exe",
+    "audiodg.exe",
+    "secure system",
+    "memory compression",
+    "wudfhost.exe",
+    "msmpeng.exe",
+    "searchindexer.exe",
+    "taskhostw.exe",
+    "runtimebroker.exe",
+    "startmenuexperiencehost.exe",
+    "shellexperiencehost.exe",
+    "textinputhost.exe",
+    "conhost.exe",
+    "dllhost.exe",
+    "lsm.exe",
+    "wlanext.exe",
+}
 
 
 class ProcessMonitor:
     """Échantillonne les processus toutes les 2 s, regroupés par nom (ex. chrome.exe ×24)."""
 
     def __init__(self, paused=lambda: False) -> None:
-        self._is_paused = paused           # mode jeu : fourni par le serveur
+        self._is_paused = paused  # mode jeu : fourni par le serveur
         self._lock = threading.Lock()
         self._procs: dict[int, psutil.Process] = {}
         self._result = {"top_cpu": [], "top_ram": [], "count": 0}
-        self._tous: list[dict] = []          # tous les groupes (classement complet)
-        self._cpu_prec: dict[int, float] = {}   # temps processeur au relevé précédent (pid -> s)
+        self._tous: list[dict] = []  # tous les groupes (classement complet)
+        self._cpu_prec: dict[int, float] = {}  # temps processeur au relevé précédent (pid -> s)
         self._t_prec = 0.0
         self._ncpu = psutil.cpu_count(logical=True) or 1
         threading.Thread(target=self._loop, daemon=True).start()
@@ -724,7 +813,7 @@ class ProcessMonitor:
     def _sample(self) -> None:
         groups: dict[str, dict] = {}
         count = 0
-        liste = winproc.processus()          # un seul appel système (~2 ms au lieu de ~400 ms avec psutil)
+        liste = winproc.processus()  # un seul appel système (~2 ms au lieu de ~400 ms avec psutil)
         if liste is not None:
             now = time.monotonic()
             prec, dt_ = self._cpu_prec, now - self._t_prec if self._t_prec else 0
@@ -742,7 +831,7 @@ class ProcessMonitor:
                 g["ram"] += rss
                 g["count"] += 1
             self._cpu_prec, self._t_prec = cpu_now, now
-        else:                                # repli : psutil, processus par processus
+        else:  # repli : psutil, processus par processus
             alive: dict[int, psutil.Process] = {}
             for p in psutil.process_iter(["name"]):
                 proc = self._procs.get(p.pid, p)
@@ -751,7 +840,7 @@ class ProcessMonitor:
                     name = name or f"pid {p.pid}"
                     if name.lower() in PROC_IGNORE or p.pid == 0:
                         continue
-                    cpu = proc.cpu_percent(None) / self._ncpu   # 0-100 % de tout le CPU
+                    cpu = proc.cpu_percent(None) / self._ncpu  # 0-100 % de tout le CPU
                     rss = proc.memory_info().rss
                 except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess, OSError):
                     continue
@@ -788,8 +877,15 @@ class ProcessMonitor:
         out = []
         for g in sorted(items, key=cle, reverse=True)[:limite]:
             n = g["name"].lower()
-            out.append({"name": g["name"], "cpu": g["cpu"], "ram": g["ram"], "count": g["count"],
-                        "protege": n in PROC_PROTEGES or any(pid in moi for pid in g["pids"])})
+            out.append(
+                {
+                    "name": g["name"],
+                    "cpu": g["cpu"],
+                    "ram": g["ram"],
+                    "count": g["count"],
+                    "protege": n in PROC_PROTEGES or any(pid in moi for pid in g["pids"]),
+                }
+            )
         return {"tri": "ram" if tri == "ram" else "cpu", "processus": out, "total": len(items), "paused": self.paused}
 
     def fermer(self, nom: str, delai: float = 3.0) -> dict:
@@ -815,7 +911,7 @@ class ProcessMonitor:
             except psutil.NoSuchProcess:
                 pass
             except psutil.AccessDenied:
-                pass                              # (compté dans « refuses » : il reste en vie)
+                pass  # (compté dans « refuses » : il reste en vie)
         _, restants = psutil.wait_procs(cibles, timeout=delai)
         for p in restants:
             try:
@@ -823,10 +919,9 @@ class ProcessMonitor:
             except psutil.NoSuchProcess:
                 pass
             except psutil.AccessDenied:
-                pass                              # (compté dans « refuses » : il reste en vie)
+                pass  # (compté dans « refuses » : il reste en vie)
         _, encore = psutil.wait_procs(restants, timeout=2) if restants else ([], [])
-        return {"nom": nom, "trouves": len(cibles), "fermes": len(cibles) - len(encore), "forces": len(restants),
-                "refuses": len(encore)}
+        return {"nom": nom, "trouves": len(cibles), "fermes": len(cibles) - len(encore), "forces": len(restants), "refuses": len(encore)}
 
 
 def _pids_nexus() -> set[int]:
@@ -863,8 +958,7 @@ def compute_alerts(cpu_temp, gpus, ram_percent, disks, disk_temps) -> list[dict]
         check(f"gpu_temp_{g['index']}", "Température GPU", g["temperature"], " °C", ALERTS["gpu_temp"])
     check("ram", "RAM utilisée", ram_percent, " %", ALERTS["ram_percent"])
     for d in disk_temps:
-        check(f"disk_temp_{d['name']}", f"Température {d['name']}", d["temperature"], " °C",
-              ALERTS["disk_temp"])
+        check(f"disk_temp_{d['name']}", f"Température {d['name']}", d["temperature"], " °C", ALERTS["disk_temp"])
     for d in disks:
         free_gb = d["free"] / 1024**3
         key = f"disk_{d['mountpoint']}"
@@ -889,14 +983,16 @@ def read_disks() -> list[dict]:
             u = psutil.disk_usage(part.mountpoint)
         except (PermissionError, OSError):
             continue
-        disks.append({
-            "mountpoint": part.mountpoint,
-            "fstype": part.fstype,
-            "total": u.total,
-            "used": u.used,
-            "free": u.free,
-            "percent": u.percent,
-        })
+        disks.append(
+            {
+                "mountpoint": part.mountpoint,
+                "fstype": part.fstype,
+                "total": u.total,
+                "used": u.used,
+                "free": u.free,
+                "percent": u.percent,
+            }
+        )
     return disks
 
 
@@ -949,7 +1045,7 @@ class Sensors:
         self.lhm = LhmPoller()
         self.net = NetMonitor()
         self.procs = ProcessMonitor(game_paused)
-        psutil.cpu_percent(percpu=True)   # amorce : le 1er appel renvoie toujours 0
+        psutil.cpu_percent(percpu=True)  # amorce : le 1er appel renvoie toujours 0
 
     def core(self) -> dict:
         """CPU, RAM, disques, GPU, températures : le nécessaire pour Discord et les alertes.
@@ -984,8 +1080,7 @@ class Sensors:
                 "source": src,
                 "source_label": SOURCE_LABELS.get(src),
                 "hint": hint,
-                "adapters": [{"name": a["name"], "vendor": a["vendor"], "vram_total": a["vram_total"]}
-                             for a in self.gpu.adapters],
+                "adapters": [{"name": a["name"], "vendor": a["vendor"], "vram_total": a["vram_total"]} for a in self.gpu.adapters],
                 "devices": gpus or [],
             },
             "lhm": {"available": temps["available"], "error": temps["error"], "url": LHM_URL},
@@ -995,9 +1090,9 @@ class Sensors:
     def hardware_report(self, wait_lhm: float = 3.0) -> list[str]:
         """Diagnostic affiché au démarrage : ce qui sera disponible ou non, en clair (jamais de plantage)."""
         lines = []
-        deadline = time.time() + wait_lhm          # laisse le temps à LHM de répondre à la 1re lecture
+        deadline = time.time() + wait_lhm  # laisse le temps à LHM de répondre à la 1re lecture
         while time.time() < deadline and self.lhm.get()["error"] == "pas encore interrogé":
-            time.sleep(.2)
+            time.sleep(0.2)
         lhm = self.lhm.get()
 
         # --- Cartes graphiques : ce qui est branché, et comment NEXUS va les lire
@@ -1009,25 +1104,35 @@ class Sensors:
         if src in ("nvml", "smi"):
             lines.append(f"[Matériel] GPU lu par le {SOURCE_LABELS[src]} : charge, VRAM, température, conso, fréquences")
         elif src == "lhm":
-            lines.append(f"[Matériel] GPU {', '.join(g['vendor'] for g in gpus[:1])} lu par LibreHardwareMonitor : "
-                         "charge, VRAM, température, conso, fréquences, ventilateur")
+            lines.append(
+                f"[Matériel] GPU {', '.join(g['vendor'] for g in gpus[:1])} lu par LibreHardwareMonitor : "
+                "charge, VRAM, température, conso, fréquences, ventilateur"
+            )
         elif src == "windows":
             vendors = ", ".join(sorted({g["vendor"] for g in gpus}))
-            lines.append(f"[Matériel] GPU {vendors} lu par les compteurs Windows : charge et VRAM. Pour la température, "
-                         "la conso et le ventilateur, installe LibreHardwareMonitor (étape 5 du README).")
+            lines.append(
+                f"[Matériel] GPU {vendors} lu par les compteurs Windows : charge et VRAM. Pour la température, "
+                "la conso et le ventilateur, installe LibreHardwareMonitor (étape 5 du README)."
+            )
         else:
-            lines.append(f"[Matériel] INFO : carte graphique non lue ({self.gpu.error or 'aucune détectée'}). "
-                         "La partie GPU affichera « indisponible », tout le reste fonctionne.")
+            lines.append(
+                f"[Matériel] INFO : carte graphique non lue ({self.gpu.error or 'aucune détectée'}). "
+                "La partie GPU affichera « indisponible », tout le reste fonctionne."
+            )
         exe = paths.INSTALL_DIR / "LibreHardwareMonitor" / "LibreHardwareMonitor.exe"
         if lhm["available"]:
             lines.append("[Matériel] LibreHardwareMonitor connecté : températures CPU, disques et ventilateurs disponibles")
         elif not exe.exists():
-            lines.append("[Matériel] INFO : LibreHardwareMonitor n'est pas installé : températures CPU / disques et "
-                         "ventilateurs « indisponibles ». Pour les avoir, voir l'étape 5 du README.")
+            lines.append(
+                "[Matériel] INFO : LibreHardwareMonitor n'est pas installé : températures CPU / disques et "
+                "ventilateurs « indisponibles ». Pour les avoir, voir l'étape 5 du README."
+            )
         else:
-            lines.append("[Matériel] INFO : LibreHardwareMonitor installé mais ne répond pas (pas encore démarré, "
-                         "fenêtre administrateur refusée ou serveur web désactivé). Températures CPU « indisponibles » "
-                         "en attendant ; voir la section Dépannage du README.")
+            lines.append(
+                "[Matériel] INFO : LibreHardwareMonitor installé mais ne répond pas (pas encore démarré, "
+                "fenêtre administrateur refusée ou serveur web désactivé). Températures CPU « indisponibles » "
+                "en attendant ; voir la section Dépannage du README."
+            )
         return lines
 
     def full(self) -> dict:
@@ -1037,6 +1142,5 @@ class Sensors:
         s["network"] = self.net.read()
         s["processes"] = self.procs.get()
         s["fans"] = label_fans(fans)
-        s["alerts"] = compute_alerts(s["cpu"]["temperature"], s["gpu"]["devices"], s["ram"]["percent"],
-                                     s["disks"], s["disk_temperatures"])
+        s["alerts"] = compute_alerts(s["cpu"]["temperature"], s["gpu"]["devices"], s["ram"]["percent"], s["disks"], s["disk_temperatures"])
         return s

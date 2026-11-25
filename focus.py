@@ -5,6 +5,7 @@ Pendant une phase de TRAVAIL, le temps compte dans la catégorie « travail » d
 (statistiques.py). La page applique un profil sobre pendant la session si l'option est cochée (js/focus.js).
 État gardé dans data/focus.json : un redémarrage du panel ne perd pas la séance en cours.
 """
+
 from __future__ import annotations
 
 import json
@@ -20,7 +21,7 @@ LIMITES = {"travail_min": (5, 180), "pause_min": (1, 60), "longue_min": (1, 90),
 
 class Focus:
     def __init__(self, journal=None) -> None:
-        self.journal = journal or (lambda *a, **k: None)     # activite.noter
+        self.journal = journal or (lambda *a, **k: None)  # activite.noter
         self._lock = threading.Lock()
         try:
             self.e = json.loads(FICHIER.read_text(encoding="utf-8"))
@@ -56,7 +57,7 @@ class Focus:
             else:
                 s["phase"] = "travail"
             s["fin"] = debut + self._duree(s["phase"])
-            s["changement"] = debut                  # la page joue un son / affiche un message
+            s["changement"] = debut  # la page joue un son / affiche un message
             change = True
         if change:
             self._sauver()
@@ -70,9 +71,16 @@ class Focus:
             if s:
                 reste = s["reste"] if s.get("suspendu") else max(0.0, s["fin"] - now)
                 cours = 0.0 if s["phase"] != "travail" else self._duree("travail") - reste
-                out.update(phase=s["phase"], suspendu=bool(s.get("suspendu")), reste_s=round(reste, 1),
-                           duree_s=self._duree(s["phase"]), seances=s["seances"], debut=s["debut"],
-                           changement=s.get("changement"), travail_s=round(s["travail_s"] + cours))
+                out.update(
+                    phase=s["phase"],
+                    suspendu=bool(s.get("suspendu")),
+                    reste_s=round(reste, 1),
+                    duree_s=self._duree(s["phase"]),
+                    seances=s["seances"],
+                    debut=s["debut"],
+                    changement=s.get("changement"),
+                    travail_s=round(s["travail_s"] + cours),
+                )
             return out
 
     def en_travail(self) -> bool:
@@ -86,8 +94,16 @@ class Focus:
             self.regler(reglages)
         now = time.time()
         with self._lock:
-            self.e["session"] = {"phase": "travail", "debut": now, "fin": now + self._duree("travail"), "seances": 0,
-                                 "travail_s": 0.0, "suspendu": False, "reste": None, "changement": None}
+            self.e["session"] = {
+                "phase": "travail",
+                "debut": now,
+                "fin": now + self._duree("travail"),
+                "seances": 0,
+                "travail_s": 0.0,
+                "suspendu": False,
+                "reste": None,
+                "changement": None,
+            }
             self._sauver()
         r = self.e["reglages"]
         self.journal("focus", "session démarrée", "ok", f"{r['travail_min']} min / {r['pause_min']} min")
@@ -117,7 +133,7 @@ class Focus:
             if s:
                 if s.get("suspendu"):
                     s["suspendu"], s["reste"] = False, None
-                if s["phase"] == "travail":                        # séance écourtée : seul le temps fait compte
+                if s["phase"] == "travail":  # séance écourtée : seul le temps fait compte
                     s["travail_s"] += max(0.0, self._duree("travail") - max(0.0, s["fin"] - time.time())) - self._duree("travail")
                 s["fin"] = time.time()
         return self.etat()
@@ -128,8 +144,7 @@ class Focus:
             self.e["session"] = None
             self._sauver()
         if e["actif"]:
-            self.journal("focus", "session terminée", "ok",
-                         f"{e['seances']} séance(s), {round(e['travail_s'] / 60)} min de travail")
+            self.journal("focus", "session terminée", "ok", f"{e['seances']} séance(s), {round(e['travail_s'] / 60)} min de travail")
         return self.etat()
 
     def regler(self, changes: dict) -> dict:

@@ -1,21 +1,35 @@
 """Accès téléphone en fenêtre native : activer / couper l'accès relance le serveur web via le crochet du
 lanceur au lieu de quitter le processus (NEXUS.exe n'a pas de lancer.bat pour le relancer) ; état du
 pare-feu et route de création de la règle limitée à la version exe."""
+
 import os, sys, tempfile, threading, time
 from pathlib import Path
 
-BASE = Path(sys.argv[1]); os.chdir(BASE); sys.path.insert(0, str(BASE))
+BASE = Path(sys.argv[1])
+os.chdir(BASE)
+sys.path.insert(0, str(BASE))
 os.environ.update(NEXUS_NO_BOT="1", NEXUS_DECK_DRYRUN="1")
-import store; store.DATA_DIR = Path(tempfile.mkdtemp())
-import db; db.DB_FILE = store.DATA_DIR / "nexus.db"; db.migrate()
+import store
+
+store.DATA_DIR = Path(tempfile.mkdtemp())
+import db
+
+db.DB_FILE = store.DATA_DIR / "nexus.db"
+db.migrate()
 import app
 from fastapi.testclient import TestClient
 
 passed = failed = 0
+
+
 def ok(c, m):
     global passed, failed
-    if c: passed += 1
-    else: failed += 1; print("  [ECHEC]", m)
+    if c:
+        passed += 1
+    else:
+        failed += 1
+        print("  [ECHEC]", m)
+
 
 # --- relance par le crochet natif (le processus reste vivant) --------------------------------
 appel = threading.Event()
@@ -26,7 +40,7 @@ os._exit = lambda code: quitte.append(code)
 try:
     app.schedule_restart()
     ok(appel.wait(5), "le crochet de relance du lanceur est appelé")
-    time.sleep(.3)
+    time.sleep(0.3)
     ok(not quitte, f"le processus ne quitte pas en mode natif : {quitte}")
     # Sans crochet (lancer.bat) : comportement historique, code de relance
     app.RESTART_HOOK = None

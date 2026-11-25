@@ -4,6 +4,7 @@ Aucun installeur n'est lancé : on teste les fonctions pures et la copie de
 l'installation dans un dossier temporaire. Le helper PowerShell est seulement
 vérifié syntaxiquement par le build, pas exécuté ici.
 """
+
 from __future__ import annotations
 
 import os
@@ -75,8 +76,7 @@ try:
     ok(maj_natif.evaluer_signature(valide, "requise", "")["ok"], "signature valide acceptée")
     ok(maj_natif.evaluer_signature(valide, "requise", "AABBCC")["ok"], "empreinte du signataire acceptée")
     ok(not maj_natif.evaluer_signature(valide, "requise", "DEADBEEF")["ok"], "signataire inattendu refusé")
-    ok(not maj_natif.evaluer_signature({"statut": "invalide", "message": "HashMismatch"}, "auto", "")["ok"],
-       "signature invalide refusée")
+    ok(not maj_natif.evaluer_signature({"statut": "invalide", "message": "HashMismatch"}, "auto", "")["ok"], "signature invalide refusée")
 
     if os.name == "nt":
         # Get-AuthenticodeSignature ne lit que les exécutables PE : on teste sur
@@ -85,8 +85,7 @@ try:
         exe_projet = BASE / "dist" / "NEXUS" / "NEXUS.exe"
         if exe_projet.is_file():
             signature = maj_natif.verifier_signature(exe_projet)
-            ok(signature["statut"] in ("non_signe", "valide"),
-               f"signature de l'exe local lue : {signature['statut']}")
+            ok(signature["statut"] in ("non_signe", "valide"), f"signature de l'exe local lue : {signature['statut']}")
         else:
             print("      (exe non construit : test « non signé » déjà couvert par evaluer_signature)")
         notepad = Path(os.environ.get("WINDIR", r"C:\Windows")) / "System32" / "notepad.exe"
@@ -132,25 +131,25 @@ try:
 
     # --- helper présent dans les sources ---------------------------------
     script = BASE / "outils" / "appliquer_maj.ps1"
-    ok(script.is_file() and "Start-Process" in script.read_text(encoding="utf-8"),
-       "script helper présent et lisible")
+    ok(script.is_file() and "Start-Process" in script.read_text(encoding="utf-8"), "script helper présent et lisible")
 
     os.environ["NEXUS_MAJ_HELPER_DRY"] = "1"
     lancement = maj_natif.lancer_helper(job)
     copie = Path(lancement["commande"][-3])
-    ok(copie.name.startswith("appliquer_maj-") and copie.parent == paths.MAJ_DIR,
-       "helper copié hors du dossier d'installation")
+    ok(copie.name.startswith("appliquer_maj-") and copie.parent == paths.MAJ_DIR, "helper copié hors du dossier d'installation")
     ok(maj_natif.JOB_FILE.is_file(), "travail JSON écrit pour le helper")
     os.environ.pop("NEXUS_MAJ_HELPER_DRY", None)
-    ok(script.read_bytes().startswith(b"\xef\xbb\xbf"),
-       "helper en UTF-8 avec BOM (PowerShell 5.1 : accents justes dans les messages)")
-    ok("config.json" in job["proteger"] and "data" in job["proteger"] and "maj" in job["proteger"],
-       "travail : données protégées transmises au helper")
+    ok(script.read_bytes().startswith(b"\xef\xbb\xbf"), "helper en UTF-8 avec BOM (PowerShell 5.1 : accents justes dans les messages)")
+    ok("config.json" in job["proteger"] and "data" in job["proteger"] and "maj" in job["proteger"], "travail : données protégées transmises au helper")
 
     # --- version portable --------------------------------------------------
     import zipfile
-    passets = [{"id": 7, "name": "NEXUS-Portable-1.9.0.zip"}, {"id": 8, "name": "NEXUS-Portable-1.9.0.zip.sha256"},
-               {"id": 9, "name": "NEXUS-Portable-1.8.0.zip"}]
+
+    passets = [
+        {"id": 7, "name": "NEXUS-Portable-1.9.0.zip"},
+        {"id": 8, "name": "NEXUS-Portable-1.9.0.zip.sha256"},
+        {"id": 9, "name": "NEXUS-Portable-1.8.0.zip"},
+    ]
     pchoix = maj_natif.choisir_assets_portable(passets, "1.9.0")
     ok(pchoix["portable"]["id"] == 7 and pchoix["sha256_portable"]["id"] == 8, "portable : archive de la bonne version choisie")
     ok(maj_natif.choisir_assets_portable(passets, "2.0.0")["portable"] is None, "portable : autre version → rien")
@@ -162,9 +161,15 @@ try:
                 f.writestr(n, contenu)
         return z
 
-    bon = zip_portable("bon.zip", {"NEXUS-Portable-1.9.0/NEXUS.exe": "exe", "NEXUS-Portable-1.9.0/portable.flag": "p",
-                                   "NEXUS-Portable-1.9.0/_internal/VERSION": "1.9.0\n",
-                                   "NEXUS-Portable-1.9.0/_internal/app.py": "x"})
+    bon = zip_portable(
+        "bon.zip",
+        {
+            "NEXUS-Portable-1.9.0/NEXUS.exe": "exe",
+            "NEXUS-Portable-1.9.0/portable.flag": "p",
+            "NEXUS-Portable-1.9.0/_internal/VERSION": "1.9.0\n",
+            "NEXUS-Portable-1.9.0/_internal/app.py": "x",
+        },
+    )
     nouveau = maj_natif.extraire_portable(bon, root / "extrait", "1.9.0")
     ok((nouveau / "NEXUS.exe").is_file() and (nouveau / "_internal" / "app.py").is_file(), "portable : archive extraite")
 
@@ -199,19 +204,26 @@ try:
     ok(maj_natif.est_portable(), "portable détecté (données à côté de l'exe)")
     ok(maj_natif.dossier_inscriptible(port), "dossier du portable modifiable")
     sp = maj_natif.sauvegarder_installation()
-    ok((sp / "NEXUS.exe").is_file() and (sp / "portable.flag").is_file() and (sp / "_internal" / "app.py").is_file(),
-       "portable : NEXUS.exe, portable.flag et _internal sauvegardés")
+    ok(
+        (sp / "NEXUS.exe").is_file() and (sp / "portable.flag").is_file() and (sp / "_internal" / "app.py").is_file(),
+        "portable : NEXUS.exe, portable.flag et _internal sauvegardés",
+    )
     ok(not any((sp / n).exists() for n in ("config.json", "data", "profils", "maj")), "portable : données jamais sauvegardées")
     ok((sp / "_internal" / "profils" / "pure" / "profil.json").is_file(), "portable : profils fournis de _internal sauvegardés")
-    ok(not (sp / "LibreHardwareMonitor").exists() and not (sp / "_mes-affaires").exists(),
-       "portable : LibreHardwareMonitor et dossiers perso ni sauvegardés ni gérés")
+    ok(
+        not (sp / "LibreHardwareMonitor").exists() and not (sp / "_mes-affaires").exists(),
+        "portable : LibreHardwareMonitor et dossiers perso ni sauvegardés ni gérés",
+    )
     jp = maj_natif.construire_job_portable({"version": "1.9.0"}, nouveau, sp)
-    ok(jp["action"] == "portable" and jp["source_dir"] == str(nouveau) and "config.json" in jp["proteger"],
-       "travail portable cohérent")
-    ok(set(jp["elements"]) == {"NEXUS.exe", "_internal", "Lancer NEXUS.bat", "LISEZMOI.txt", "portable.flag"}
-       and "LibreHardwareMonitor" not in jp["elements"], "portable : le helper ne gère que les fichiers du programme")
-    ok(set(maj_natif.construire_job_retour(sp, "1.8.0")["elements"]) == set(jp["elements"]),
-       "portable : le retour en arrière ne gère aussi que les fichiers du programme")
+    ok(jp["action"] == "portable" and jp["source_dir"] == str(nouveau) and "config.json" in jp["proteger"], "travail portable cohérent")
+    ok(
+        set(jp["elements"]) == {"NEXUS.exe", "_internal", "Lancer NEXUS.bat", "LISEZMOI.txt", "portable.flag"} and "LibreHardwareMonitor" not in jp["elements"],
+        "portable : le helper ne gère que les fichiers du programme",
+    )
+    ok(
+        set(maj_natif.construire_job_retour(sp, "1.8.0")["elements"]) == set(jp["elements"]),
+        "portable : le retour en arrière ne gère aussi que les fichiers du programme",
+    )
     maj_natif._ecrire(maj_natif.JOB_FILE, {**jp, "expected_version": version_mod.current()})
     ok(maj_natif.marquer_demarrage_ok(), "le démarrage de la nouvelle version portable est confirmé au helper")
 finally:

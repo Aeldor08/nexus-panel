@@ -7,9 +7,9 @@ x, y, une largeur, une hauteur et un ordre d'empilement z.
 
 from __future__ import annotations
 
-LARGEUR = 1000                     # largeur logique du mur
+LARGEUR = 1000  # largeur logique du mur
 MARGE, ECART, COLONNES = 20, 20, 4
-LEGENDE = 44                       # place sous une photo (légende + boutons)
+LEGENDE = 44  # place sous une photo (légende + boutons)
 MIN_W, MAX_W, MIN_H, MAX_H = 120, LARGEUR, 90, 1400
 CELLULE = (LARGEUR - 2 * MARGE - (COLONNES - 1) * ECART) / COLONNES
 NOTE_H = 200

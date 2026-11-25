@@ -16,15 +16,17 @@ from pathlib import Path
 import store
 
 ICON_DIR = store.DATA_DIR / "icons"
-STEAM_SKIP = re.compile(r"redistributable|steamworks|proton|steamvr|steam linux runtime|"
-                        r"directx|vcredist|dedicated server|soundtrack", re.I)
+STEAM_SKIP = re.compile(
+    r"redistributable|steamworks|proton|steamvr|steam linux runtime|"
+    r"directx|vcredist|dedicated server|soundtrack",
+    re.I,
+)
 CREATE_NO_WINDOW = 0x08000000
-DETACHED = 0x00000008 | 0x00000200   # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
+DETACHED = 0x00000008 | 0x00000200  # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
 
 
 def _steam_path() -> Path | None:
-    for hive, key in ((winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam"),
-                      (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Valve\Steam")):
+    for hive, key in ((winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam"), (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Valve\Steam")):
         try:
             with winreg.OpenKey(hive, key) as k:
                 for name in ("SteamPath", "InstallPath"):
@@ -68,8 +70,12 @@ def steam_games() -> list[dict]:
             size = int((_vdf_values(t, "SizeOnDisk") or ["0"])[0] or 0)
             cover = _find_cover(root, appid)
             games[appid] = {
-                "id": f"steam:{appid}", "kind": "game", "store": "Steam", "name": name,
-                "last_played": last or None, "size": size or None,
+                "id": f"steam:{appid}",
+                "kind": "game",
+                "store": "Steam",
+                "name": name,
+                "last_played": last or None,
+                "size": size or None,
                 "cover": f"/api/launcher/cover/{appid}" if cover else None,
                 "_target": f"steam://rungameid/{appid}",
             }
@@ -109,11 +115,18 @@ def epic_games() -> list[dict]:
             continue
         if not m.get("bIsApplication", True) or not m.get("AppName"):
             continue
-        games.append({
-            "id": f"epic:{m['AppName']}", "kind": "game", "store": "Epic", "name": m.get("DisplayName") or m["AppName"],
-            "last_played": None, "size": m.get("InstallSize"), "cover": None,
-            "_target": f"com.epicgames.launcher://apps/{m['AppName']}?action=launch&silent=true",
-        })
+        games.append(
+            {
+                "id": f"epic:{m['AppName']}",
+                "kind": "game",
+                "store": "Epic",
+                "name": m.get("DisplayName") or m["AppName"],
+                "last_played": None,
+                "size": m.get("InstallSize"),
+                "cover": None,
+                "_target": f"com.epicgames.launcher://apps/{m['AppName']}?action=launch&silent=true",
+            }
+        )
     return games
 
 
@@ -132,23 +145,34 @@ def _default_apps() -> list[dict]:
     apps = []
     for name, target, args in candidates:
         if "://" in target or Path(target).exists():
-            apps.append({"id": "app:" + hashlib.md5(name.encode()).hexdigest()[:10],
-                         "name": name, "target": target, "args": args})
+            apps.append({"id": "app:" + hashlib.md5(name.encode()).hexdigest()[:10], "name": name, "target": target, "args": args})
     # Applis Microsoft Store : Spotify, Claude
-    for app_id, name, package, entry in (("app:spotify", "Spotify", "SpotifyAB.SpotifyMusic", "Spotify"),
-                                         ("app:claude", "Claude", "Claude", "Claude")):
+    for app_id, name, package, entry in (("app:spotify", "Spotify", "SpotifyAB.SpotifyMusic", "Spotify"), ("app:claude", "Claude", "Claude", "Claude")):
         if any(a["name"] == name for a in apps):
             continue
         try:
             out = subprocess.run(
                 ["powershell", "-NoProfile", "-Command", f"(Get-AppxPackage {package}).PackageFamilyName"],
-                capture_output=True, text=True, encoding="oem", errors="replace", timeout=10, creationflags=CREATE_NO_WINDOW).stdout.strip()
+                capture_output=True,
+                text=True,
+                encoding="oem",
+                errors="replace",
+                timeout=10,
+                creationflags=CREATE_NO_WINDOW,
+            ).stdout.strip()
             if out:
                 apps.append({"id": app_id, "name": name, "target": rf"shell:AppsFolder\{out}!{entry}", "args": []})
         except Exception:
             pass
-    apps.append({"id": "app:claude-web", "name": "claude.ai", "target": "https://claude.ai", "args": [],
-                 "icon_from": next((a["target"] for a in apps if a["id"] == "app:claude"), None)})
+    apps.append(
+        {
+            "id": "app:claude-web",
+            "name": "claude.ai",
+            "target": "https://claude.ai",
+            "args": [],
+            "icon_from": next((a["target"] for a in apps if a["id"] == "app:claude"), None),
+        }
+    )
     return apps
 
 
@@ -161,13 +185,14 @@ def exe_icon(exe: str) -> Path | None:
     if not out.exists():
         # Chemins passés en base64 pour éviter tout problème d'échappement PowerShell.
         b = lambda s: base64.b64encode(s.encode("utf-16-le")).decode()
-        ps = ("Add-Type -AssemblyName System.Drawing;"
-              f"$e=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('{b(exe)}'));"
-              f"$o=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('{b(str(out))}'));"
-              "[System.Drawing.Icon]::ExtractAssociatedIcon($e).ToBitmap().Save($o,[System.Drawing.Imaging.ImageFormat]::Png)")
+        ps = (
+            "Add-Type -AssemblyName System.Drawing;"
+            f"$e=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('{b(exe)}'));"
+            f"$o=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('{b(str(out))}'));"
+            "[System.Drawing.Icon]::ExtractAssociatedIcon($e).ToBitmap().Save($o,[System.Drawing.Imaging.ImageFormat]::Png)"
+        )
         try:
-            subprocess.run(["powershell", "-NoProfile", "-Command", ps], timeout=15,
-                           capture_output=True, creationflags=CREATE_NO_WINDOW)
+            subprocess.run(["powershell", "-NoProfile", "-Command", ps], timeout=15, capture_output=True, creationflags=CREATE_NO_WINDOW)
         except Exception:
             return None
     return out if out.exists() else None
@@ -179,9 +204,14 @@ def _store_app_exe(family: str, name: str) -> str | None:
         return None
     try:
         loc = subprocess.run(
-            ["powershell", "-NoProfile", "-Command",
-             f"(Get-AppxPackage | Where-Object PackageFamilyName -eq '{family}').InstallLocation"],
-            capture_output=True, text=True, encoding="oem", errors="replace", timeout=10, creationflags=CREATE_NO_WINDOW).stdout.strip()
+            ["powershell", "-NoProfile", "-Command", f"(Get-AppxPackage | Where-Object PackageFamilyName -eq '{family}').InstallLocation"],
+            capture_output=True,
+            text=True,
+            encoding="oem",
+            errors="replace",
+            timeout=10,
+            creationflags=CREATE_NO_WINDOW,
+        ).stdout.strip()
     except Exception:
         return None
     if not loc or not Path(loc).is_dir():
@@ -218,10 +248,8 @@ class Launcher:
     def items(self) -> dict:
         cfg = self.config()
         hidden = set(cfg["hidden"])
-        apps = [{"id": a["id"], "kind": "app", "name": a["name"], "target": a["target"],
-                 "icon": f"/api/launcher/icon/{a['id']}"} for a in cfg["apps"]]
-        games = [{k: v for k, v in g.items() if not k.startswith("_")} | {"hidden": g["id"] in hidden}
-                 for g in self._games()]
+        apps = [{"id": a["id"], "kind": "app", "name": a["name"], "target": a["target"], "icon": f"/api/launcher/icon/{a['id']}"} for a in cfg["apps"]]
+        games = [{k: v for k, v in g.items() if not k.startswith("_")} | {"hidden": g["id"] in hidden} for g in self._games()]
         return {"games": games, "apps": apps}
 
     def _find(self, item_id: str) -> tuple[str, list[str]] | None:
@@ -239,10 +267,9 @@ class Launcher:
             return False
         target, args = found
         if "://" in target or target.lower().startswith("shell:") or not args:
-            os.startfile(target)   # protocoles (steam://), applis Store, .exe/.lnk sans argument
+            os.startfile(target)  # protocoles (steam://), applis Store, .exe/.lnk sans argument
         else:
-            subprocess.Popen([target, *args], cwd=str(Path(target).parent), creationflags=DETACHED,
-                             close_fds=True)
+            subprocess.Popen([target, *args], cwd=str(Path(target).parent), creationflags=DETACHED, close_fds=True)
         return True
 
     def icon(self, item_id: str) -> Path | None:
@@ -250,7 +277,7 @@ class Launcher:
         app = next((a for a in self.config()["apps"] if a["id"] == item_id), None)
         if not app:
             return None
-        target = app.get("icon_from") or app["target"]   # icon_from : icône d'une autre appli (ex. lien web)
+        target = app.get("icon_from") or app["target"]  # icon_from : icône d'une autre appli (ex. lien web)
         exe = target if target.lower().endswith((".exe", ".lnk")) and Path(target).exists() else None
         if target.lower().startswith("steam://") and _steam_path():
             exe = str(_steam_path() / "steam.exe")

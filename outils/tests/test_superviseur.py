@@ -1,6 +1,7 @@
 """Superviseur de NEXUS (icône près de l'horloge) : redémarrages, mises à jour, plantages, journal, Python privé,
 lancer.bat. Sans icône (pas besoin de pystray), avec un faux app.py dans un dossier temporaire.
 Usage : python outils/tests/test_superviseur.py"""
+
 import json
 import os
 import re
@@ -25,7 +26,7 @@ def ok(cond, msg):
         echecs += 1
 
 
-FAUX_APP = r'''
+FAUX_APP = r"""
 import json, os, sys, time
 from pathlib import Path
 ici = Path(__file__).parent
@@ -41,14 +42,14 @@ if code == "dort":
     time.sleep(60)
     code = 0
 sys.exit(code)
-'''
-FAUX_MAJ = r'''
+"""
+FAUX_MAJ = r"""
 from pathlib import Path
 ici = Path(__file__).parent
 (ici / "maj" / "en_cours.json").unlink()
 with open(ici / "lancements.txt", "a", encoding="utf-8") as f:
     f.write("MAJ\n")
-'''
+"""
 
 
 def dossier(codes, maj=False):
@@ -71,8 +72,7 @@ def lancements(d):
 
 def sup(d, **kw):
     notes = []
-    s = S.Superviseur(d, sys.executable, lhm=False, configurer=False, delai_plantage=.05, prefixe=d,
-                      notifier=lambda t, m: notes.append((t, m)), **kw)
+    s = S.Superviseur(d, sys.executable, lhm=False, configurer=False, delai_plantage=0.05, prefixe=d, notifier=lambda t, m: notes.append((t, m)), **kw)
     return s, notes
 
 
@@ -81,12 +81,12 @@ def attendre(cond, t=20):
     while time.time() < fin:
         if cond():
             return True
-        time.sleep(.05)
+        time.sleep(0.05)
     return False
 
 
 os.environ.pop("PYTHONPATH", None)
-os.environ["PYTHONPATH"] = "C:\\ailleurs"        # doit être retiré pour le serveur
+os.environ["PYTHONPATH"] = "C:\\ailleurs"  # doit être retiré pour le serveur
 
 # 1. code 3 (redémarrage demandé) puis 0 (arrêt normal)
 d = dossier([3, 0])
@@ -96,8 +96,7 @@ L = lancements(d)
 ok(rc == 0 and len(L) == 2, f"code 3 : relancé tout de suite, code 0 : arrêt ({len(L)} lancements)")
 ok(L[0]["NEXUS_OPEN_BROWSER"] == "1" and L[1]["NEXUS_OPEN_BROWSER"] == "0", "le navigateur ne s'ouvre qu'au premier lancement")
 ok(all(x["NEXUS_LANCEUR"] == "1" for x in L), "NEXUS_LANCEUR=1 : app.py sait qu'on le relance (mises à jour)")
-ok(all(x["PYTHONNOUSERSITE"] == "1" and x["PYTHONPATH"] is None for x in L),
-   "serveur isolé : ni paquets « utilisateur » ni PYTHONPATH de Windows")
+ok(all(x["PYTHONNOUSERSITE"] == "1" and x["PYTHONPATH"] is None for x in L), "serveur isolé : ni paquets « utilisateur » ni PYTHONPATH de Windows")
 log = (d / "logs" / "nexus.log").read_text(encoding="utf-8")
 ok("serveur lancé : élan n° 1" in log and "élan n° 2" in log, "messages du serveur dans logs\\nexus.log (accents compris)")
 ok("[Icône] redémarrage demandé par NEXUS" in log and "serveur arrêté normalement" in log, "le journal raconte ce que fait l'icône")
@@ -123,9 +122,8 @@ t = threading.Thread(target=s.boucle, daemon=True)
 t.start()
 ok(attendre(lambda: s.etat.startswith("arrêté")), f"5 plantages d'affilée : arrêté ({s.etat})")
 ok(len(lancements(d)) == S.MAX_PLANTAGES and notes and "5 fois" in notes[-1][1], "relancé 4 fois après un plantage, puis notification")
-s.redemarrer()                                     # Redémarrer : on repart pour 5 essais
-ok(attendre(lambda: len(lancements(d)) == 2 * S.MAX_PLANTAGES and s.etat.startswith("arrêté")),
-   "Redémarrer après l'abandon : nouveaux essais")
+s.redemarrer()  # Redémarrer : on repart pour 5 essais
+ok(attendre(lambda: len(lancements(d)) == 2 * S.MAX_PLANTAGES and s.etat.startswith("arrêté")), "Redémarrer après l'abandon : nouveaux essais")
 s.arreter()
 t.join(5)
 ok(not t.is_alive(), "Quitter pendant l'attente : la boucle s'arrête")
@@ -175,8 +173,10 @@ d = dossier([0])
 (d / "logs" / "nexus.log").write_text("x" * (S.JOURNAL_MAX + 10))
 s, _ = sup(d)
 s.boucle()
-ok((d / "logs" / "nexus.1.log").stat().st_size > S.JOURNAL_MAX and (d / "logs" / "nexus.log").stat().st_size < 10_000,
-   "journal trop gros : mis de côté (nexus.1.log), nouveau journal")
+ok(
+    (d / "logs" / "nexus.1.log").stat().st_size > S.JOURNAL_MAX and (d / "logs" / "nexus.log").stat().st_size < 10_000,
+    "journal trop gros : mis de côté (nexus.1.log), nouveau journal",
+)
 
 # 8. Python privé : à jour seulement si runtime\ a la version de outils\python-prive.json
 d = Path(tempfile.mkdtemp(prefix="nx-rt-"))
@@ -190,13 +190,16 @@ ok(not S.python_prive_a_jour(d), "runtime\\ d'une autre version : à refaire")
 (d / "runtime" / "VERSION-PYTHON").write_text("3.12.10\r\n")
 ok(S.python_prive_a_jour(d), "runtime\\ à la bonne version : rien à faire")
 pins = json.loads((BASE / "outils" / "python-prive.json").read_text(encoding="utf-8"))
-ok(re.fullmatch(r"3\.\d+\.\d+", pins["version"]) and re.fullmatch(r"[0-9A-F]{64}", pins["sha256"])
-   and pins["url"].startswith("https://api.nuget.org/") and pins["version"] in pins["url"],
-   "outils\\python-prive.json : version, adresse nuget.org et empreinte SHA256")
+ok(
+    re.fullmatch(r"3\.\d+\.\d+", pins["version"])
+    and re.fullmatch(r"[0-9A-F]{64}", pins["sha256"])
+    and pins["url"].startswith("https://api.nuget.org/")
+    and pins["version"] in pins["url"],
+    "outils\\python-prive.json : version, adresse nuget.org et empreinte SHA256",
+)
 
 # 9. une seule icône par dossier NEXUS (un 2ᵉ lancement ouvre juste le panel)
-code = "import sys; sys.path.insert(0, r'%s'); import superviseur as S; from pathlib import Path; " \
-       "print(S.deja_ouvert(Path(r'%s')))"
+code = "import sys; sys.path.insert(0, r'%s'); import superviseur as S; from pathlib import Path; print(S.deja_ouvert(Path(r'%s')))"
 un = subprocess.Popen([sys.executable, "-c", code % (BASE, d) + "; import time; time.sleep(4)"], stdout=subprocess.PIPE, text=True)
 time.sleep(1.5)
 deux = subprocess.run([sys.executable, "-c", code % (BASE, d)], capture_output=True, text=True).stdout.strip()
@@ -212,18 +215,24 @@ t = (BASE / "lancer.bat").read_text(encoding="ascii")
 reperes = set(re.findall(r"(?im)^:(\w+)", t))
 vises = set(re.findall(r"(?i)\b(?:goto|call)\s+:?(\w+)", t)) - {"installer"}
 ok(vises <= reperes, f"lancer.bat : tous les repères visés existent ({sorted(vises - reperes)})")
-ok("serveur" in reperes and t.index(":serveur") < t.index(":trop"),
-   "lancer.bat garde « :serveur » (une ancienne fenêtre NEXUS y revient après une mise à jour)")
-apres = t[t.index(":serveur"):t.index(":trop")]
+ok(
+    "serveur" in reperes and t.index(":serveur") < t.index(":trop"),
+    "lancer.bat garde « :serveur » (une ancienne fenêtre NEXUS y revient après une mise à jour)",
+)
+apres = t[t.index(":serveur") : t.index(":trop")]
 ok("call :trouver" in apres, "après « :serveur », le Python est recherché à nouveau (rien ne dépend de ce qui précède)")
 b = (BASE / "lancer.bat").read_bytes()
 fin_maj = b.index(b"maj_demarrage.py\r\n") + len(b"maj_demarrage.py\r\n")
-ok(fin_maj == 3480 and b[fin_maj:].startswith(b"call :app\r\n"),
-   f"lancer.bat calé : « call :app » à l'octet 3480 comme le lancement du serveur dans l'ancien lancer.bat ({fin_maj})")
-debut = t[:t.index("\n:console\n")]
-ok("call :python_prive" in debut and "call :dependances" in debut and not re.search(r"(?m)^call :app", debut),
-   "lancer.bat : Python privé et dépendances avant le démarrage, le serveur seulement en mode console")
-tr = t[t.index(":trouver"):]
+ok(
+    fin_maj == 3480 and b[fin_maj:].startswith(b"call :app\r\n"),
+    f"lancer.bat calé : « call :app » à l'octet 3480 comme le lancement du serveur dans l'ancien lancer.bat ({fin_maj})",
+)
+debut = t[: t.index("\n:console\n")]
+ok(
+    "call :python_prive" in debut and "call :dependances" in debut and not re.search(r"(?m)^call :app", debut),
+    "lancer.bat : Python privé et dépendances avant le démarrage, le serveur seulement en mode console",
+)
+tr = t[t.index(":trouver") :]
 ok(tr.index("runtime\\python.exe") < tr.index(".venv\\Scripts\\python.exe"), "le Python privé passe avant l'ancien .venv")
 
 print(f"\n{'ÉCHEC' if echecs else 'OK'} : {echecs} vérification(s) en échec")

@@ -22,8 +22,7 @@ def report(folder: Path, label: str | None = None) -> bool:
     name = label or str(folder)
     print(f"\n=== {name}")
     if not profiles.ID_RE.match(folder.name) and label is None:
-        res["errors"].append(f"nom de dossier « {folder.name} » invalide : minuscules, chiffres et tirets "
-                             "uniquement, 40 caractères max (ex. ocean-calme)")
+        res["errors"].append(f"nom de dossier « {folder.name} » invalide : minuscules, chiffres et tirets uniquement, 40 caractères max (ex. ocean-calme)")
         res["ok"] = False
     if folder.name == profiles.DEFAULT_ID:
         res["errors"].append("« defaut » est réservé au profil intégré")

@@ -146,9 +146,7 @@ def _migrer_anciennes_donnees() -> list[str]:
                 copied.append(f"profils/{folder.name}/")
     if copied:
         _LAYOUT_MARKER.parent.mkdir(parents=True, exist_ok=True)
-        _LAYOUT_MARKER.write_text(
-            "Migration depuis " + str(LEGACY_DIR) + " le " + time.strftime("%Y-%m-%d %H:%M:%S") + "\n",
-            encoding="utf-8")
+        _LAYOUT_MARKER.write_text("Migration depuis " + str(LEGACY_DIR) + " le " + time.strftime("%Y-%m-%d %H:%M:%S") + "\n", encoding="utf-8")
     return copied
 
 
@@ -169,7 +167,7 @@ def prepare() -> None:
     # destination déjà présente et ne copierait rien de l'ancienne installation.
     try:
         copied = _migrer_anciennes_donnees()
-    except Exception as exc:                       # ne jamais empêcher NEXUS de démarrer
+    except Exception as exc:  # ne jamais empêcher NEXUS de démarrer
         _dire(f"[Données] AVERTISSEMENT : migration de l'ancien dossier impossible ({exc})")
         copied = []
     for folder in (DATA_DIR, LOG_DIR, BACKUP_DIR, MAJ_DIR, SAUVEGARDES_DIR, VERSIONS_DIR, ACTIONS_DIR, PROFILES_DIR):

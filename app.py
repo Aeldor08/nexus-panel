@@ -74,7 +74,7 @@ STATIC_DIR = paths.STATIC_DIR
 # --------------------------------------------------------------------------- #
 app = FastAPI(title="NEXUS", docs_url=None, redoc_url=None)
 game_mode = gamemode_mod.GameMode()
-sensors = stats.Sensors()        # (mode jeu : rien n'est mis en pause dans l'onglet PC, processus compris)
+sensors = stats.Sensors()  # (mode jeu : rien n'est mis en pause dans l'onglet PC, processus compris)
 mixer = audio_mod.AudioMixer()
 media = media_mod.MediaMonitor()
 launcher = launcher_mod.Launcher()
@@ -82,7 +82,7 @@ pinger = lan.PingMonitor()
 scanner = lan.LanScanner(lambda: pinger.gateway, paused=lambda: game_mode.active)
 # NEXUS_DECK_DRYRUN=1 : mode simulation pour les tests (aucune action réelle n'est exécutée)
 deck = deck_mod.Deck(executor=(lambda b: f"(simulation) {b['type']}") if os.environ.get("NEXUS_DECK_DRYRUN") else deck_mod.execute)
-discord_bot = bot_mod.DiscordBot(sensors, deck)     # démarré dans start_services()
+discord_bot = bot_mod.DiscordBot(sensors, deck)  # démarré dans start_services()
 profile_lib = profiles_mod.ProfileLibrary()
 
 # Notifications : le lanceur natif installe un notifier Windows (toast) ; en navigateur,
@@ -118,7 +118,7 @@ def _notify_all(titre: str, texte: str):
     return ok or envoye
 
 
-reminder_svc = reminders_mod.ReminderService(notifier=_notify_all)   # démarré dans start_services()
+reminder_svc = reminders_mod.ReminderService(notifier=_notify_all)  # démarré dans start_services()
 # Mises à jour : vérification en tâche de fond (démarrée dans start_services) ; le bot peut seulement PRÉVENIR
 updater = maj_mod.Updater(notifier=_notify_all)
 
@@ -133,6 +133,8 @@ def _gpu_load():
 
 # Minuteur Pomodoro / mode focus (le temps de travail compte dans les statistiques)
 focus_svc = focus_mod.Focus(journal=activite.noter)
+
+
 # Philibert, l'iguane de NEXUS (docs/PHILIBERT.md) : Discord seulement si l'option est cochée dans ses réglages,
 # envoyé dans un fil à part (le bot peut mettre jusqu'à 15 s à répondre)
 def _philibert_discord(titre: str, texte: str) -> None:
@@ -141,17 +143,24 @@ def _philibert_discord(titre: str, texte: str) -> None:
 
 philibert_svc = philibert_mod.Philibert(journal=activite.noter, notifier=_philibert_discord)
 # Statistiques personnelles : réutilise le mode jeu, le panneau multimédia et la lecture GPU (démarré dans __main__)
-tracker = statistiques_mod.Tracker(game_state=game_mode.state, media_state=media.state, gpu_load=_gpu_load,
-                                   en_focus=focus_svc.en_travail)
+tracker = statistiques_mod.Tracker(game_state=game_mode.state, media_state=media.state, gpu_load=_gpu_load, en_focus=focus_svc.en_travail)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 # ---- Accès téléphone : garde réseau --------------------------------------
 remote_svc = remote_mod.Remote()
-RESTART_CODE = 3            # code de sortie qui demande au lanceur (icône ou lancer.bat) de relancer le serveur
+RESTART_CODE = 3  # code de sortie qui demande au lanceur (icône ou lancer.bat) de relancer le serveur
 # Accessibles sans appairage depuis le réseau : la page d'appairage et ce qu'elle affiche
-PUBLIC_REMOTE_PATHS = {"/pair", "/api/pair/claim", "/static/nexus-logo.svg", "/favicon.ico", "/static/favicon.ico",
-                       "/static/manifest.webmanifest", "/static/icons/icon-192.png", "/static/icons/icon-512.png"}
+PUBLIC_REMOTE_PATHS = {
+    "/pair",
+    "/api/pair/claim",
+    "/static/nexus-logo.svg",
+    "/favicon.ico",
+    "/static/favicon.ico",
+    "/static/manifest.webmanifest",
+    "/static/icons/icon-192.png",
+    "/static/icons/icon-512.png",
+}
 _hosts_cache = {"t": 0.0, "hosts": set()}
 
 
@@ -170,8 +179,8 @@ def allowed_hosts() -> set[str]:
 
 def _host_name(header: str) -> str:
     h = (header or "").strip().lower()
-    if h.startswith("["):                       # [::1]:8000
-        return h[1:h.find("]")] if "]" in h else h
+    if h.startswith("["):  # [::1]:8000
+        return h[1 : h.find("]")] if "]" in h else h
     return h.rsplit(":", 1)[0] if h.count(":") == 1 else h
 
 
@@ -185,14 +194,11 @@ async def _guard(request: Request, call_next):
         # (ou un programme local non autorisé) de lire les données privées via 127.0.0.1.
         if not TOKEN:
             return await call_next(request)
-        supplied = (request.cookies.get(LOCAL_COOKIE)
-                    or request.headers.get("x-nexus-token")
-                    or request.query_params.get("token")
-                    or "")
+        supplied = request.cookies.get(LOCAL_COOKIE) or request.headers.get("x-nexus-token") or request.query_params.get("token") or ""
         if not hmac.compare_digest(str(supplied), TOKEN):
             return JSONResponse({"error": "jeton local requis"}, status_code=403)
         response = await call_next(request)
-        if request.query_params.get("token") == TOKEN:          # 1re page : pose le cookie
+        if request.query_params.get("token") == TOKEN:  # 1re page : pose le cookie
             response.set_cookie(LOCAL_COOKIE, TOKEN, httponly=True, samesite="strict", path="/")
         return response
     # --- requête venant du réseau ---
@@ -225,7 +231,9 @@ async def _no_stale_pages(request: Request, call_next):
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "no-referrer")
     return response
-psutil.cpu_percent(percpu=True)   # amorce : le 1er appel renvoie toujours 0
+
+
+psutil.cpu_percent(percpu=True)  # amorce : le 1er appel renvoie toujours 0
 
 
 _stats_cache = {"t": 0.0, "corps": b""}
@@ -238,7 +246,7 @@ def api_stats() -> Response:
     # et des débits réseau plus réguliers (calculés sur l'intervalle entre deux relevés).
     with _stats_lock:
         now = time.monotonic()
-        if now - _stats_cache["t"] > .5:
+        if now - _stats_cache["t"] > 0.5:
             payload = {**sensors.full(), "gamemode": game_mode.state(), "demarrage": DEMARRAGE}
             _stats_cache.update(t=now, corps=JSONResponse(payload).body)
         corps = _stats_cache["corps"]
@@ -335,10 +343,17 @@ def api_agenda(debut: str | None = None, fin: str | None = None) -> JSONResponse
         raise BadRequest("plage de dates invalide (400 jours maximum)")
     db = agenda_mod.load()
     mins, ref, _ = reminders_mod.settings()
-    return JSONResponse({"evenements": db["events"], "occurrences": agenda_mod.occurrences(db, start, end),
-                         "todos": db["todos"], "notes": db["notes"],
-                         "reglages": {"rappels_minutes": mins, "heure_reference": ref},
-                         "repetitions": agenda_mod.REPEAT_LABELS}, headers={"Cache-Control": "no-store"})
+    return JSONResponse(
+        {
+            "evenements": db["events"],
+            "occurrences": agenda_mod.occurrences(db, start, end),
+            "todos": db["todos"],
+            "notes": db["notes"],
+            "reglages": {"rappels_minutes": mins, "heure_reference": ref},
+            "repetitions": agenda_mod.REPEAT_LABELS,
+        },
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @app.post("/api/agenda/evenements")
@@ -399,7 +414,7 @@ def _private(data, status: int = 200) -> JSONResponse:
 @app.get("/api/souvenirs/jour/{day}")
 def api_souv_day(day: str) -> JSONResponse:
     try:
-        return _private(souvenirs_mod.wall(day))        # photos, notes et disposition du mur de ce jour
+        return _private(souvenirs_mod.wall(day))  # photos, notes et disposition du mur de ce jour
     except souvenirs_mod.SouvenirError as exc:
         raise BadRequest(str(exc))
 
@@ -426,8 +441,9 @@ async def api_souv_layout_auto(day: str, request: Request) -> JSONResponse:
 async def api_souv_note_add(request: Request) -> JSONResponse:
     body = await json_body(request)
     try:
-        n = souvenirs_mod.add_note(str(body.get("jour") or ""), str(body.get("texte") or ""),
-                                   str(body.get("couleur") or "jaune"), body.get("police") or 18, body.get("position"))
+        n = souvenirs_mod.add_note(
+            str(body.get("jour") or ""), str(body.get("texte") or ""), str(body.get("couleur") or "jaune"), body.get("police") or 18, body.get("position")
+        )
     except souvenirs_mod.SouvenirError as exc:
         raise BadRequest(str(exc))
     return _private({"ok": True, "note": n})
@@ -437,9 +453,20 @@ async def api_souv_note_add(request: Request) -> JSONResponse:
 async def api_souv_note_update(nid: str, request: Request) -> JSONResponse:
     body = await json_body(request)
     try:
-        return _private({"ok": True, "note": souvenirs_mod.update_note(
-            nid, texte=body.get("texte"), couleur=body.get("couleur"), police=body.get("police"), epinglee=body.get("epinglee"),
-            encre=body.get("encre"), fonte=body.get("fonte"))})
+        return _private(
+            {
+                "ok": True,
+                "note": souvenirs_mod.update_note(
+                    nid,
+                    texte=body.get("texte"),
+                    couleur=body.get("couleur"),
+                    police=body.get("police"),
+                    epinglee=body.get("epinglee"),
+                    encre=body.get("encre"),
+                    fonte=body.get("fonte"),
+                ),
+            }
+        )
     except souvenirs_mod.SouvenirError as exc:
         raise BadRequest(str(exc))
 
@@ -555,8 +582,13 @@ async def api_perso_stats_settings(request: Request) -> JSONResponse:
             raise BadRequest("durée de conservation : entre 7 et 3650 jours")
         db_mod.set_setting("stats_conservation_jours", days)
         tracker.prune()
-    return _private({"ok": True, "pause": bool(db_mod.get_setting("stats_pause", False)),
-                     "conservation_jours": db_mod.get_setting("stats_conservation_jours", statistiques_mod.DEFAULT_RETENTION)})
+    return _private(
+        {
+            "ok": True,
+            "pause": bool(db_mod.get_setting("stats_pause", False)),
+            "conservation_jours": db_mod.get_setting("stats_conservation_jours", statistiques_mod.DEFAULT_RETENTION),
+        }
+    )
 
 
 @app.post("/api/statistiques/effacer")
@@ -581,11 +613,15 @@ def _verify_panel_password(password: str) -> bool:
 
 @app.get("/api/journal/etat")
 def api_journal_state(request: Request) -> JSONResponse:
-    return _private({"verrou_actif": journal_mod.lock_enabled(),
-                     "deverrouille": journal_mod.unlocked(request.cookies.get(journal_mod.COOKIE)),
-                     "mot_de_passe_defini": deck_mod.Deck.password_set(config.get("deck")),
-                     "humeurs": [{"emoji": e, "nom": n} for e, n in journal_mod.MOODS],
-                     "activites": journal_mod.activities()})
+    return _private(
+        {
+            "verrou_actif": journal_mod.lock_enabled(),
+            "deverrouille": journal_mod.unlocked(request.cookies.get(journal_mod.COOKIE)),
+            "mot_de_passe_defini": deck_mod.Deck.password_set(config.get("deck")),
+            "humeurs": [{"emoji": e, "nom": n} for e, n in journal_mod.MOODS],
+            "activites": journal_mod.activities(),
+        }
+    )
 
 
 @app.post("/api/journal/deverrouiller")
@@ -636,8 +672,7 @@ async def api_journal_put(day: str, request: Request) -> JSONResponse:
     _journal_check(request)
     body = await json_body(request)
     try:
-        return _private(journal_mod.save(day, str(body.get("humeur") or ""), body.get("activites") or [],
-                                         str(body.get("texte") or "")))
+        return _private(journal_mod.save(day, str(body.get("humeur") or ""), body.get("activites") or [], str(body.get("texte") or "")))
     except journal_mod.JournalError as exc:
         raise BadRequest(str(exc))
 
@@ -661,8 +696,11 @@ def api_journal_search(q: str, request: Request) -> JSONResponse:
 def api_journal_export(request: Request, format: str = "md") -> Response:
     _journal_check(request)
     name, text = journal_mod.export("md" if format == "md" else "txt")
-    return Response(text.encode("utf-8"), media_type="text/markdown; charset=utf-8" if name.endswith(".md") else "text/plain; charset=utf-8",
-                    headers={**NO_STORE, "Content-Disposition": f'attachment; filename="{name}"'})
+    return Response(
+        text.encode("utf-8"),
+        media_type="text/markdown; charset=utf-8" if name.endswith(".md") else "text/plain; charset=utf-8",
+        headers={**NO_STORE, "Content-Disposition": f'attachment; filename="{name}"'},
+    )
 
 
 @app.get("/api/perso/resume")
@@ -672,8 +710,7 @@ def api_perso_summary(request: Request) -> JSONResponse:
     rep = statistiques_mod.report("jour")
     top = rep["jeux"][0] if rep["jeux"] else None
     j = journal_mod.summary(today) if journal_mod.unlocked(request.cookies.get(journal_mod.COOKIE)) else {"verrouille": True}
-    return _private({"souvenirs": souvenirs_mod.summary(today), "journal": j,
-                     "stats": {"actif_s": rep["actif_s"], "pause": rep["pause"], "jeu": top}})
+    return _private({"souvenirs": souvenirs_mod.summary(today), "journal": j, "stats": {"actif_s": rep["actif_s"], "pause": rep["pause"], "jeu": top}})
 
 
 # ---- Média ----------------------------------------------------------------
@@ -702,8 +739,7 @@ async def api_media_control(request: Request) -> JSONResponse:
         raise BadRequest("action inconnue")
     pos = body.get("position")
     # dans un fil à part : la commande attend l'application (jusqu'à 2,5 s) sans bloquer le reste du panel
-    ok = await run_in_threadpool(media.control, text_field(body, "source", 300), action,
-                                 float(pos) if isinstance(pos, (int, float)) else None)
+    ok = await run_in_threadpool(media.control, text_field(body, "source", 300), action, float(pos) if isinstance(pos, (int, float)) else None)
     return JSONResponse({"ok": ok})
 
 
@@ -848,13 +884,23 @@ def pair_page() -> FileResponse:
 async def api_pair_claim(request: Request) -> JSONResponse:
     body = await json_body(request)
     ip = request.client.host if request.client else ""
-    token = remote_svc.claim(ip, str(body.get("secret") or "")[:100] or None, str(body.get("code") or "")[:10] or None,
-                             text_field(body, "name", 40, required=False), request.headers.get("user-agent", ""))
+    token = remote_svc.claim(
+        ip,
+        str(body.get("secret") or "")[:100] or None,
+        str(body.get("code") or "")[:10] or None,
+        text_field(body, "name", 40, required=False),
+        request.headers.get("user-agent", ""),
+    )
     if not token:
         activite.noter("appareil", "appairage refusé", "refusé", "code invalide ou expiré", ip, unique_s=30)
         raise BadRequest("code invalide ou expiré : relance l'appairage sur le PC", 403)
-    activite.noter("appareil", "nouvel appareil appairé", "ok",
-                   text_field(body, "name", 40, required=False) or remote_mod.device_label(request.headers.get("user-agent", "")), ip)
+    activite.noter(
+        "appareil",
+        "nouvel appareil appairé",
+        "ok",
+        text_field(body, "name", 40, required=False) or remote_mod.device_label(request.headers.get("user-agent", "")),
+        ip,
+    )
     resp = JSONResponse({"ok": True})
     resp.set_cookie(remote_mod.COOKIE, token, max_age=remote_mod.COOKIE_MAX_AGE, httponly=True, samesite="strict", path="/")
     return resp
@@ -873,13 +919,18 @@ def _pare_feu_ok() -> bool | None:
     if time.time() - _pare_feu_cache["t"] < 5:
         return _pare_feu_cache["ok"]
     import subprocess
+
     try:
-        p = subprocess.run(["netsh", "advfirewall", "firewall", "show", "rule", f"name={PARE_FEU_REGLE}"],
-                           capture_output=True, text=True, timeout=10, errors="replace",
-                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        p = subprocess.run(
+            ["netsh", "advfirewall", "firewall", "show", "rule", f"name={PARE_FEU_REGLE}"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            errors="replace",
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
         sortie = p.stdout or ""
-        ok = p.returncode == 0 and any(ligne.strip().endswith(str(PORT)) for ligne in sortie.splitlines()
-                                       if "LocalPort" in ligne)
+        ok = p.returncode == 0 and any(ligne.strip().endswith(str(PORT)) for ligne in sortie.splitlines() if "LocalPort" in ligne)
     except (OSError, subprocess.TimeoutExpired):
         ok = None
     _pare_feu_cache.update(t=time.time(), ok=ok)
@@ -889,10 +940,16 @@ def _pare_feu_ok() -> bool | None:
 @app.get("/api/remote")
 def api_remote() -> JSONResponse:
     p = remote_svc.pairing()
-    return JSONResponse({**remote_svc.state(), "url": lan_url(), "port": PORT,
-                         "pare_feu": _pare_feu_ok(),
-                         "pairing": {"code": p["code"], "expires": p["expires"]} if p else None},
-                        headers={"Cache-Control": "no-store"})
+    return JSONResponse(
+        {
+            **remote_svc.state(),
+            "url": lan_url(),
+            "port": PORT,
+            "pare_feu": _pare_feu_ok(),
+            "pairing": {"code": p["code"], "expires": p["expires"]} if p else None,
+        },
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @app.post("/api/remote/pare-feu")
@@ -903,14 +960,16 @@ async def api_remote_pare_feu(request: Request) -> JSONResponse:
     if not paths.FROZEN or os.name != "nt":
         raise BadRequest("seulement pour la version exe sous Windows", 409)
     import subprocess
+
     regle = f'name="{PARE_FEU_REGLE}"'
-    args = (f'/c netsh advfirewall firewall delete rule {regle} & '
-            f'netsh advfirewall firewall add rule {regle} dir=in action=allow protocol=TCP '
-            f'localport={int(PORT)} remoteip=localsubnet profile=private')
+    args = (
+        f"/c netsh advfirewall firewall delete rule {regle} & "
+        f"netsh advfirewall firewall add rule {regle} dir=in action=allow protocol=TCP "
+        f"localport={int(PORT)} remoteip=localsubnet profile=private"
+    )
     script = f"Start-Process -FilePath cmd.exe -ArgumentList '{args}' -Verb RunAs -WindowStyle Hidden -Wait"
     try:
-        subprocess.Popen(["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
-                         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        subprocess.Popen(["powershell", "-NoProfile", "-NonInteractive", "-Command", script], creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     except OSError as exc:
         raise BadRequest(f"impossible d'ouvrir la demande d'autorisation ({exc})", 500) from exc
     _pare_feu_cache["t"] = 0.0
@@ -952,6 +1011,7 @@ def api_remote_qr() -> Response:
         return Response(status_code=404)
     import qrcode
     import qrcode.image.svg
+
     img = qrcode.make(f"{url}/pair#{p['secret']}", image_factory=qrcode.image.svg.SvgPathImage, border=2)
     return Response(img.to_string(), media_type="image/svg+xml", headers={"Cache-Control": "no-store"})
 
@@ -1001,8 +1061,7 @@ async def api_deck_login(request: Request) -> JSONResponse:
         raise BadRequest("mot de passe incorrect", 403)
     deck._log("web", _ip(request), "-", "connexion", "ok", "nouvelle session du deck")
     resp = JSONResponse({"ok": True})
-    resp.set_cookie(deck_mod.SESSION_COOKIE, token, max_age=deck_mod.SESSION_DAYS * 86400,
-                    httponly=True, samesite="strict", path="/")
+    resp.set_cookie(deck_mod.SESSION_COOKIE, token, max_age=deck_mod.SESSION_DAYS * 86400, httponly=True, samesite="strict", path="/")
     return resp
 
 
@@ -1019,16 +1078,25 @@ async def api_deck_logout(request: Request) -> JSONResponse:
 def api_deck(request: Request) -> JSONResponse:
     deck.suivre_mot_de_passe(config.get("deck"))
     if not deck.check_session(request.cookies.get(deck_mod.SESSION_COOKIE)):
-        return JSONResponse({"logged_in": False, "password_set": deck.password_set(config.get("deck"))},
-                            headers={"Cache-Control": "no-store"})
+        return JSONResponse({"logged_in": False, "password_set": deck.password_set(config.get("deck"))}, headers={"Cache-Control": "no-store"})
     deck_guard(request)
-    return JSONResponse({
-        "logged_in": True, "buttons": deck.buttons, "warnings": deck.warnings,
-        "catalog": {"types": deck_mod.ACTION_TYPES, "media": deck_mod.MEDIA_LABELS, "power": deck_mod.POWER_OPS,
-                    "scripts": deck_mod.list_scripts(), "app_exts": deck_mod.APP_EXTS},
-        "log": deck.recent_log(12),
-        "discord": discord_bot.status,
-    }, headers={"Cache-Control": "no-store"})
+    return JSONResponse(
+        {
+            "logged_in": True,
+            "buttons": deck.buttons,
+            "warnings": deck.warnings,
+            "catalog": {
+                "types": deck_mod.ACTION_TYPES,
+                "media": deck_mod.MEDIA_LABELS,
+                "power": deck_mod.POWER_OPS,
+                "scripts": deck_mod.list_scripts(),
+                "app_exts": deck_mod.APP_EXTS,
+            },
+            "log": deck.recent_log(12),
+            "discord": discord_bot.status,
+        },
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @app.post("/api/deck/run")
@@ -1060,24 +1128,28 @@ def _redemarrer_pour_maj() -> None:
     En version installée, le helper PowerShell attend la fin de ce processus avant de lancer l'installeur."""
     if paths.FROZEN:
         print("[MAJ] Arrêt de NEXUS pour l'installeur natif.", flush=True)
-        threading.Timer(.4, lambda: os._exit(RESTART_CODE)).start()
+        threading.Timer(0.4, lambda: os._exit(RESTART_CODE)).start()
         return
     if os.environ.get("NEXUS_LANCEUR") != "1":
         import subprocess
+
         flags = getattr(subprocess, "CREATE_NEW_CONSOLE", 0)
-        subprocess.Popen([sys.executable, str(BASE_DIR / "maj_demarrage.py"), "--puis-lancer"], cwd=BASE_DIR,
-                         creationflags=flags, env={**os.environ, "NEXUS_OPEN_BROWSER": "0"})
-        threading.Timer(.4, lambda: os._exit(0)).start()
+        subprocess.Popen(
+            [sys.executable, str(BASE_DIR / "maj_demarrage.py"), "--puis-lancer"],
+            cwd=BASE_DIR,
+            creationflags=flags,
+            env={**os.environ, "NEXUS_OPEN_BROWSER": "0"},
+        )
+        threading.Timer(0.4, lambda: os._exit(0)).start()
         return
-    threading.Timer(.4, lambda: os._exit(RESTART_CODE)).start()
+    threading.Timer(0.4, lambda: os._exit(RESTART_CODE)).start()
 
 
 def _maj_mot_de_passe(request: Request, body: dict, action: str = "mise à jour") -> None:
     if not deck.rate_ok(_ip(request), "maj", 5):
         raise BadRequest("trop d'essais : attends une minute", 429)
     if not deck_mod.Deck.password_set(config.get("deck")):
-        raise BadRequest("aucun mot de passe défini pour le panel : lance configurer.bat ou "
-                         "NEXUS.exe --configure, puis réessaie", 403)
+        raise BadRequest("aucun mot de passe défini pour le panel : lance configurer.bat ou NEXUS.exe --configure, puis réessaie", 403)
     if not _verify_panel_password(body.get("mot_de_passe")):
         activite.noter("maj", action, "refusé", "mauvais mot de passe", _ip(request))
         raise BadRequest("mot de passe incorrect", 403)
@@ -1090,7 +1162,7 @@ def api_maj() -> JSONResponse:
 
 @app.post("/api/maj/verifier")
 async def api_maj_verifier(request: Request) -> JSONResponse:
-    await json_body(request)                     # (JSON obligatoire : pas de déclenchement depuis un autre site)
+    await json_body(request)  # (JSON obligatoire : pas de déclenchement depuis un autre site)
     return JSONResponse(await run_in_threadpool(updater.verifier))
 
 
@@ -1109,8 +1181,7 @@ async def api_maj_reglages(request: Request) -> JSONResponse:
         apres = maj_mod.modifier_reglages({k: body[k] for k in ("depot", "actif", "intervalle_heures", "discord") if k in body})
     except maj_mod.MajError as exc:
         raise BadRequest(str(exc))
-    changes = [f"{k} : {avant.get(k)} → {apres.get(k)}" for k in ("depot", "actif", "intervalle_heures", "discord")
-               if avant.get(k) != apres.get(k)]
+    changes = [f"{k} : {avant.get(k)} → {apres.get(k)}" for k in ("depot", "actif", "intervalle_heures", "discord") if avant.get(k) != apres.get(k)]
     if changes:
         activite.noter("maj", "réglages des mises à jour", "ok", " ; ".join(changes), _ip(request))
     return JSONResponse(updater.public())
@@ -1170,8 +1241,7 @@ async def api_maj_revenir(request: Request) -> JSONResponse:
 # ---- Santé de NEXUS, journal d'activité -----------------------------------
 def _etat(ok: bool | None, detail: str = "", attention: bool = False) -> dict:
     """ok : True / False / None (inactif ou facultatif) ; attention : marche, mais à surveiller."""
-    return {"etat": "inactif" if ok is None else "attention" if (attention and ok) else "ok" if ok else "erreur",
-            "detail": detail}
+    return {"etat": "inactif" if ok is None else "attention" if (attention and ok) else "ok" if ok else "erreur", "detail": detail}
 
 
 def _duree(s: float) -> str:
@@ -1185,10 +1255,16 @@ def _duree(s: float) -> str:
     return f"{s // 86400} j {s % 86400 // 3600} h"
 
 
-BOT_ETATS = {"online": (True, "connecté"), "connecting": (True, "connexion en cours"), "disabled": (None, "désactivé"),
-             "no_token": (None, "aucun jeton (facultatif)"), "stopped": (None, "arrêté"),
-             "missing_lib": (False, "bibliothèque discord.py absente"), "bad_token": (False, "jeton refusé par Discord"),
-             "bad_config": (False, "configuration incomplète")}
+BOT_ETATS = {
+    "online": (True, "connecté"),
+    "connecting": (True, "connexion en cours"),
+    "disabled": (None, "désactivé"),
+    "no_token": (None, "aucun jeton (facultatif)"),
+    "stopped": (None, "arrêté"),
+    "missing_lib": (False, "bibliothèque discord.py absente"),
+    "bad_token": (False, "jeton refusé par Discord"),
+    "bad_config": (False, "configuration incomplète"),
+}
 
 
 def _sante_elements(now: float) -> list[dict]:
@@ -1213,37 +1289,73 @@ def _sante_elements(now: float) -> list[dict]:
     elif tr.get("etat") == "arrete":
         stats_e = _etat(False, "arrêté (base de données indisponible ?)")
     else:
-        stats_e = _etat(not en_retard, (f"dernière mesure il y a {_duree(now - derniere)}" if derniere else "en attente de la 1re mesure")
-                        + (" — en retard" if en_retard else ""))
+        stats_e = _etat(
+            not en_retard,
+            (f"dernière mesure il y a {_duree(now - derniere)}" if derniere else "en attente de la 1re mesure") + (" — en retard" if en_retard else ""),
+        )
     res = v.get("resultat")
-    maj_txt = ("dernière vérification " + time.strftime("%d/%m %H:%M", time.localtime(v["derniere"])) + " : " if v.get("derniere") else "")
-    maj_txt += {"ok": "à jour" if v.get("a_jour") else "une nouvelle version est disponible",
-                "non_configure": "aucun dépôt configuré"}.get(res) or (v.get("erreur") or "pas encore vérifié")
+    maj_txt = "dernière vérification " + time.strftime("%d/%m %H:%M", time.localtime(v["derniere"])) + " : " if v.get("derniere") else ""
+    maj_txt += {"ok": "à jour" if v.get("a_jour") else "une nouvelle version est disponible", "non_configure": "aucun dépôt configuré"}.get(res) or (
+        v.get("erreur") or "pas encore vérifié"
+    )
     db_f = db_mod.DB_FILE
     lhm_pas_encore = lhm.get("error") == "pas encore interrogé"
     return [
-        {"id": "serveur", "nom": "Serveur", **_etat(True, f"v{version_mod.current()} · démarré il y a {_duree(now - proc.create_time())} · "
-                                                           f"{proc.memory_info().rss / 2**20:.0f} Mo · {proc.num_threads()} fils · port {PORT}")},
-        {"id": "bot", "nom": "Bot Discord", **_etat(ok_b, (txt_b if not b.get("detail") or b["detail"].startswith(txt_b)
-                                                            else f"{txt_b} — {b['detail']}")[:200])},
-        {"id": "lhm", "nom": "LibreHardwareMonitor", **_etat(
-            None if lhm_pas_encore else bool(lhm.get("available")),
-            "en attente" if lhm_pas_encore else "répond (températures, ventilateurs)" if lhm.get("available")
-            else f"ne répond pas ({lhm.get('error') or '?'}) : températures CPU et ventilateurs indisponibles")},
+        {
+            "id": "serveur",
+            "nom": "Serveur",
+            **_etat(
+                True,
+                f"v{version_mod.current()} · démarré il y a {_duree(now - proc.create_time())} · "
+                f"{proc.memory_info().rss / 2**20:.0f} Mo · {proc.num_threads()} fils · port {PORT}",
+            ),
+        },
+        {
+            "id": "bot",
+            "nom": "Bot Discord",
+            **_etat(ok_b, (txt_b if not b.get("detail") or b["detail"].startswith(txt_b) else f"{txt_b} — {b['detail']}")[:200]),
+        },
+        {
+            "id": "lhm",
+            "nom": "LibreHardwareMonitor",
+            **_etat(
+                None if lhm_pas_encore else bool(lhm.get("available")),
+                "en attente"
+                if lhm_pas_encore
+                else "répond (températures, ventilateurs)"
+                if lhm.get("available")
+                else f"ne répond pas ({lhm.get('error') or '?'}) : températures CPU et ventilateurs indisponibles",
+            ),
+        },
         {"id": "gpu", "nom": "Carte graphique", **_etat(bool(src) or None, f"lue par : {stats.SOURCE_LABELS.get(src, src) if src else 'aucune source'}")},
         {"id": "stats", "nom": "Suivi des statistiques", **stats_e},
-        {"id": "media", "nom": "Lecture en cours (Windows)", **_etat(
-            bool(md.get("available")) and not md.get("error"),
-            f"{len(md.get('sessions') or [])} lecteur(s) détecté(s)" if md.get("available") else f"indisponible : {md.get('error') or '?'}")},
+        {
+            "id": "media",
+            "nom": "Lecture en cours (Windows)",
+            **_etat(
+                bool(md.get("available")) and not md.get("error"),
+                f"{len(md.get('sessions') or [])} lecteur(s) détecté(s)" if md.get("available") else f"indisponible : {md.get('error') or '?'}",
+            ),
+        },
         {"id": "maj", "nom": "Mises à jour", **_etat(None if res in (None, "non_configure") else res == "ok", maj_txt)},
-        {"id": "base", "nom": "Base de données", **_etat(
-            db_f.exists() or None, f"schéma {db_mod.VERSION} · {db_f.stat().st_size / 2**20:.1f} Mo" if db_f.exists() else "pas encore créée")},
-        {"id": "disque", "nom": "Espace disque (dossier de NEXUS)", **_etat(
-            libre is not None, f"{libre / 2**30:.1f} Go libres" if libre is not None else "inconnu",
-            attention=libre is not None and libre < 5 * 2**30)},
-        {"id": "telephone", "nom": "Accès téléphone", **_etat(
-            True if remote_svc.active else None,
-            f"activé · {len(remote_svc.state()['devices'])} appareil(s) appairé(s)" if remote_svc.active else "désactivé")},
+        {
+            "id": "base",
+            "nom": "Base de données",
+            **_etat(db_f.exists() or None, f"schéma {db_mod.VERSION} · {db_f.stat().st_size / 2**20:.1f} Mo" if db_f.exists() else "pas encore créée"),
+        },
+        {
+            "id": "disque",
+            "nom": "Espace disque (dossier de NEXUS)",
+            **_etat(libre is not None, f"{libre / 2**30:.1f} Go libres" if libre is not None else "inconnu", attention=libre is not None and libre < 5 * 2**30),
+        },
+        {
+            "id": "telephone",
+            "nom": "Accès téléphone",
+            **_etat(
+                True if remote_svc.active else None,
+                f"activé · {len(remote_svc.state()['devices'])} appareil(s) appairé(s)" if remote_svc.active else "désactivé",
+            ),
+        },
     ]
 
 
@@ -1253,16 +1365,16 @@ def api_sante() -> JSONResponse:
     elems = _sante_elements(now)
     erreurs = sante_mod.liste()
     recentes = [x for x in erreurs if x["niveau"] == "erreur" and now - x["t"] < 3600]
-    resume = ("erreur" if any(e["etat"] == "erreur" for e in elems)
-              else "attention" if recentes or any(e["etat"] == "attention" for e in elems) else "ok")
-    return JSONResponse({"elements": elems, "erreurs": erreurs, "resume": resume, "maintenant": now},
-                        headers={"Cache-Control": "no-store"})
+    resume = "erreur" if any(e["etat"] == "erreur" for e in elems) else "attention" if recentes or any(e["etat"] == "attention" for e in elems) else "ok"
+    return JSONResponse({"elements": elems, "erreurs": erreurs, "resume": resume, "maintenant": now}, headers={"Cache-Control": "no-store"})
 
 
 @app.get("/api/activite")
 def api_activite(cat: str = "", n: int = 200) -> JSONResponse:
-    return JSONResponse({"evenements": activite.lire(max(1, min(1000, n)), cat if cat in activite.CATEGORIES else None),
-                         "categories": activite.CATEGORIES}, headers={"Cache-Control": "no-store"})
+    return JSONResponse(
+        {"evenements": activite.lire(max(1, min(1000, n)), cat if cat in activite.CATEGORIES else None), "categories": activite.CATEGORIES},
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 # ---- Processus : classement complet et fermeture (PC uniquement, avec confirmation) ----
@@ -1275,16 +1387,22 @@ def api_processus(tri: str = "cpu") -> JSONResponse:
 async def api_processus_fermer(request: Request) -> JSONResponse:
     body = await json_body(request)
     nom = text_field(body, "nom", 120)
-    if str(body.get("confirmation") or "") != nom:          # nom confirmé par l'utilisateur dans la page
+    if str(body.get("confirmation") or "") != nom:  # nom confirmé par l'utilisateur dans la page
         raise BadRequest("confirmation manquante")
     try:
         r = await run_in_threadpool(sensors.procs.fermer, nom)
     except ValueError as exc:
         activite.noter("processus", f"fermeture de {nom}", "refusé", str(exc), _ip(request))
         raise BadRequest(str(exc))
-    activite.noter("processus", f"fermeture de {nom}", "partiel" if r["refuses"] else "ok",
-                   f"{r['fermes']}/{r['trouves']} fermé(s)" + (f", {r['forces']} de force" if r["forces"] else "")
-                   + (f", {r['refuses']} refusé(s) par Windows" if r["refuses"] else ""), _ip(request))
+    activite.noter(
+        "processus",
+        f"fermeture de {nom}",
+        "partiel" if r["refuses"] else "ok",
+        f"{r['fermes']}/{r['trouves']} fermé(s)"
+        + (f", {r['forces']} de force" if r["forces"] else "")
+        + (f", {r['refuses']} refusé(s) par Windows" if r["refuses"] else ""),
+        _ip(request),
+    )
     return JSONResponse(r)
 
 
@@ -1297,9 +1415,14 @@ def api_focus() -> JSONResponse:
 @app.post("/api/focus/{action}")
 async def api_focus_action(action: str, request: Request) -> JSONResponse:
     body = await json_body(request)
-    actions = {"demarrer": lambda: focus_svc.demarrer(body.get("reglages") or None), "suspendre": focus_svc.suspendre,
-               "reprendre": focus_svc.reprendre, "passer": focus_svc.passer, "arreter": focus_svc.arreter,
-               "reglages": lambda: focus_svc.regler(body)}
+    actions = {
+        "demarrer": lambda: focus_svc.demarrer(body.get("reglages") or None),
+        "suspendre": focus_svc.suspendre,
+        "reprendre": focus_svc.reprendre,
+        "passer": focus_svc.passer,
+        "arreter": focus_svc.arreter,
+        "reglages": lambda: focus_svc.regler(body),
+    }
     if action not in actions:
         raise BadRequest("action inconnue", 404)
     return JSONResponse(actions[action]())
@@ -1342,8 +1465,9 @@ async def api_philibert_jeu(etape: str, request: Request) -> JSONResponse:
     if etape == "coup":
         return _philibert(philibert_svc.jeu_coup, body.get("jeton"), body.get("choix"), body.get("reponse"))
     if etape == "fin":
-        return _philibert(philibert_svc.jeu_fin, body.get("jeton"), body.get("score"), body.get("insectes"), body.get("arrivee"),
-                          body.get("palier"), body.get("distance"))
+        return _philibert(
+            philibert_svc.jeu_fin, body.get("jeton"), body.get("score"), body.get("insectes"), body.get("arrivee"), body.get("palier"), body.get("distance")
+        )
     if etape == "annuler":
         return _philibert(philibert_svc.jeu_annuler, body.get("jeton"))
     raise BadRequest("étape inconnue", 404)
@@ -1382,8 +1506,7 @@ async def api_gamemode_config(request: Request) -> JSONResponse:
 # ---- Réseau ---------------------------------------------------------------
 @app.get("/api/net")
 def api_net() -> JSONResponse:
-    return JSONResponse({**pinger.state(), "lan": scanner.state()},
-                        headers={"Cache-Control": "no-store"})
+    return JSONResponse({**pinger.state(), "lan": scanner.state()}, headers={"Cache-Control": "no-store"})
 
 
 @app.post("/api/net/scan")
@@ -1406,7 +1529,7 @@ async def api_net_device(request: Request) -> JSONResponse:
 #  Profils visuels (dossier profils\, voir profiles.py et profils\FORMAT.md)
 #  Même garde que tout le panel (middleware _guard) : ce PC, ou un téléphone appairé.
 # --------------------------------------------------------------------------- #
-MAX_IMPORT_BODY = 9 * 1024 * 1024       # 5 Mo de profil, encodés en base64 dans du JSON
+MAX_IMPORT_BODY = 9 * 1024 * 1024  # 5 Mo de profil, encodés en base64 dans du JSON
 
 
 @app.get("/api/profils")
@@ -1431,8 +1554,7 @@ def _profile_cache(request: Request, pid: str, etag: str) -> tuple[dict, bool]:
 def profile_css(pid: str, request: Request) -> Response:
     css = profile_lib.css(pid)
     if css is None:
-        return PlainTextResponse("/* profil introuvable ou invalide */", status_code=404,
-                                 media_type="text/css", headers=profiles_mod.SAFE_HEADERS)
+        return PlainTextResponse("/* profil introuvable ou invalide */", status_code=404, media_type="text/css", headers=profiles_mod.SAFE_HEADERS)
     headers, same = _profile_cache(request, pid, "css-" + (profile_lib.signature(pid) or ""))
     if same:
         return Response(status_code=304, headers=headers)
@@ -1458,8 +1580,7 @@ def api_profile_export(pid: str) -> Response:
         name, data = profile_lib.export_zip(pid)
     except profiles_mod.ProfileError as exc:
         raise BadRequest(str(exc), 404)
-    return Response(data, media_type="application/zip",
-                    headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "no-store"})
+    return Response(data, media_type="application/zip", headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "no-store"})
 
 
 @app.post("/api/profils/import")
@@ -1508,6 +1629,7 @@ def index() -> FileResponse:
 def _journaliser_resultat_maj() -> None:
     """Résultat d'une installation / d'un retour (maj_demarrage.py ou helper natif) : une seule fois dans le journal."""
     import json as _json
+
     f = maj_mod.MAJ_DIR / "resultat.json"
     try:
         r = _json.loads(f.read_text(encoding="utf-8-sig"))
@@ -1515,8 +1637,7 @@ def _journaliser_resultat_maj() -> None:
         return
     if r.get("journalise"):
         return
-    action = {"retour": "retour effectué", "rollback": "retour automatique"}.get(
-        r.get("type"), "installation terminée")
+    action = {"retour": "retour effectué", "rollback": "retour automatique"}.get(r.get("type"), "installation terminée")
     activite.noter("maj", action, "ok" if r.get("ok") else "erreur", str(r.get("message") or ""), "", "panel")
     r["journalise"] = True
     try:
@@ -1560,18 +1681,17 @@ def start_services() -> None:
         return
     _services_started = True
     # Diagnostic matériel en arrière-plan : il ne retarde pas le démarrage du serveur
-    threading.Thread(target=lambda: [print(l, flush=True) for l in sensors.hardware_report()],
-                     daemon=True, name="materiel").start()
-    discord_bot.start()     # thread séparé ; un jeton absent ou invalide n'empêche pas NEXUS de démarrer
+    threading.Thread(target=lambda: [print(l, flush=True) for l in sensors.hardware_report()], daemon=True, name="materiel").start()
+    discord_bot.start()  # thread séparé ; un jeton absent ou invalide n'empêche pas NEXUS de démarrer
     try:
-        agenda_mod.load()   # migre l'agenda au format 2 si besoin (avec sauvegarde) avant les rappels
+        agenda_mod.load()  # migre l'agenda au format 2 si besoin (avec sauvegarde) avant les rappels
     except Exception as exc:
         print(f"[Agenda] AVERTISSEMENT : {exc}")
     reminder_svc.start()
-    updater.demarrer()      # vérification des mises à jour : 20 s après le démarrage, puis toutes les N heures
+    updater.demarrer()  # vérification des mises à jour : 20 s après le démarrage, puis toutes les N heures
     try:
-        db_mod.migrate()    # base locale des souvenirs, statistiques et journal (créée vide sur une installation neuve)
-        tracker.start()     # mesures légères toutes les 10 s ; une erreur n'arrête jamais le serveur
+        db_mod.migrate()  # base locale des souvenirs, statistiques et journal (créée vide sur une installation neuve)
+        tracker.start()  # mesures légères toutes les 10 s ; une erreur n'arrête jamais le serveur
     except Exception as exc:
         print(f"[Données perso] AVERTISSEMENT : {exc} — souvenirs, statistiques et journal indisponibles")
     if NATIVE_NOTIFIER and (_native_alert_thread is None or not _native_alert_thread.is_alive()):
@@ -1581,7 +1701,8 @@ def start_services() -> None:
     if paths.FROZEN:
         try:
             import maj_natif
-            maj_natif.marquer_demarrage_ok()      # confirme au helper que la nouvelle version répond
+
+            maj_natif.marquer_demarrage_ok()  # confirme au helper que la nouvelle version répond
         except Exception:
             pass
 
@@ -1611,13 +1732,14 @@ def _single_instance_guard() -> bool:
     suffixe = ""
     if os.environ.get("NEXUS_PORTABLE") == "1":
         import hashlib
+
         suffixe = "-" + hashlib.sha1(str(paths.USER_ROOT).lower().encode("utf-8")).hexdigest()[:10]
     kernel32 = ctypes.windll.kernel32
     kernel32.CreateMutexW.restype = ctypes.c_void_p
     kernel32.CreateMutexW.argtypes = [ctypes.c_void_p, ctypes.c_bool, ctypes.c_wchar_p]
     _MUTEX_HANDLE = kernel32.CreateMutexW(None, False, f"Local\\NEXUS-{user}{suffixe}")
     if not _MUTEX_HANDLE:
-        return True                                   # impossible de créer le mutex : on ne bloque pas
+        return True  # impossible de créer le mutex : on ne bloque pas
     if ctypes.windll.kernel32.GetLastError() != 183:  # ERROR_ALREADY_EXISTS
         return True
     runtime = paths.read_runtime()
@@ -1627,6 +1749,7 @@ def _single_instance_guard() -> bool:
         print(f"NEXUS tourne déjà : {url}")
         if os.environ.get("NEXUS_OPEN_BROWSER") == "1":
             import webbrowser
+
             webbrowser.open(url)
     else:
         print("NEXUS tourne déjà dans cette session.")
@@ -1639,6 +1762,7 @@ def _test_demarrage(attendue: str) -> int:
     import json as _json
     import urllib.request
     import uvicorn
+
     paths.prepare()
     config.migrer()
     config.load(force=True)
@@ -1661,7 +1785,7 @@ def _test_demarrage(attendue: str) -> int:
             print(f"TEST-DEMARRAGE-OK {v}")
             return 0
         except OSError:
-            time.sleep(.5)
+            time.sleep(0.5)
     print("le serveur de test ne répond pas", file=sys.stderr)
     return 1
 
@@ -1679,18 +1803,18 @@ if __name__ == "__main__":
             os._exit(1)
     if not _single_instance_guard():
         raise SystemExit(0)
-    logs.install()                       # journal fichier (utile sans console)
-    sante_mod.install()                  # dernières erreurs gardées pour la fenêtre « Santé de NEXUS »
+    logs.install()  # journal fichier (utile sans console)
+    sante_mod.install()  # dernières erreurs gardées pour la fenêtre « Santé de NEXUS »
     _journaliser_resultat_maj()
     try:
-        config.migrer()                  # schéma de config.json (sauvegarde avant chaque migration)
+        config.migrer()  # schéma de config.json (sauvegarde avant chaque migration)
     except Exception as exc:
         print(f"[Config] AVERTISSEMENT : migration impossible ({exc})")
     try:
-        saved = version_mod.snapshot()   # sauvegarde du code de cette version (une seule fois)
+        saved = version_mod.snapshot()  # sauvegarde du code de cette version (une seule fois)
         if saved:
             print(f"Version {version_mod.current()} sauvegardée dans versions\\{saved.name}")
-        retires = version_mod.nettoyer()   # au plus 8 sauvegardes de code (les plus récentes)
+        retires = version_mod.nettoyer()  # au plus 8 sauvegardes de code (les plus récentes)
         if retires:
             print(f"Anciennes sauvegardes de code retirées : {len(retires)} (versions\\ garde les 8 plus récentes)")
     except OSError as exc:
@@ -1714,11 +1838,10 @@ if __name__ == "__main__":
     for w in config.warnings:
         print(f"[Config] AVERTISSEMENT : {w}")
     if not deck.password_set(config.get("deck")):
-        print("[Deck] AVERTISSEMENT : aucun mot de passe : stream deck inaccessible "
-              "(lance configurer.bat ou NEXUS.exe --configure)")
+        print("[Deck] AVERTISSEMENT : aucun mot de passe : stream deck inaccessible (lance configurer.bat ou NEXUS.exe --configure)")
     # Port déjà pris (autre programme, ou NEXUS déjà ouvert) : message clair au lieu d'un plantage
     probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):    # Windows : échoue aussi si le port est pris sur une autre adresse
+    if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):  # Windows : échoue aussi si le port est pris sur une autre adresse
         probe.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
     try:
         probe.bind((host, PORT))
@@ -1736,18 +1859,20 @@ if __name__ == "__main__":
     # Ouvre le navigateur seulement quand le serveur répond vraiment (lancer.bat met NEXUS_OPEN_BROWSER=1)
     def _open_when_ready() -> None:
         import webbrowser
-        for _ in range(240):                      # jusqu'à 2 minutes (PC lent, antivirus…)
+
+        for _ in range(240):  # jusqu'à 2 minutes (PC lent, antivirus…)
             try:
-                with socket.create_connection((HOST, PORT), timeout=.5):
+                with socket.create_connection((HOST, PORT), timeout=0.5):
                     break
             except OSError:
-                time.sleep(.5)
+                time.sleep(0.5)
         else:
             print("[ERREUR] NEXUS ne répond pas : regarde le message d'erreur au-dessus dans cette fenêtre.")
             return
         url = f"http://{HOST}:{PORT}" + (f"/?token={TOKEN}" if TOKEN else "")
         print(f"NEXUS est prêt : ouverture de http://{HOST}:{PORT}", flush=True)
         webbrowser.open(url)
+
     if os.environ.get("NEXUS_OPEN_BROWSER") == "1":
         threading.Thread(target=_open_when_ready, daemon=True).start()
 

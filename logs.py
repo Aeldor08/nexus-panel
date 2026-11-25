@@ -82,7 +82,7 @@ def install() -> Path | None:
 
 
 _derniers: dict[str, float] = {}
-SIGNALER_INTERVALLE_S = 900          # même erreur de fond : au plus un message par quart d'heure
+SIGNALER_INTERVALLE_S = 900  # même erreur de fond : au plus un message par quart d'heure
 
 
 def signaler(contexte: str, exc: BaseException) -> None:
@@ -96,4 +96,4 @@ def signaler(contexte: str, exc: BaseException) -> None:
     try:
         print(f"[{contexte}] ERREUR : {type(exc).__name__}: {exc}", flush=True)
     except Exception:
-        pass                                     # (pythonw sans console : jamais d'erreur en écrivant le journal)
+        pass  # (pythonw sans console : jamais d'erreur en écrivant le journal)

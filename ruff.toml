@@ -7,3 +7,8 @@ extend-exclude = [".venv", "versions", "partage", "sauvegardes-maj", "maj", "dis
 select = ["E9", "F", "B"]
 # B904 / B905 : style ; B023 / B007 : faux positifs (fonctions appelées dans la boucle même)
 ignore = ["B904", "B905", "B023", "B007"]
+
+[format]
+# Formatage automatique (ruff format) : même largeur de ligne que le lint, guillemets doubles.
+quote-style = "double"
+line-ending = "auto"

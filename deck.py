@@ -44,8 +44,7 @@ DETACHED = 0x00000008 | 0x00000200
 
 # Touches multimédia Windows (codes de touches virtuelles)
 MEDIA_KEYS = {"play_pause": 0xB3, "next": 0xB0, "prev": 0xB1, "volume_up": 0xAF, "volume_down": 0xAE, "mute": 0xAD}
-MEDIA_LABELS = {"play_pause": "Lecture / pause", "next": "Suivant", "prev": "Précédent",
-                "volume_up": "Volume +", "volume_down": "Volume −", "mute": "Muet"}
+MEDIA_LABELS = {"play_pause": "Lecture / pause", "next": "Suivant", "prev": "Précédent", "volume_up": "Volume +", "volume_down": "Volume −", "mute": "Muet"}
 POWER_OPS = {"shutdown": "Éteindre", "restart": "Redémarrer", "sleep": "Mettre en veille"}
 APP_EXTS = (".exe", ".lnk", ".url", ".appref-ms")
 SCRIPT_RE = re.compile(r"^[\w][\w\-. ]{0,60}\.(bat|cmd|ps1|py)$", re.I)
@@ -83,7 +82,7 @@ def verify_password(cfg: dict, password: str) -> bool:
         except ValueError:
             return False
         return hmac.compare_digest(test, digest)
-    plain = str(cfg.get("password") or "")           # ancienne config : mot de passe en clair
+    plain = str(cfg.get("password") or "")  # ancienne config : mot de passe en clair
     return bool(plain) and hmac.compare_digest(password.encode(), plain.encode())
 
 
@@ -155,21 +154,20 @@ def validate(b: dict) -> dict:
     elif typ == "lock":
         clean = {}
     elif typ == "script":
-        script_path(params.get("name"))            # lève une erreur si invalide ou absent
+        script_path(params.get("name"))  # lève une erreur si invalide ou absent
         clean = {"name": params["name"]}
     elif typ == "power":
         op = params.get("op")
         if op not in POWER_OPS:
             raise DeckError(f"« {label or bid} » : opération d'alimentation inconnue ({op})")
         if not confirm:
-            raise DeckError(f"« {label or bid} » : « {POWER_OPS[op]} » exige \"confirm\": true")
+            raise DeckError(f'« {label or bid} » : « {POWER_OPS[op]} » exige "confirm": true')
         clean = {"op": op}
 
     icon = str(b.get("icon") or "").strip()[:8]
     # Discord : jamais pour un bouton qui demande une confirmation (ni pour l'alimentation)
     discord = bool(b.get("discord", False)) and not confirm and typ != "power"
-    return {"id": bid, "label": label, "icon": icon, "color": color, "type": typ,
-            "params": clean, "confirm": confirm, "discord": discord}
+    return {"id": bid, "label": label, "icon": icon, "color": color, "type": typ, "params": clean, "confirm": confirm, "discord": discord}
 
 
 # --------------------------------------------------------------------------- #
@@ -178,7 +176,7 @@ def validate(b: dict) -> dict:
 def _press(vk: int) -> None:
     user32 = ctypes.windll.user32
     user32.keybd_event(vk, 0, 0, 0)
-    user32.keybd_event(vk, 0, 2, 0)            # KEYEVENTF_KEYUP
+    user32.keybd_event(vk, 0, 2, 0)  # KEYEVENTF_KEYUP
 
 
 def execute(b: dict) -> str:
@@ -212,21 +210,19 @@ def execute(b: dict) -> str:
             # relancerait NEXUS. On cherche un Python séparé ; sinon on explique la limite.
             python = sys.executable if not paths.FROZEN else (shutil.which("python") or shutil.which("py"))
             if paths.FROZEN and not python:
-                raise DeckError("script .py non pris en charge dans la version installée : "
-                                "utilisez un .bat, .cmd ou .ps1 (ou installez Python)")
-            cmd = [python, str(path)] if not (paths.FROZEN and python and Path(python).name.lower() == "py.exe") \
-                else [python, "-3", str(path)]
+                raise DeckError("script .py non pris en charge dans la version installée : utilisez un .bat, .cmd ou .ps1 (ou installez Python)")
+            cmd = [python, str(path)] if not (paths.FROZEN and python and Path(python).name.lower() == "py.exe") else [python, "-3", str(path)]
         subprocess.Popen(cmd, cwd=str(ACTIONS_DIR), creationflags=CREATE_NO_WINDOW, close_fds=True)
         return f"script {path.name} lancé"
     if t == "power":
         op = p["op"]
         if op == "shutdown":
-            subprocess.Popen(["shutdown", "/s", "/t", "15", "/c", "Arrêt demandé depuis NEXUS (shutdown /a pour annuler)"],
-                             creationflags=CREATE_NO_WINDOW)
+            subprocess.Popen(["shutdown", "/s", "/t", "15", "/c", "Arrêt demandé depuis NEXUS (shutdown /a pour annuler)"], creationflags=CREATE_NO_WINDOW)
             return "arrêt dans 15 s (annuler : shutdown /a)"
         if op == "restart":
-            subprocess.Popen(["shutdown", "/r", "/t", "15", "/c", "Redémarrage demandé depuis NEXUS (shutdown /a pour annuler)"],
-                             creationflags=CREATE_NO_WINDOW)
+            subprocess.Popen(
+                ["shutdown", "/r", "/t", "15", "/c", "Redémarrage demandé depuis NEXUS (shutdown /a pour annuler)"], creationflags=CREATE_NO_WINDOW
+            )
             return "redémarrage dans 15 s (annuler : shutdown /a)"
         if op == "sleep":
             threading.Timer(1.5, lambda: ctypes.windll.powrprof.SetSuspendState(False, True, False)).start()
@@ -240,10 +236,10 @@ def execute(b: dict) -> str:
 class Deck:
     def __init__(self, executor=execute) -> None:
         self._lock = threading.Lock()
-        self._executor = executor                   # remplaçable pour les tests (aucune action réelle)
+        self._executor = executor  # remplaçable pour les tests (aucune action réelle)
         self.warnings: list[str] = []
         self.buttons: list[dict] = []
-        self._sessions: dict[str, float] = {}      # hash du jeton -> expiration
+        self._sessions: dict[str, float] = {}  # hash du jeton -> expiration
         self._hits: dict[tuple[str, str], list[float]] = {}
         ACTIONS_DIR.mkdir(parents=True, exist_ok=True)
         if not DECK_FILE.exists() and EXAMPLE_FILE.exists():
@@ -332,8 +328,9 @@ class Deck:
         line = f"{time.strftime('%Y-%m-%d %H:%M:%S')} | {source:<7} | {ip or '-':<15} | {bid} | {label} | {result} | {detail}\n"
         with self._lock, open(LOG_FILE, "a", encoding="utf-8") as f:
             f.write(line)
-        try:                                         # aussi dans le journal d'activité du panel (fenêtre Santé)
+        try:  # aussi dans le journal d'activité du panel (fenêtre Santé)
             import activite
+
             activite.noter("deck", label if label not in ("-", "?") else str(bid), result, detail, ip, source)
         except Exception:
             pass

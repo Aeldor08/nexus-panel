@@ -1,5 +1,6 @@
 """Option --titre de outils/release.py, sur un CHANGELOG temporaire (le vrai n'est jamais touché) :
 en-tête « ## [X.Y.Z] - date - titre », titre de la release GitHub, lecture du titre par version.py (le panel)."""
+
 import shutil
 import sys
 import tempfile
@@ -27,8 +28,12 @@ def ok(c, m):
 vrai = (BASE / "CHANGELOG.md").read_bytes()
 tmp = Path(tempfile.mkdtemp(prefix="nexus-release-"))
 try:
-    (tmp / "CHANGELOG.md").write_text("# Changelog\n\n## [Non publié]\n\nPhilibert arrive ! Un petit iguane.\n\n### Ajouté\n- Philibert\n\n"
-                                      "## [1.0.10] - 2026-11-16\n\n### Corrigé\n- Post-it\n", encoding="utf-8", newline="\n")
+    (tmp / "CHANGELOG.md").write_text(
+        "# Changelog\n\n## [Non publié]\n\nPhilibert arrive ! Un petit iguane.\n\n### Ajouté\n- Philibert\n\n"
+        "## [1.0.10] - 2026-11-16\n\n### Corrigé\n- Post-it\n",
+        encoding="utf-8",
+        newline="\n",
+    )
     release.BASE = tmp
     release.dater_changelog("1.1.0", "2026-11-16", release.verifier_titre("  Philibert   arrive !  "))
     t = (tmp / "CHANGELOG.md").read_text(encoding="utf-8")
@@ -52,10 +57,14 @@ ok((BASE / "CHANGELOG.md").read_bytes() == vrai, "le vrai CHANGELOG.md n'a pas c
 # notes de la release GitHub : encadré « Télécharger » en tête (lien direct vers l'archive), puis le CHANGELOG
 n = release.notes_release("### Ajouté\n- Philibert", "1.6.0", "proprio/nexus-panel", 2.345)
 ok(n.startswith("## ⬇️ Télécharger NEXUS 1.6.0"), "notes : encadré Télécharger en tête")
-ok("(https://github.com/proprio/nexus-panel/releases/download/v1.6.0/NEXUS-1.6.0.zip)" in n and "2.3 Mo" in n,
-   "notes : lien direct vers l'archive de la version, avec sa taille")
-ok("installer.bat" in n and n.index("installer.bat") < n.index("- Philibert") < n.index("certutil -hashfile NEXUS-1.6.0.zip"),
-   "notes : installation, puis CHANGELOG, puis vérification SHA256")
+ok(
+    "(https://github.com/proprio/nexus-panel/releases/download/v1.6.0/NEXUS-1.6.0.zip)" in n and "2.3 Mo" in n,
+    "notes : lien direct vers l'archive de la version, avec sa taille",
+)
+ok(
+    "installer.bat" in n and n.index("installer.bat") < n.index("- Philibert") < n.index("certutil -hashfile NEXUS-1.6.0.zip"),
+    "notes : installation, puis CHANGELOG, puis vérification SHA256",
+)
 
 print(f"\n{passed} tests réussis, {failed} échec(s)")
 sys.exit(1 if failed else 0)

@@ -9,6 +9,7 @@
 5. Release 1.0.3 dont la migration ÉCHOUE au test de démarrage : restauration automatique (code, data, config).
 6. Aucune erreur dans les journaux du serveur ; le jeton n'apparaît nulle part (réponses, config.json, journaux).
 Usage : python outils/tests/test_maj.py [--garder]   (--garder : ne supprime pas le dossier de test)"""
+
 from __future__ import annotations
 
 import hashlib
@@ -34,7 +35,7 @@ import release  # noqa: E402
 
 DEPOT = "nexus-test/faux-depot"
 MDP = "motdepasse-de-test"
-JETON = "github_pat_" + "T3st" * 10          # faux jeton (format valide, ne donne accès à rien)
+JETON = "github_pat_" + "T3st" * 10  # faux jeton (format valide, ne donne accès à rien)
 KEYRING_SERVICE = "NEXUS-panel-mises-a-jour"
 
 passed = failed = 0
@@ -61,9 +62,9 @@ def port_libre() -> int:
 # --------------------------------------------------------------------------- #
 class FauxGitHub:
     def __init__(self):
-        self.mode = "ok"                 # ok | hors_ligne | jeton_invalide | limite
-        self.release = None              # {"version", "zip": Path, "sha": bytes}
-        self.vus = []                    # (chemin, en-tête Authorization)
+        self.mode = "ok"  # ok | hors_ligne | jeton_invalide | limite
+        self.release = None  # {"version", "zip": Path, "sha": bytes}
+        self.vus = []  # (chemin, en-tête Authorization)
         fg = self
 
         class H(http.server.BaseHTTPRequestHandler):
@@ -82,7 +83,7 @@ class FauxGitHub:
             def do_GET(self):
                 fg.vus.append((self.path, self.headers.get("Authorization")))
                 if fg.mode == "hors_ligne":
-                    self.connection.close()      # connexion coupée sans réponse
+                    self.connection.close()  # connexion coupée sans réponse
                     return
                 if self.path.startswith("/fichiers/"):
                     nom = self.path.split("/")[-1]
@@ -95,18 +96,23 @@ class FauxGitHub:
                 if fg.mode == "jeton_invalide":
                     return self._envoyer(401, b'{"message":"Bad credentials"}')
                 if fg.mode == "limite":
-                    return self._envoyer(403, b'{"message":"API rate limit exceeded"}',
-                                         entetes={"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": str(int(time.time()) + 1800)})
+                    return self._envoyer(
+                        403, b'{"message":"API rate limit exceeded"}', entetes={"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": str(int(time.time()) + 1800)}
+                    )
                 pre = f"/repos/{DEPOT}/releases/"
                 r = fg.release
                 if self.path == pre + "latest":
                     if not r:
                         return self._envoyer(404, b'{"message":"Not Found"}')
                     z = r["zip"]
-                    data = {"tag_name": f"v{r['version']}", "name": f"NEXUS {r['version']}", "published_at": "2026-11-10T12:00:00Z",
-                            "body": f"### Ajouté\n- nouveautés de la {r['version']}", "html_url": "https://github.com/" + DEPOT,
-                            "assets": [{"id": 11, "name": z.name, "size": z.stat().st_size},
-                                       {"id": 12, "name": z.name + ".sha256", "size": len(r["sha"])}]}
+                    data = {
+                        "tag_name": f"v{r['version']}",
+                        "name": f"NEXUS {r['version']}",
+                        "published_at": "2026-11-10T12:00:00Z",
+                        "body": f"### Ajouté\n- nouveautés de la {r['version']}",
+                        "html_url": "https://github.com/" + DEPOT,
+                        "assets": [{"id": 11, "name": z.name, "size": z.stat().st_size}, {"id": 12, "name": z.name + ".sha256", "size": len(r["sha"])}],
+                    }
                     return self._envoyer(200, json.dumps(data).encode())
                 if self.path.startswith(pre + "assets/") and r:
                     nom = r["zip"].name if self.path.endswith("/11") else r["zip"].name + ".sha256"
@@ -132,20 +138,35 @@ class Panel:
         self.dir, self.api, self.port = dossier, api, port_libre()
         self.proc = None
         self.journal = dossier.parent / "journal-serveur.txt"
-        self.env = dict(os.environ, NEXUS_PORT=str(self.port), NEXUS_LANCEUR="1", NEXUS_NO_BOT="1", NEXUS_OPEN_BROWSER="0",
-                        NEXUS_DECK_DRYRUN="1", NEXUS_MAJ_API_TEST=api, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
+        self.env = dict(
+            os.environ,
+            NEXUS_PORT=str(self.port),
+            NEXUS_LANCEUR="1",
+            NEXUS_NO_BOT="1",
+            NEXUS_OPEN_BROWSER="0",
+            NEXUS_DECK_DRYRUN="1",
+            NEXUS_MAJ_API_TEST=api,
+            PYTHONIOENCODING="utf-8",
+            PYTHONUTF8="1",
+        )
 
     def demarrer(self):
         self.log = open(self.journal, "a", encoding="utf-8")
-        self.proc = subprocess.Popen([sys.executable, "app.py"], cwd=self.dir, env=self.env, stdout=self.log,
-                                     stderr=subprocess.STDOUT, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        self.proc = subprocess.Popen(
+            [sys.executable, "app.py"],
+            cwd=self.dir,
+            env=self.env,
+            stdout=self.log,
+            stderr=subprocess.STDOUT,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
         for _ in range(240):
             if self.proc.poll() is not None:
                 raise RuntimeError(f"le serveur de test s'est arrêté (code {self.proc.returncode})")
             try:
                 return self.get("/api/version")
             except OSError:
-                time.sleep(.5)
+                time.sleep(0.5)
         raise RuntimeError("le serveur de test ne répond pas")
 
     def arreter(self):
@@ -160,8 +181,9 @@ class Panel:
             return json.loads(r.read().decode("utf-8"))
 
     def post(self, chemin, corps=None):
-        req = urllib.request.Request(f"http://127.0.0.1:{self.port}{chemin}", data=json.dumps(corps or {}).encode(),
-                                     headers={"Content-Type": "application/json"}, method="POST")
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{self.port}{chemin}", data=json.dumps(corps or {}).encode(), headers={"Content-Type": "application/json"}, method="POST"
+        )
         try:
             with urllib.request.urlopen(req, timeout=60) as r:
                 return r.status, json.loads(r.read().decode("utf-8"))
@@ -174,8 +196,9 @@ class Panel:
         self.log.close()
         if code != 3:
             raise RuntimeError(f"le serveur est sorti avec le code {code} au lieu de 3")
-        r = subprocess.run([sys.executable, "maj_demarrage.py"], cwd=self.dir, env=self.env, capture_output=True,
-                           text=True, encoding="utf-8", errors="replace", timeout=400)
+        r = subprocess.run(
+            [sys.executable, "maj_demarrage.py"], cwd=self.dir, env=self.env, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=400
+        )
         with open(self.journal, "a", encoding="utf-8") as f:
             f.write(r.stdout + r.stderr)
         self.demarrer()
@@ -199,6 +222,7 @@ def user_version(db: Path) -> int:
 def keyring_effacer():
     try:
         import keyring
+
         keyring.delete_password(KEYRING_SERVICE, DEPOT)
     except Exception:
         pass
@@ -228,12 +252,19 @@ def main() -> int:
         z101 = zip_de(src, "1.0.1", rels, fichiers + ["outils/temoin_101.py"])
         (src / "outils" / "temoin_101.py").unlink()
         db_py, cfg_py = (src / "db.py").read_text(encoding="utf-8"), (src / "config.py").read_text(encoding="utf-8")
-        (src / "db.py").write_text(db_py.replace("VERSION = MIGRATIONS[-1][0]",
-            'MIGRATIONS.append((99, "_migration_test_echec"))\n\n\ndef _migration_test_echec(con):\n'
-            '    con.execute("CREATE TABLE temoin_echec (x)")\n    raise RuntimeError("migration de test volontairement en échec")\n\n\n'
-            "VERSION = MIGRATIONS[-1][0]"), encoding="utf-8")
-        (src / "config.py").write_text(cfg_py.replace("MIGRATIONS = [(1, _migration_1)]",
-            'MIGRATIONS = [(1, _migration_1), (2, lambda c: {**c, "temoin_migration": True})]'), encoding="utf-8")
+        (src / "db.py").write_text(
+            db_py.replace(
+                "VERSION = MIGRATIONS[-1][0]",
+                'MIGRATIONS.append((99, "_migration_test_echec"))\n\n\ndef _migration_test_echec(con):\n'
+                '    con.execute("CREATE TABLE temoin_echec (x)")\n    raise RuntimeError("migration de test volontairement en échec")\n\n\n'
+                "VERSION = MIGRATIONS[-1][0]",
+            ),
+            encoding="utf-8",
+        )
+        (src / "config.py").write_text(
+            cfg_py.replace("MIGRATIONS = [(1, _migration_1)]", 'MIGRATIONS = [(1, _migration_1), (2, lambda c: {**c, "temoin_migration": True})]'),
+            encoding="utf-8",
+        )
         z103 = zip_de(src, "1.0.3", rels, fichiers)
 
         # ---- 1. installation propre depuis l'archive ---------------------------------------------------------
@@ -241,23 +272,41 @@ def main() -> int:
             noms = z.namelist()
             z.extractall(racine / "install")
         inst = racine / "install" / "NEXUS-1.0.0"
-        ok(not any(n.split("/", 1)[1].split("/")[0] in ("data", "logs", "versions", "maj", "sauvegardes-maj") or
-                   n.endswith(("/config.json", "/deck.json", "/jeux.json")) for n in noms),
-           "archive : ni data/, ni config réelle, ni journaux ou sauvegardes")
-        scan = subprocess.run([sys.executable, str(BASE / "outils" / "scan_perso.py"), str(z100)], capture_output=True, text=True,
-                              encoding="utf-8", errors="replace")
+        ok(
+            not any(
+                n.split("/", 1)[1].split("/")[0] in ("data", "logs", "versions", "maj", "sauvegardes-maj")
+                or n.endswith(("/config.json", "/deck.json", "/jeux.json"))
+                for n in noms
+            ),
+            "archive : ni data/, ni config réelle, ni journaux ou sauvegardes",
+        )
+        scan = subprocess.run(
+            [sys.executable, str(BASE / "outils" / "scan_perso.py"), str(z100)], capture_output=True, text=True, encoding="utf-8", errors="replace"
+        )
         ok(scan.returncode == 0, "archive : aucune donnée personnelle (scan_perso)")
         ok((inst / "DEPOT").read_text(encoding="utf-8").strip() == DEPOT, "archive : fichier DEPOT (dépôt d'origine)")
-        reponses = f"{MDP}\n{MDP}\nn\n\n"          # mot de passe ×2, pas de bot Discord, dépôt proposé accepté
-        r = subprocess.run([sys.executable, "configurer.py"], cwd=inst, input=reponses, capture_output=True, text=True,
-                           encoding="utf-8", errors="replace", env=dict(os.environ, PYTHONIOENCODING="utf-8"), timeout=60)
+        reponses = f"{MDP}\n{MDP}\nn\n\n"  # mot de passe ×2, pas de bot Discord, dépôt proposé accepté
+        r = subprocess.run(
+            [sys.executable, "configurer.py"],
+            cwd=inst,
+            input=reponses,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            env=dict(os.environ, PYTHONIOENCODING="utf-8"),
+            timeout=60,
+        )
         cfg = json.loads((inst / "config.json").read_text(encoding="utf-8"))
-        ok(r.returncode == 0 and cfg["deck"]["password_hash"].startswith("pbkdf2_sha256$") and not cfg["deck"]["password"],
-           "assistant de première configuration : mot de passe enregistré en empreinte seulement")
+        ok(
+            r.returncode == 0 and cfg["deck"]["password_hash"].startswith("pbkdf2_sha256$") and not cfg["deck"]["password"],
+            "assistant de première configuration : mot de passe enregistré en empreinte seulement",
+        )
         ok(cfg.get("mises_a_jour", {}).get("depot") == DEPOT, f"assistant : dépôt surveillé proposé et retenu ({cfg.get('mises_a_jour')})")
-        ok((inst / "deck.json").is_file() and not (inst / "data" / "nexus.db").exists()
-           and not (inst / "data" / "agenda.json").exists(),
-           "assistant : deck.json d'exemple, data/ encore vide (aucune donnée)")
+        ok(
+            (inst / "deck.json").is_file() and not (inst / "data" / "nexus.db").exists() and not (inst / "data" / "agenda.json").exists(),
+            "assistant : deck.json d'exemple, data/ encore vide (aucune donnée)",
+        )
 
         # profil personnel + données témoins (ne doivent jamais être touchés)
         shutil.copytree(inst / "profils" / "_modele", inst / "profils" / "mon-perso")
@@ -277,15 +326,18 @@ def main() -> int:
         # ---- 2. erreurs claires --------------------------------------------------------------------------------
         fg.mode = "hors_ligne"
         _, m = panel.post("/api/maj/verifier")
-        ok(m["verification"]["resultat"] == "erreur" and "injoignable" in m["verification"]["erreur"],
-           f"GitHub hors ligne : {m['verification']['erreur']}")
+        ok(m["verification"]["resultat"] == "erreur" and "injoignable" in m["verification"]["erreur"], f"GitHub hors ligne : {m['verification']['erreur']}")
         fg.mode = "jeton_invalide"
         c, m = panel.post("/api/maj/jeton", {"jeton": JETON})
-        ok(c == 200 and m["jeton"]["enregistre"] and "invalide" in (m["verification"]["erreur"] or ""),
-           f"jeton invalide : {m['verification']['erreur']} (rangé : {m['jeton']['ou']})")
+        ok(
+            c == 200 and m["jeton"]["enregistre"] and "invalide" in (m["verification"]["erreur"] or ""),
+            f"jeton invalide : {m['verification']['erreur']} (rangé : {m['jeton']['ou']})",
+        )
         ok(JETON not in json.dumps(m), "le jeton n'est jamais renvoyé par l'API du panel")
-        ok(JETON not in (inst / "config.json").read_text(encoding="utf-8") or m["jeton"]["ou"] == "config",
-           f"jeton rangé hors de config.json quand c'est possible (gestionnaire Windows : {m['jeton']['ou'] == 'windows'})")
+        ok(
+            JETON not in (inst / "config.json").read_text(encoding="utf-8") or m["jeton"]["ou"] == "config",
+            f"jeton rangé hors de config.json quand c'est possible (gestionnaire Windows : {m['jeton']['ou'] == 'windows'})",
+        )
         c, m2 = panel.post("/api/maj/jeton", {"jeton": "mot-de-passe-github"})
         ok(c == 400, "un texte qui n'est pas un jeton GitHub est refusé")
         fg.mode = "limite"
@@ -301,8 +353,7 @@ def main() -> int:
         fg.vus.clear()
         _, m = panel.post("/api/maj/verifier")
         d = m["disponible"]
-        ok(d and d["version"] == "1.0.1" and d["archive"]["taille"] > 1e6 and "1.0.1" in d["notes"],
-           "détection de la 1.0.1 (notes et taille)")
+        ok(d and d["version"] == "1.0.1" and d["archive"]["taille"] > 1e6 and "1.0.1" in d["notes"], "détection de la 1.0.1 (notes et taille)")
         c, r = panel.post("/api/maj/installer", {"mot_de_passe": MDP})
         ok(c == 400 and "validation" in r.get("error", ""), f"installation refusée sans validation explicite ({c})")
         c, r = panel.post("/api/maj/installer", {"mot_de_passe": MDP, "validation": "1.0.0"})
@@ -316,12 +367,17 @@ def main() -> int:
             t = panel.get("/api/maj")["travail"]
             if t["etape"] == "erreur":
                 break
-            time.sleep(.5)
+            time.sleep(0.5)
         ok(t["etape"] == "erreur" and "SHA256" in (t["erreur"] or ""), f"archive corrompue refusée : {t['erreur']}")
         sauvs = list((inst / "sauvegardes-maj").glob("*")) if (inst / "sauvegardes-maj").exists() else []
-        ok(panel.proc.poll() is None and panel.get("/api/version")["version"] == "1.0.0"
-           and not (inst / "maj" / "en_cours.json").exists() and not sauvs and not (inst / "maj" / "1.0.1").exists(),
-           "après le refus : rien n'a été touché (même version, archive supprimée, aucune sauvegarde ni travail en attente)")
+        ok(
+            panel.proc.poll() is None
+            and panel.get("/api/version")["version"] == "1.0.0"
+            and not (inst / "maj" / "en_cours.json").exists()
+            and not sauvs
+            and not (inst / "maj" / "1.0.1").exists(),
+            "après le refus : rien n'a été touché (même version, archive supprimée, aucune sauvegarde ni travail en attente)",
+        )
 
         fg.publier("1.0.1", z101)
         panel.post("/api/maj/verifier")
@@ -334,7 +390,7 @@ def main() -> int:
                 etapes.add(panel.get("/api/maj")["travail"]["etape"])
             except OSError:
                 break
-            time.sleep(.2)
+            time.sleep(0.2)
         sortie = panel.cycle_lanceur()
         v = panel.get("/api/version")
         m = panel.get("/api/maj")
@@ -347,8 +403,10 @@ def main() -> int:
         ok(pj.read_bytes() == perso_avant, "profil personnel intact")
         ok(len(m["sauvegardes"]) == 1 and m["retour_possible"], "sauvegarde horodatée faite avant l'installation")
         sauv = inst / "sauvegardes-maj" / m["sauvegardes"][0]["dossier"]
-        ok((sauv / "data" / "temoin.txt").is_file() and (sauv / "config" / "config.json").is_file() and (sauv / "code" / "app.py").is_file(),
-           "la sauvegarde contient le code, data/ et la configuration")
+        ok(
+            (sauv / "data" / "temoin.txt").is_file() and (sauv / "config" / "config.json").is_file() and (sauv / "code" / "app.py").is_file(),
+            "la sauvegarde contient le code, data/ et la configuration",
+        )
         api_vus = [a for p, a in fg.vus if p.startswith("/repos/")]
         fichiers_vus = [a for p, a in fg.vus if p.startswith("/fichiers/")]
         ok(api_vus and all(a == f"Bearer {JETON}" for a in api_vus), "jeton envoyé à l'API GitHub")

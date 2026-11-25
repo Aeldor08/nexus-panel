@@ -10,6 +10,7 @@ Il fait ce que faisait la fenêtre noire de lancer.bat :
 - code 4 (port déjà utilisé) : notification, puis arrêt.
 L'icône : Ouvrir NEXUS (clic), Redémarrer, Ouvrir le journal, Quitter. Une seule icône par dossier NEXUS.
 La logique (classe Superviseur) ne dépend pas de l'icône : outils/tests/test_superviseur.py la teste sans pystray."""
+
 from __future__ import annotations
 
 import ctypes
@@ -27,11 +28,11 @@ from pathlib import Path
 from typing import Callable
 
 BASE = Path(__file__).resolve().parent
-RESTART_CODE = 3          # app.py : « relance-moi » (mise à jour, accès téléphone)
-PORT_PRIS = 4             # app.py : le port est déjà utilisé
-MAX_PLANTAGES = 5         # plantages d'affilée avant d'abandonner (comme lancer.bat)
-STABLE_S = 60             # un serveur qui a tenu une minute remet le compteur de plantages à zéro
-JOURNAL_MAX = 1_000_000   # au-delà, logs\nexus.log devient logs\nexus.1.log au démarrage
+RESTART_CODE = 3  # app.py : « relance-moi » (mise à jour, accès téléphone)
+PORT_PRIS = 4  # app.py : le port est déjà utilisé
+MAX_PLANTAGES = 5  # plantages d'affilée avant d'abandonner (comme lancer.bat)
+STABLE_S = 60  # un serveur qui a tenu une minute remet le compteur de plantages à zéro
+JOURNAL_MAX = 1_000_000  # au-delà, logs\nexus.log devient logs\nexus.1.log au démarrage
 CREATE_NO_WINDOW = 0x08000000
 CREATE_NEW_CONSOLE = 0x00000010
 
@@ -77,14 +78,22 @@ def python_prive_a_jour(base: Path = BASE) -> bool:
 
 
 class Superviseur:
-    def __init__(self, base: Path = BASE, python: str | Path | None = None, *,
-                 notifier: Callable[[str, str], None] | None = None,
-                 etat: Callable[[str], None] | None = None,
-                 ouvrir_navigateur: bool = True, delai_plantage: float = 3.0,
-                 lhm: bool = True, configurer: bool = True, prefixe: Path | None = None):
+    def __init__(
+        self,
+        base: Path = BASE,
+        python: str | Path | None = None,
+        *,
+        notifier: Callable[[str, str], None] | None = None,
+        etat: Callable[[str], None] | None = None,
+        ouvrir_navigateur: bool = True,
+        delai_plantage: float = 3.0,
+        lhm: bool = True,
+        configurer: bool = True,
+        prefixe: Path | None = None,
+    ):
         self.base = Path(base)
         self.python = python_console(python)
-        self.prefixe = prefixe                   # dossier du Python (marque des dépendances) ; tests : un dossier à part
+        self.prefixe = prefixe  # dossier du Python (marque des dépendances) ; tests : un dossier à part
         self.notifier = notifier or (lambda titre, texte: None)
         self._etat_cb = etat or (lambda texte: None)
         self.ouvrir_navigateur = ouvrir_navigateur
@@ -93,8 +102,8 @@ class Superviseur:
         self.etat = "démarrage…"
         self.proc: subprocess.Popen | None = None
         self.quitter = threading.Event()
-        self._relance = threading.Event()        # Redémarrer (menu) : relance au lieu de s'arrêter
-        self._reprise = threading.Event()        # après 5 plantages : on attend Redémarrer ou Quitter
+        self._relance = threading.Event()  # Redémarrer (menu) : relance au lieu de s'arrêter
+        self._reprise = threading.Event()  # après 5 plantages : on attend Redémarrer ou Quitter
         self.journal = self.base / "logs" / "nexus.log"
         self.lancements = 0
 
@@ -122,10 +131,17 @@ class Superviseur:
         self.journal.parent.mkdir(exist_ok=True)
         sortie = self.journal.open("a", encoding="utf-8")
         try:
-            return subprocess.Popen([str(self.python), *args], cwd=self.base, stdout=sortie, stderr=subprocess.STDOUT,
-                                    stdin=subprocess.DEVNULL, creationflags=CREATE_NO_WINDOW, **kw)
+            return subprocess.Popen(
+                [str(self.python), *args],
+                cwd=self.base,
+                stdout=sortie,
+                stderr=subprocess.STDOUT,
+                stdin=subprocess.DEVNULL,
+                creationflags=CREATE_NO_WINDOW,
+                **kw,
+            )
         finally:
-            sortie.close()          # le processus enfant garde sa propre copie
+            sortie.close()  # le processus enfant garde sa propre copie
 
     # ---- avant le serveur ---------------------------------------------------
     def preparer(self) -> bool:
@@ -133,8 +149,7 @@ class Superviseur:
         if self.configurer and not (self.base / "config.json").exists():
             self._etat("première configuration…")
             self.noter("config.json absent : assistant de configuration")
-            subprocess.run([str(self.python), "configurer.py"], cwd=self.base, env=env_prive(),
-                           creationflags=CREATE_NEW_CONSOLE)
+            subprocess.run([str(self.python), "configurer.py"], cwd=self.base, env=env_prive(), creationflags=CREATE_NEW_CONSOLE)
         if not self.dependances():
             return False
         if self.lhm:
@@ -144,19 +159,20 @@ class Superviseur:
     def dependances(self) -> bool:
         """pip seulement si requirements.txt a changé depuis la dernière installation (marque dans le Python)."""
         req = self.base / "requirements.txt"
-        prefixe = self.prefixe or Path(subprocess.run(
-            [str(self.python), "-c", "import sys; print(sys.prefix)"], capture_output=True, text=True, env=env_prive(),
-            creationflags=CREATE_NO_WINDOW).stdout.strip() or self.python.parent)
+        prefixe = self.prefixe or Path(
+            subprocess.run(
+                [str(self.python), "-c", "import sys; print(sys.prefix)"], capture_output=True, text=True, env=env_prive(), creationflags=CREATE_NO_WINDOW
+            ).stdout.strip()
+            or self.python.parent
+        )
         marque = prefixe / "requirements.installe"
         if not req.exists() or (marque.exists() and filecmp.cmp(req, marque, shallow=False)):
             return True
         self._etat("installation des dépendances…")
         self.noter("requirements.txt a changé : installation des dépendances")
-        p = self._lancer(["-m", "pip", "install", "--disable-pip-version-check", "--no-warn-script-location", "-q",
-                          "-r", str(req)], env=env_prive())
+        p = self._lancer(["-m", "pip", "install", "--disable-pip-version-check", "--no-warn-script-location", "-q", "-r", str(req)], env=env_prive())
         if p.wait() != 0:
-            self.notifier("NEXUS ne peut pas démarrer", "L'installation des dépendances a échoué (connexion Internet ?). "
-                                                         "Détails : Ouvrir le journal.")
+            self.notifier("NEXUS ne peut pas démarrer", "L'installation des dépendances a échoué (connexion Internet ?). Détails : Ouvrir le journal.")
             self._etat("dépendances manquantes")
             return False
         try:
@@ -175,13 +191,13 @@ class Superviseur:
             shutil.copyfile(modele, cfg)
         try:
             import psutil
-            if any((p.info.get("name") or "").lower() == "librehardwaremonitor.exe"
-                   for p in psutil.process_iter(["name"])):
+
+            if any((p.info.get("name") or "").lower() == "librehardwaremonitor.exe" for p in psutil.process_iter(["name"])):
                 return
         except Exception:
             pass
         self.noter("démarrage de LibreHardwareMonitor (fenêtre administrateur de Windows)")
-        r = ctypes.windll.shell32.ShellExecuteW(None, "runas", str(exe), None, str(exe.parent), 7)   # 7 : réduit
+        r = ctypes.windll.shell32.ShellExecuteW(None, "runas", str(exe), None, str(exe.parent), 7)  # 7 : réduit
         if r <= 32:
             self.noter("LibreHardwareMonitor non démarré : températures CPU indisponibles")
 
@@ -197,14 +213,13 @@ class Superviseur:
         premiere = self.lancements == 0
         self.lancements += 1
         self.noter(f"démarrage du serveur (NEXUS {version_nexus(self.base)}, {self.python})")
-        return self._lancer(["app.py"], env=env_prive(NEXUS_LANCEUR="1",
-                                                      NEXUS_OPEN_BROWSER="1" if premiere and self.ouvrir_navigateur else "0"))
+        return self._lancer(["app.py"], env=env_prive(NEXUS_LANCEUR="1", NEXUS_OPEN_BROWSER="1" if premiere and self.ouvrir_navigateur else "0"))
 
     def boucle(self) -> int:
         """Tourne jusqu'à Quitter, un arrêt normal (code 0) ou un port déjà pris. Renvoie le dernier code."""
         self.tourner_journal()
         if not self.preparer():
-            self._reprise.wait()                 # dépendances manquantes : Redémarrer (réessaie) ou Quitter
+            self._reprise.wait()  # dépendances manquantes : Redémarrer (réessaie) ou Quitter
             if self.quitter.is_set():
                 return 1
             self._reprise.clear()
@@ -219,7 +234,7 @@ class Superviseur:
             self.proc = None
             if self.quitter.is_set():
                 break
-            if self._relance.is_set():           # Redémarrer (menu)
+            if self._relance.is_set():  # Redémarrer (menu)
                 self._relance.clear()
                 plantages = 0
                 continue
@@ -232,15 +247,15 @@ class Superviseur:
                 continue
             if rc == PORT_PRIS:
                 self.noter(f"port {port()} déjà utilisé")
-                self.notifier("NEXUS ne peut pas démarrer",
-                              f"Le port {port()} est déjà utilisé : NEXUS est peut-être déjà ouvert ailleurs.")
+                self.notifier("NEXUS ne peut pas démarrer", f"Le port {port()} est déjà utilisé : NEXUS est peut-être déjà ouvert ailleurs.")
                 break
             plantages = 1 if time.monotonic() - t0 > STABLE_S else plantages + 1
             self.noter(f"le serveur s'est arrêté de façon inattendue (code {rc}, {plantages}/{MAX_PLANTAGES})")
             if plantages >= MAX_PLANTAGES:
                 self._etat(f"arrêté ({MAX_PLANTAGES} plantages d'affilée)")
-                self.notifier("NEXUS s'est arrêté", f"Le serveur s'est arrêté {MAX_PLANTAGES} fois de suite. "
-                                                    "Clic droit sur l'icône : Ouvrir le journal, ou Redémarrer.")
+                self.notifier(
+                    "NEXUS s'est arrêté", f"Le serveur s'est arrêté {MAX_PLANTAGES} fois de suite. Clic droit sur l'icône : Ouvrir le journal, ou Redémarrer."
+                )
                 self._reprise.wait()
                 if self.quitter.is_set():
                     break
@@ -285,18 +300,17 @@ def deja_ouvert(base: Path = BASE) -> bool:
     k32 = ctypes.windll.kernel32
     k32.CreateMutexW.restype = ctypes.c_void_p
     _verrou = k32.CreateMutexW(None, False, nom)
-    return k32.GetLastError() == 183          # ERROR_ALREADY_EXISTS
+    return k32.GetLastError() == 183  # ERROR_ALREADY_EXISTS
 
 
 def main() -> int:
     if deja_ouvert():
-        webbrowser.open(adresse())            # NEXUS tourne déjà : on ouvre juste le panel
+        webbrowser.open(adresse())  # NEXUS tourne déjà : on ouvre juste le panel
         return 0
     # Python privé absent ou pas à la bonne version : lancer.bat l'installe (dans une fenêtre, une seule fois),
     # puis relance l'icône (NEXUS_DEPUIS_LANCEUR=1 : pas de boucle si l'installation a échoué)
     if os.environ.get("NEXUS_DEPUIS_LANCEUR") != "1" and not python_prive_a_jour():
-        subprocess.Popen(["cmd.exe", "/c", str(BASE / "lancer.bat")], cwd=BASE, creationflags=CREATE_NEW_CONSOLE,
-                         env={**os.environ, "NEXUS_ATTENDRE": "1"})
+        subprocess.Popen(["cmd.exe", "/c", str(BASE / "lancer.bat")], cwd=BASE, creationflags=CREATE_NEW_CONSOLE, env={**os.environ, "NEXUS_ATTENDRE": "1"})
         return 0
 
     import pystray
@@ -348,8 +362,8 @@ def main() -> int:
     def travail(i: pystray.Icon) -> None:
         i.visible = True
         sup.boucle()
-        if not sup.quitter.is_set():          # arrêt normal ou port pris : l'icône s'en va aussi
-            time.sleep(4)                     # le temps de lire la notification
+        if not sup.quitter.is_set():  # arrêt normal ou port pris : l'icône s'en va aussi
+            time.sleep(4)  # le temps de lire la notification
             i.stop()
 
     icone.run(setup=travail)

@@ -31,19 +31,32 @@ try:
 
     from comtypes import CLSCTX_ALL
     from pycaw.pycaw import AudioUtilities, IAudioMeterInformation
+
     AVAILABLE, IMPORT_ERROR = True, None
 except Exception as exc:  # pycaw absent
     AVAILABLE, IMPORT_ERROR = False, str(exc)
 
 SYSTEM_KEY = "__system__"
 NICE_NAMES = {
-    "discord.exe": "Discord", "opera.exe": "Opera GX", "spotify.exe": "Spotify", "steam.exe": "Steam",
-    "steamwebhelper.exe": "Steam", "chrome.exe": "Chrome", "msedge.exe": "Edge", "firefox.exe": "Firefox",
-    "medal.exe": "Medal", "medalencoder.exe": "Medal (encodeur)", "voicemod.exe": "Voicemod",
-    "riot client.exe": "Riot Client", "valorant-win64-shipping.exe": "VALORANT", "obs64.exe": "OBS Studio",
-    "vlc.exe": "VLC", "claude.exe": "Claude", "rdr2.exe": "Red Dead Redemption 2",
+    "discord.exe": "Discord",
+    "opera.exe": "Opera GX",
+    "spotify.exe": "Spotify",
+    "steam.exe": "Steam",
+    "steamwebhelper.exe": "Steam",
+    "chrome.exe": "Chrome",
+    "msedge.exe": "Edge",
+    "firefox.exe": "Firefox",
+    "medal.exe": "Medal",
+    "medalencoder.exe": "Medal (encodeur)",
+    "voicemod.exe": "Voicemod",
+    "riot client.exe": "Riot Client",
+    "valorant-win64-shipping.exe": "VALORANT",
+    "obs64.exe": "OBS Studio",
+    "vlc.exe": "VLC",
+    "claude.exe": "Claude",
+    "rdr2.exe": "Red Dead Redemption 2",
 }
-STATE_TTL = 0.2   # s : l'état est relu au plus 5 fois par seconde
+STATE_TTL = 0.2  # s : l'état est relu au plus 5 fois par seconde
 LEVELS_TTL = 0.04  # s : niveaux seuls (lecture légère), au plus 25 fois par seconde
 
 
@@ -58,10 +71,10 @@ class AudioMixer:
         self._jobs: queue.Queue = queue.Queue()
         self._state = {"available": AVAILABLE, "error": IMPORT_ERROR, "device": None, "apps": []}
         self._state_time = 0.0
-        self._seq_lock = threading.Lock()        # ordre des réglages (voir set)
-        self._gen = 0                            # compteur de réglages (une lecture pendant un réglage n'est pas mise en cache)
+        self._seq_lock = threading.Lock()  # ordre des réglages (voir set)
+        self._gen = 0  # compteur de réglages (une lecture pendant un réglage n'est pas mise en cache)
         self._last_seq: dict[tuple, int] = {}
-        self.exe_paths: dict[str, str] = {}      # clé appli -> chemin de l'exe (pour l'icône)
+        self.exe_paths: dict[str, str] = {}  # clé appli -> chemin de l'exe (pour l'icône)
         if AVAILABLE:
             threading.Thread(target=self._run, daemon=True).start()
 
@@ -71,12 +84,12 @@ class AudioMixer:
         while True:
             fn, done = self._jobs.get()
             try:
-                done["result"] = fn()          # ne renvoie que des valeurs Python simples
+                done["result"] = fn()  # ne renvoie que des valeurs Python simples
             except Exception as exc:
                 # Message texte uniquement : l'exception garderait des objets COM vivants dans l'autre thread.
                 done["error"] = f"{type(exc).__name__}: {exc}"
             del fn
-            gc.collect(0)                      # libère les objets COM ici, dans le thread audio
+            gc.collect(0)  # libère les objets COM ici, dans le thread audio
             done["event"].set()
 
     def _call(self, fn, timeout: float = 3.0):
@@ -134,7 +147,7 @@ class AudioMixer:
         dev = self._speakers()
         ep = dev.EndpointVolume
         apps = []
-        meters: dict[str, list] = {}               # compteurs de niveau gardés pour _levels (thread audio seulement)
+        meters: dict[str, list] = {}  # compteurs de niveau gardés pour _levels (thread audio seulement)
         for key, g in self._groups().items():
             vols, mutes, peaks, active = [], [], [], False
             for s in g["sessions"]:
@@ -150,11 +163,20 @@ class AudioMixer:
                     pass
             if g["exe"]:
                 self.exe_paths[key] = g["exe"]
-            apps.append({"key": key, "name": g["name"], "volume": round(max(vols), 3), "muted": all(mutes),
-                         "peak": round(max(peaks), 3) if peaks else 0.0, "active": active,
-                         "sessions": len(g["sessions"]), "has_icon": bool(g["exe"])})
+            apps.append(
+                {
+                    "key": key,
+                    "name": g["name"],
+                    "volume": round(max(vols), 3),
+                    "muted": all(mutes),
+                    "peak": round(max(peaks), 3) if peaks else 0.0,
+                    "active": active,
+                    "sessions": len(g["sessions"]),
+                    "has_icon": bool(g["exe"]),
+                }
+            )
         apps.sort(key=lambda a: (a["key"] == SYSTEM_KEY, not a["active"], a["name"].lower()))
-        self._meters = meters                      # remplace (et libère, ici même) les anciens compteurs
+        self._meters = meters  # remplace (et libère, ici même) les anciens compteurs
         self._dev_meter = None
         imm = getattr(dev, "_dev", None)
         if imm is not None:
@@ -163,9 +185,14 @@ class AudioMixer:
             except Exception:
                 pass
         return {
-            "available": True, "error": None,
-            "device": {"name": dev.FriendlyName, "volume": round(float(ep.GetMasterVolumeLevelScalar()), 3),
-                       "muted": bool(ep.GetMute()), "peak": self._device_peak(dev)},
+            "available": True,
+            "error": None,
+            "device": {
+                "name": dev.FriendlyName,
+                "volume": round(float(ep.GetMasterVolumeLevelScalar()), 3),
+                "muted": bool(ep.GetMute()),
+                "peak": self._device_peak(dev),
+            },
             "apps": apps,
         }
 
@@ -218,8 +245,7 @@ class AudioMixer:
         return self._state
 
     # -- écriture -------------------------------------------------------------------
-    def set(self, target: str, volume: float | None = None, muted: bool | None = None,
-            seq: int | None = None, client: str | None = None) -> bool:
+    def set(self, target: str, volume: float | None = None, muted: bool | None = None, seq: int | None = None, client: str | None = None) -> bool:
         """seq / client (facultatifs) : numéro d'ordre des réglages d'une même page. Une requête plus ANCIENNE
         qui arrive après une plus récente (réseau, threads) est ignorée : le dernier volume demandé gagne."""
         if not AVAILABLE:
@@ -230,9 +256,9 @@ class AudioMixer:
             with self._seq_lock:
                 k = (client or "", target)
                 if seq <= self._last_seq.get(k, 0):
-                    return True                      # déjà dépassé par un réglage plus récent : rien à faire
+                    return True  # déjà dépassé par un réglage plus récent : rien à faire
                 self._last_seq[k] = seq
-                if len(self._last_seq) > 500:        # (pages fermées : on oublie les plus vieilles)
+                if len(self._last_seq) > 500:  # (pages fermées : on oublie les plus vieilles)
                     for old in list(self._last_seq)[:250]:
                         del self._last_seq[old]
                 return self._apply(target, volume, muted)
@@ -263,7 +289,7 @@ class AudioMixer:
         try:
             ok = bool(self._call(apply))
         finally:
-            del apply                 # la fermeture ne doit rien retenir dans ce thread
+            del apply  # la fermeture ne doit rien retenir dans ce thread
             self._gen += 1
-        self._state_time = 0          # prochaine lecture à jour
+        self._state_time = 0  # prochaine lecture à jour
         return ok

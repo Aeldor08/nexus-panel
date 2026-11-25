@@ -32,14 +32,16 @@ def _charger_discord() -> bool:
     try:
         import discord as _d
         from discord import app_commands as _ac
+
         discord, app_commands = _d, _ac
         return True
     except Exception as exc:  # discord.py absent ou cassé
         AVAILABLE, IMPORT_ERROR = False, str(exc)
         return False
 
+
 COLOR_OK, COLOR_HOT, COLOR_INFO = 0x3DFFA2, 0xFF2A55, 0x00F0FF
-HYSTERESIS = {"temp": 3.0, "percent": 2.0}   # marge avant d'annoncer le retour à la normale
+HYSTERESIS = {"temp": 3.0, "percent": 2.0}  # marge avant d'annoncer le retour à la normale
 
 
 def _gb(b) -> str:
@@ -66,33 +68,35 @@ def stats_fields(s: dict) -> list[tuple[str, str]]:
     g = s["gpu"]["devices"][0] if s["gpu"]["devices"] else None
     ram = s["ram"]
     return [
-        ("🧠 CPU", f"**{s['cpu']['percent']:.0f} %** · {_t(s['cpu']['temperature'])}"
-                  + (f" · {s['cpu']['power_w']:.0f} W" if s["cpu"].get("power_w") else "")),
+        ("🧠 CPU", f"**{s['cpu']['percent']:.0f} %** · {_t(s['cpu']['temperature'])}" + (f" · {s['cpu']['power_w']:.0f} W" if s["cpu"].get("power_w") else "")),
         ("💾 RAM", f"**{ram['percent']:.0f} %** · {_gb(ram['used'])} / {_gb(ram['total'])}"),
-        ("🎮 GPU", f"**{_p(g['load_percent'])}** · {_t(g['temperature'])} · VRAM {_gb(g['vram_used'])} / {_gb(g['vram_total'])}"
-                  if g else "indisponible"),
+        ("🎮 GPU", f"**{_p(g['load_percent'])}** · {_t(g['temperature'])} · VRAM {_gb(g['vram_used'])} / {_gb(g['vram_total'])}" if g else "indisponible"),
         ("🗄️ Disques", "\n".join(f"`{d['mountpoint']}` {d['percent']:.0f} % · {_gb(d['free'])} libres" for d in s["disks"]) or "–"),
     ]
 
 
 def disks_fields(s: dict) -> list[tuple[str, str]]:
-    return [(f"`{d['mountpoint']}` ({d['fstype']})",
-             f"{_bar(d['percent'])} **{d['percent']:.0f} %**\n{_gb(d['used'])} utilisés · **{_gb(d['free'])} libres** · {_gb(d['total'])}")
-            for d in s["disks"]]
+    return [
+        (
+            f"`{d['mountpoint']}` ({d['fstype']})",
+            f"{_bar(d['percent'])} **{d['percent']:.0f} %**\n{_gb(d['used'])} utilisés · **{_gb(d['free'])} libres** · {_gb(d['total'])}",
+        )
+        for d in s["disks"]
+    ]
 
 
 def gpu_fields(s: dict) -> list[tuple[str, str]]:
     out = []
     for g in s["gpu"]["devices"]:
-        lines = [f"Charge **{_p(g['load_percent'])}** {_bar(g['load_percent'] or 0)}",
-                 f"VRAM **{_gb(g['vram_used'])} / {_gb(g['vram_total'])}**"
-                 + (f" ({g['vram_percent']:.0f} %)" if g.get("vram_percent") is not None else ""),
-                 f"Température **{_t(g['temperature'])}**"]
+        lines = [
+            f"Charge **{_p(g['load_percent'])}** {_bar(g['load_percent'] or 0)}",
+            f"VRAM **{_gb(g['vram_used'])} / {_gb(g['vram_total'])}**" + (f" ({g['vram_percent']:.0f} %)" if g.get("vram_percent") is not None else ""),
+            f"Température **{_t(g['temperature'])}**",
+        ]
         if g.get("power_w") is not None:
             lines.append(f"Consommation {g['power_w']:.0f} W" + (f" / {g['power_limit_w']} W" if g.get("power_limit_w") else ""))
         if g.get("clock_core_mhz") is not None:
-            lines.append(f"Fréquence {g['clock_core_mhz']} MHz"
-                         + (f" · mémoire {g['clock_mem_mhz']} MHz" if g.get("clock_mem_mhz") is not None else ""))
+            lines.append(f"Fréquence {g['clock_core_mhz']} MHz" + (f" · mémoire {g['clock_mem_mhz']} MHz" if g.get("clock_mem_mhz") is not None else ""))
         if g.get("fan_percent") is not None:
             lines.append("Ventilateur " + ("à l'arrêt (0 dB)" if g["fan_percent"] == 0 else f"{g['fan_percent']} %"))
         if s["gpu"].get("source_label"):
@@ -106,13 +110,18 @@ def gpu_fields(s: dict) -> list[tuple[str, str]]:
 def help_fields(commands: list[tuple[str, str]], deck_labels: list[str], th: dict) -> list[tuple[str, str]]:
     """Contenu de /command : commandes disponibles, boutons du deck utilisables, alertes actives."""
     out = [("📜 Commandes", "\n".join(f"**/{n}** — {d}" for n, d in commands) or "–")]
-    out.append(("🎛️ Boutons utilisables avec /deck",
-                ", ".join(f"`{l}`" for l in deck_labels) if deck_labels
-                else "aucun — coche « Autoriser /deck depuis Discord » sur un bouton, dans le mode édition du Deck"))
-    parts = [f"CPU ≥ {th.get('cpu_temp')} °C", f"GPU ≥ {th.get('gpu_temp')} °C",
-             f"RAM ≥ {th.get('ram_percent')} %", f"disque ≥ {th.get('disk_percent')} %"]
-    out.append(("🚨 Alertes automatiques",
-                " · ".join(parts) + f"\nRappel au plus toutes les {th.get('cooldown_minutes', 30)} min, message au retour à la normale."))
+    out.append(
+        (
+            "🎛️ Boutons utilisables avec /deck",
+            ", ".join(f"`{l}`" for l in deck_labels)
+            if deck_labels
+            else "aucun — coche « Autoriser /deck depuis Discord » sur un bouton, dans le mode édition du Deck",
+        )
+    )
+    parts = [f"CPU ≥ {th.get('cpu_temp')} °C", f"GPU ≥ {th.get('gpu_temp')} °C", f"RAM ≥ {th.get('ram_percent')} %", f"disque ≥ {th.get('disk_percent')} %"]
+    out.append(
+        ("🚨 Alertes automatiques", " · ".join(parts) + f"\nRappel au plus toutes les {th.get('cooldown_minutes', 30)} min, message au retour à la normale.")
+    )
     return out
 
 
@@ -120,12 +129,12 @@ class AlertTracker:
     """Décide quelles alertes envoyer : anti-spam par type + message de retour à la normale."""
 
     def __init__(self) -> None:
-        self.state: dict[str, dict] = {}   # clé -> {"active": bool, "sent": horodatage}
+        self.state: dict[str, dict] = {}  # clé -> {"active": bool, "sent": horodatage}
 
     def evaluate(self, s: dict, th: dict, now: float | None = None) -> list[dict]:
         now = time.time() if now is None else now
         cooldown = max(1, float(th.get("cooldown_minutes", 30))) * 60
-        checks = []   # (clé, libellé, valeur, seuil, unité, genre)
+        checks = []  # (clé, libellé, valeur, seuil, unité, genre)
         checks.append(("cpu_temp", "Température CPU", s["cpu"]["temperature"], th["cpu_temp"], "°C", "temp"))
         for g in s["gpu"]["devices"]:
             checks.append((f"gpu_temp_{g['index']}", f"Température GPU ({g['name']})", g["temperature"], th["gpu_temp"], "°C", "temp"))
@@ -140,8 +149,7 @@ class AlertTracker:
             st = self.state.setdefault(key, {"active": False, "sent": 0.0})
             if value >= limit:
                 if not st["active"] or now - st["sent"] >= cooldown:
-                    events.append({"type": "reminder" if st["active"] else "alert", "key": key, "label": label,
-                                   "value": value, "limit": limit, "unit": unit})
+                    events.append({"type": "reminder" if st["active"] else "alert", "key": key, "label": label, "value": value, "limit": limit, "unit": unit})
                     st["active"], st["sent"] = True, now
             elif st["active"] and value <= limit - HYSTERESIS[kind]:
                 events.append({"type": "recovered", "key": key, "label": label, "value": value, "limit": limit, "unit": unit})
@@ -220,7 +228,7 @@ class DiscordBot:
             except discord.PrivilegedIntentsRequired:
                 self._warn("error", "intents non autorisés pour ce bot")
                 return
-            except Exception as exc:     # réseau coupé, Discord indisponible… on réessaie
+            except Exception as exc:  # réseau coupé, Discord indisponible… on réessaie
                 self._warn("error", f"connexion impossible ({type(exc).__name__}: {exc}) ; nouvel essai dans {delay} s")
             finally:
                 try:
@@ -243,7 +251,7 @@ class DiscordBot:
 
     def _build_client(self):
         intents = discord.Intents.none()
-        intents.guilds = True                       # aucun intent privilégié (pas de lecture des messages)
+        intents.guilds = True  # aucun intent privilégié (pas de lecture des messages)
         client = discord.Client(intents=intents, allowed_mentions=discord.AllowedMentions(users=True, everyone=False, roles=False))
         tree = app_commands.CommandTree(client)
         cfg = config.get("discord")
@@ -302,8 +310,7 @@ class DiscordBot:
             if inter.user.id != owner_id or not self.deck:
                 return []
             cur = current.lower()
-            return [app_commands.Choice(name=b["label"][:100], value=b["label"][:100])
-                    for b in self.deck.discord_buttons() if cur in b["label"].lower()][:25]
+            return [app_commands.Choice(name=b["label"][:100], value=b["label"][:100]) for b in self.deck.discord_buttons() if cur in b["label"].lower()][:25]
 
         @tree.command(name="command", description="Liste de toutes les commandes disponibles")
         async def cmd_command(inter: discord.Interaction):
@@ -311,8 +318,7 @@ class DiscordBot:
                 return
             cmds = sorted((c.name, c.description) for c in tree.get_commands())
             labels = [b["label"] for b in self.deck.discord_buttons()] if self.deck else []
-            await inter.response.send_message(
-                embed=embed("🤖 Commandes NEXUS", help_fields(cmds, labels, config.get("alerts"))), ephemeral=True)
+            await inter.response.send_message(embed=embed("🤖 Commandes NEXUS", help_fields(cmds, labels, config.get("alerts"))), ephemeral=True)
 
         @client.event
         async def on_ready():
@@ -334,14 +340,22 @@ class DiscordBot:
                 self._warn("error", "impossible d'enregistrer les commandes : réinvite le bot avec la permission « applications.commands »")
                 return
             perms = channel.permissions_for(guild.me)
-            missing = [n for n, ok in (("Voir le salon", perms.view_channel), ("Envoyer des messages", perms.send_messages),
-                                      ("Intégrer des liens", perms.embed_links)) if not ok]
-            self._set("online" if not missing else "error",
-                      "connecté" if not missing else "permissions manquantes dans le salon : " + ", ".join(missing),
-                      user=str(client.user), guild=guild.name, channel=f"#{channel.name}",
-                      commands=[c.name for c in synced])
-            print(f"[Discord] Connecté : {client.user} · serveur « {guild.name} » · salon #{channel.name} · "
-                  f"commandes : {', '.join('/' + c.name for c in synced)}")
+            missing = [
+                n
+                for n, ok in (("Voir le salon", perms.view_channel), ("Envoyer des messages", perms.send_messages), ("Intégrer des liens", perms.embed_links))
+                if not ok
+            ]
+            self._set(
+                "online" if not missing else "error",
+                "connecté" if not missing else "permissions manquantes dans le salon : " + ", ".join(missing),
+                user=str(client.user),
+                guild=guild.name,
+                channel=f"#{channel.name}",
+                commands=[c.name for c in synced],
+            )
+            print(
+                f"[Discord] Connecté : {client.user} · serveur « {guild.name} » · salon #{channel.name} · commandes : {', '.join('/' + c.name for c in synced)}"
+            )
             self._channel = channel
             if not getattr(client, "_alerts_started", False):
                 client._alerts_started = True
@@ -360,8 +374,7 @@ class DiscordBot:
         em = discord.Embed(title=title, description=text, color=COLOR_INFO)
         em.set_footer(text="NEXUS · agenda")
         em.timestamp = discord.utils.utcnow()
-        fut = asyncio.run_coroutine_threadsafe(
-            self._channel.send(content=f"<@{owner}>" if owner else None, embed=em), self._loop)
+        fut = asyncio.run_coroutine_threadsafe(self._channel.send(content=f"<@{owner}>" if owner else None, embed=em), self._loop)
         try:
             fut.result(timeout=15)
             return True

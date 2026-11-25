@@ -3,6 +3,7 @@
 Le test tourne dans un sous-processus (run_all.py) avec un dossier de données temporaire ;
 il ne touche ni au projet ni au vrai %LOCALAPPDATA%.
 """
+
 import os
 import shutil
 import sys

@@ -1,6 +1,7 @@
 """Deck : mot de passe changé pendant que NEXUS tourne (configurer.bat, « Configurer NEXUS », config.json
 modifié à la main). config.json est relu dès qu'il change, l'ancien mot de passe est refusé et les sessions
 ouvertes avec l'ancien sont révoquées. Ancien format du fichier de sessions toujours lu."""
+
 import json
 import os
 import sys
@@ -8,7 +9,9 @@ import tempfile
 import time
 from pathlib import Path
 
-BASE = Path(sys.argv[1]); os.chdir(BASE); sys.path.insert(0, str(BASE))
+BASE = Path(sys.argv[1])
+os.chdir(BASE)
+sys.path.insert(0, str(BASE))
 os.environ.update(NEXUS_NO_BOT="1", NEXUS_DECK_DRYRUN="1")
 tmp = Path(tempfile.mkdtemp(prefix="nexus-deck-"))
 os.environ["NEXUS_DATA_DIR"] = str(tmp)
@@ -17,16 +20,25 @@ import config  # noqa: E402
 import deck as deck_mod  # noqa: E402
 
 passed = failed = 0
+
+
 def ok(c, m):
     global passed, failed
-    if c: passed += 1
-    else: failed += 1; print("  [ECHEC]", m)
+    if c:
+        passed += 1
+    else:
+        failed += 1
+        print("  [ECHEC]", m)
+
 
 assert config.CONFIG_FILE.parent == tmp, config.CONFIG_FILE
+
+
 def ecrire(hash_):
     config.CONFIG_FILE.write_text(json.dumps({"deck": {"password_hash": hash_}}), encoding="utf-8")
-    t = time.time() + 2                                       # (horloge du système de fichiers : date bien différente)
+    t = time.time() + 2  # (horloge du système de fichiers : date bien différente)
     os.utime(config.CONFIG_FILE, (t, t))
+
 
 ecrire(deck_mod.hash_password("ancien-mdp-1"))
 d = deck_mod.Deck()

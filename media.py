@@ -25,6 +25,7 @@ try:
         GlobalSystemMediaTransportControlsSessionManager as SessionManager,
     )
     from winrt.windows.storage.streams import DataReader
+
     AVAILABLE = True
     IMPORT_ERROR = None
 except Exception as exc:  # paquets winrt absents
@@ -37,25 +38,73 @@ STATUS = {0: "closed", 1: "opened", 2: "changing", 3: "stopped", 4: "playing", 5
 # Identifiant d'application Windows (AppUserModelID) -> nom affiché. Le premier motif trouvé gagne : les plus
 # précis d'abord (« operagx » avant « opera », « edge » des applis du Store avant le reste).
 BROWSER_NAMES = [
-    ("operagx", "Opera GX"), ("opera gx", "Opera GX"), ("opera", "Opera"), ("msedge", "Edge"), ("microsoftedge", "Edge"),
-    ("chrome", "Chrome"), ("chromium", "Chromium"), ("brave", "Brave"), ("vivaldi", "Vivaldi"), ("yandex", "Yandex"),
-    ("thebrowsercompany.arc", "Arc"), ("arc.exe", "Arc"), ("duckduckgo", "DuckDuckGo"), ("thorium", "Thorium"),
-    ("waterfox", "Waterfox"), ("librewolf", "LibreWolf"), ("floorp", "Floorp"), ("zen", "Zen"),
-    ("palemoon", "Pale Moon"), ("seamonkey", "SeaMonkey"), ("torbrowser", "Tor Browser"), ("firefox", "Firefox"),
-    ("maxthon", "Maxthon"), ("iridium", "Iridium"), ("sidekick", "Sidekick"), ("whale", "Naver Whale"),
+    ("operagx", "Opera GX"),
+    ("opera gx", "Opera GX"),
+    ("opera", "Opera"),
+    ("msedge", "Edge"),
+    ("microsoftedge", "Edge"),
+    ("chrome", "Chrome"),
+    ("chromium", "Chromium"),
+    ("brave", "Brave"),
+    ("vivaldi", "Vivaldi"),
+    ("yandex", "Yandex"),
+    ("thebrowsercompany.arc", "Arc"),
+    ("arc.exe", "Arc"),
+    ("duckduckgo", "DuckDuckGo"),
+    ("thorium", "Thorium"),
+    ("waterfox", "Waterfox"),
+    ("librewolf", "LibreWolf"),
+    ("floorp", "Floorp"),
+    ("zen", "Zen"),
+    ("palemoon", "Pale Moon"),
+    ("seamonkey", "SeaMonkey"),
+    ("torbrowser", "Tor Browser"),
+    ("firefox", "Firefox"),
+    ("maxthon", "Maxthon"),
+    ("iridium", "Iridium"),
+    ("sidekick", "Sidekick"),
+    ("whale", "Naver Whale"),
 ]
 PLAYER_NAMES = [
-    ("spotify", "Spotify"), ("deezer", "Deezer"), ("applemusic", "Apple Music"), ("apple music", "Apple Music"),
-    ("itunes", "iTunes"), ("tidal", "Tidal"), ("amazonmusic", "Amazon Music"), ("amazon music", "Amazon Music"),
-    ("qobuz", "Qobuz"), ("youtubemusic", "YouTube Music"), ("youtube music", "YouTube Music"),
-    ("soundcloud", "SoundCloud"), ("pandora", "Pandora"), ("napster", "Napster"), ("audible", "Audible"),
-    ("vlc", "VLC"), ("foobar", "foobar2000"), ("musicbee", "MusicBee"), ("aimp", "AIMP"), ("winamp", "Winamp"),
-    ("mediamonkey", "MediaMonkey"), ("potplayer", "PotPlayer"), ("mpc-hc", "MPC-HC"), ("mpc-be", "MPC-BE"),
-    ("plex", "Plex"), ("jellyfin", "Jellyfin"), ("kodi", "Kodi"), ("strawberry", "Strawberry"),
-    ("dopamine", "Dopamine"), ("zunemusic", "Lecteur multimédia"), ("zunevideo", "Films et TV"),
-    ("microsoft.media.player", "Lecteur multimédia"), ("wmplayer", "Windows Media Player"),
-    ("discord", "Discord"), ("twitch", "Twitch"), ("netflix", "Netflix"), ("disney", "Disney+"),
-    ("primevideo", "Prime Video"), ("steam", "Steam"),
+    ("spotify", "Spotify"),
+    ("deezer", "Deezer"),
+    ("applemusic", "Apple Music"),
+    ("apple music", "Apple Music"),
+    ("itunes", "iTunes"),
+    ("tidal", "Tidal"),
+    ("amazonmusic", "Amazon Music"),
+    ("amazon music", "Amazon Music"),
+    ("qobuz", "Qobuz"),
+    ("youtubemusic", "YouTube Music"),
+    ("youtube music", "YouTube Music"),
+    ("soundcloud", "SoundCloud"),
+    ("pandora", "Pandora"),
+    ("napster", "Napster"),
+    ("audible", "Audible"),
+    ("vlc", "VLC"),
+    ("foobar", "foobar2000"),
+    ("musicbee", "MusicBee"),
+    ("aimp", "AIMP"),
+    ("winamp", "Winamp"),
+    ("mediamonkey", "MediaMonkey"),
+    ("potplayer", "PotPlayer"),
+    ("mpc-hc", "MPC-HC"),
+    ("mpc-be", "MPC-BE"),
+    ("plex", "Plex"),
+    ("jellyfin", "Jellyfin"),
+    ("kodi", "Kodi"),
+    ("strawberry", "Strawberry"),
+    ("dopamine", "Dopamine"),
+    ("zunemusic", "Lecteur multimédia"),
+    ("zunevideo", "Films et TV"),
+    ("microsoft.media.player", "Lecteur multimédia"),
+    ("wmplayer", "Windows Media Player"),
+    ("discord", "Discord"),
+    ("twitch", "Twitch"),
+    ("netflix", "Netflix"),
+    ("disney", "Disney+"),
+    ("primevideo", "Prime Video"),
+    ("steam", "Steam"),
 ]
 BROWSERS = {name for _, name in BROWSER_NAMES}
 # Firefox (et ses dérivés) s'annonce par un code hexadécimal de 16 caractères (ex. 308046B0AF4A39CB)
@@ -71,7 +120,7 @@ def app_name(source: str) -> str:
     if FIREFOX_AUMID.match(base):
         return "Firefox"
     base = base.rsplit("\\", 1)[-1].removesuffix(".exe").removesuffix(".EXE")
-    if "_" in base and "." in base.split("_")[0]:             # application du Store : « Editeur.Nom_hash »
+    if "_" in base and "." in base.split("_")[0]:  # application du Store : « Editeur.Nom_hash »
         base = base.split("_")[0].split(".")[-1]
     return base or "Lecteur"
 
@@ -79,10 +128,20 @@ def app_name(source: str) -> str:
 def web_service(name: str, props_artist: str, props_album: str, title: str) -> str | None:
     """Site de musique / vidéo deviné dans un navigateur (Windows ne donne pas l'adresse de la page)."""
     blob = f"{props_artist} | {props_album} | {title}".lower()
-    for key, label in (("deezer", "Deezer"), ("spotify", "Spotify"), ("youtube music", "YouTube Music"),
-                       ("youtube", "YouTube"), ("soundcloud", "SoundCloud"), ("twitch", "Twitch"),
-                       ("netflix", "Netflix"), ("tidal", "Tidal"), ("apple music", "Apple Music"),
-                       ("bandcamp", "Bandcamp"), ("qobuz", "Qobuz"), ("amazon music", "Amazon Music")):
+    for key, label in (
+        ("deezer", "Deezer"),
+        ("spotify", "Spotify"),
+        ("youtube music", "YouTube Music"),
+        ("youtube", "YouTube"),
+        ("soundcloud", "SoundCloud"),
+        ("twitch", "Twitch"),
+        ("netflix", "Netflix"),
+        ("tidal", "Tidal"),
+        ("apple music", "Apple Music"),
+        ("bandcamp", "Bandcamp"),
+        ("qobuz", "Qobuz"),
+        ("amazon music", "Amazon Music"),
+    ):
         if key in blob:
             return label
     return None
@@ -93,7 +152,7 @@ def _secs(value) -> float:
         return 0.0
     if isinstance(value, dt.timedelta):
         return value.total_seconds()
-    return float(getattr(value, "duration", value)) / 1e7   # TimeSpan en ticks de 100 ns
+    return float(getattr(value, "duration", value)) / 1e7  # TimeSpan en ticks de 100 ns
 
 
 def signature(sessions: list[dict]) -> str:
@@ -103,21 +162,21 @@ def signature(sessions: list[dict]) -> str:
 
 
 class MediaMonitor:
-    POLL_S = 1.0          # relecture de secours
-    COALESCE_S = .04      # regroupe une rafale d'événements
+    POLL_S = 1.0  # relecture de secours
+    COALESCE_S = 0.04  # regroupe une rafale d'événements
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._cond = threading.Condition(self._lock)
         self._state = {"available": AVAILABLE, "error": IMPORT_ERROR, "current": None, "sessions": [], "sig": "", "updated": 0}
-        self._covers: dict[str, tuple[str, bytes]] = {}   # source -> (hash, octets)
+        self._covers: dict[str, tuple[str, bytes]] = {}  # source -> (hash, octets)
         self._sessions = {}
-        self._subs: dict[str, tuple] = {}                 # source -> (objet session, jetons d'événements)
+        self._subs: dict[str, tuple] = {}  # source -> (objet session, jetons d'événements)
         self._mgr = None
         self._mgr_tokens = []
         self._wake: asyncio.Event | None = None
         self._loop = asyncio.new_event_loop()
-        self.events_ok = False                            # au moins un événement Windows reçu (diagnostic)
+        self.events_ok = False  # au moins un événement Windows reçu (diagnostic)
         if AVAILABLE:
             threading.Thread(target=self._run, daemon=True).start()
 
@@ -218,25 +277,26 @@ class MediaMonitor:
             ctrl = pb.controls
             is_browser = name in BROWSERS
             title, artist, album = props.title or "", props.artist or "", props.album_title or ""
-            sessions.append({
-                "source": source,
-                "app": name,
-                "is_browser": is_browser,
-                "site": web_service(name, artist, album, title) if is_browser else None,
-                "title": title,
-                "artist": artist,
-                "album": album,
-                "status": status,
-                "position": round(pos, 1),
-                "duration": round(end, 1) if end > 0 else None,
-                "cover": cover_hash,
-                "can_play_pause": bool(ctrl.is_play_pause_toggle_enabled or ctrl.is_play_enabled
-                                       or ctrl.is_pause_enabled),
-                "can_next": bool(ctrl.is_next_enabled),
-                "can_prev": bool(ctrl.is_previous_enabled),
-                "can_seek": bool(ctrl.is_playback_position_enabled) and end > 0,
-                "current": source == cur_id,
-            })
+            sessions.append(
+                {
+                    "source": source,
+                    "app": name,
+                    "is_browser": is_browser,
+                    "site": web_service(name, artist, album, title) if is_browser else None,
+                    "title": title,
+                    "artist": artist,
+                    "album": album,
+                    "status": status,
+                    "position": round(pos, 1),
+                    "duration": round(end, 1) if end > 0 else None,
+                    "cover": cover_hash,
+                    "can_play_pause": bool(ctrl.is_play_pause_toggle_enabled or ctrl.is_play_enabled or ctrl.is_pause_enabled),
+                    "can_next": bool(ctrl.is_next_enabled),
+                    "can_prev": bool(ctrl.is_previous_enabled),
+                    "can_seek": bool(ctrl.is_playback_position_enabled) and end > 0,
+                    "current": source == cur_id,
+                }
+            )
             objs[source] = s
         self._unsubscribe_gone(set(objs))
         # Priorité : celle en lecture, puis celle que Windows considère comme active.
@@ -245,9 +305,15 @@ class MediaMonitor:
         with self._cond:
             changed = sig != self._state.get("sig")
             self._sessions = objs
-            self._state = {"available": True, "error": None,
-                           "current": sessions[0]["source"] if sessions else None,
-                           "sessions": sessions, "sig": sig, "updated": time.time(), "events": self.events_ok}
+            self._state = {
+                "available": True,
+                "error": None,
+                "current": sessions[0]["source"] if sessions else None,
+                "sessions": sessions,
+                "sig": sig,
+                "updated": time.time(),
+                "events": self.events_ok,
+            }
             if changed:
                 self._cond.notify_all()
 
@@ -314,7 +380,7 @@ class MediaMonitor:
             ok = False
         # relire l'état tout de suite, puis encore un peu plus tard (l'appli publie son nouvel état en différé)
         self._poke()
-        for delay in (.25, .7):
+        for delay in (0.25, 0.7):
             try:
                 self._loop.call_soon_threadsafe(self._loop.call_later, delay, self._set_wake)
             except RuntimeError:

@@ -57,10 +57,31 @@ HELPER_NAME = "appliquer_maj.ps1"
 # personnelles, pas des fichiers du programme. Les noms ne s'appliquent qu'à
 # la racine de l'installation, pour ne pas exclure ``_internal/profils``.
 PROTEGES_RACINE = {
-    "data", "logs", "maj", "sauvegardes-maj", "versions", "profils", "actions",
-    "config.json", "deck.json", "jeux.json", "fan_names.json", "runtime.json", ".env",
-    ".venv", "venv", "backups", "sauvegardes", "partage", "reference", "references",
-    "dist", "build", ".git", ".ruff_cache", ".pytest_cache",
+    "data",
+    "logs",
+    "maj",
+    "sauvegardes-maj",
+    "versions",
+    "profils",
+    "actions",
+    "config.json",
+    "deck.json",
+    "jeux.json",
+    "fan_names.json",
+    "runtime.json",
+    ".env",
+    ".venv",
+    "venv",
+    "backups",
+    "sauvegardes",
+    "partage",
+    "reference",
+    "references",
+    "dist",
+    "build",
+    ".git",
+    ".ruff_cache",
+    ".pytest_cache",
 }
 
 
@@ -115,19 +136,18 @@ def choisir_assets(assets: list[dict]) -> dict:
     for asset in assets:
         nom = str(asset.get("name") or "")
         if INSTALLATEUR_RE.match(nom):
-            if installateur is None or vtuple(INSTALLATEUR_RE.match(nom).group(1)) > vtuple(
-                    INSTALLATEUR_RE.match(installateur["name"]).group(1)):
+            if installateur is None or vtuple(INSTALLATEUR_RE.match(nom).group(1)) > vtuple(INSTALLATEUR_RE.match(installateur["name"]).group(1)):
                 installateur = asset
         elif nom.lower().endswith(".exe.sha256") and INSTALLATEUR_RE.match(nom[:-7]):
             if sha_installateur is None or vtuple(INSTALLATEUR_RE.match(nom[:-7]).group(1)) > vtuple(
-                    INSTALLATEUR_RE.match(sha_installateur["name"][:-7]).group(1)):
+                INSTALLATEUR_RE.match(sha_installateur["name"][:-7]).group(1)
+            ):
                 sha_installateur = asset
         elif nom.lower().endswith(".zip.sha256"):
             sha_archive = sha_archive or asset
         elif nom.lower().endswith(".zip"):
             archive = archive or asset
-    return {"installateur": installateur, "sha256_installateur": sha_installateur,
-            "archive": archive, "sha256": sha_archive}
+    return {"installateur": installateur, "sha256_installateur": sha_installateur, "archive": archive, "sha256": sha_archive}
 
 
 def choisir_assets_portable(assets: list[dict], version: str) -> dict:
@@ -160,6 +180,7 @@ def extraire_portable(archive: Path, dest: Path, version: str) -> Path:
     racine (config.json, data…, qui écraseraient celles de l'utilisateur), NEXUS.exe ou _internal
     absents, version annoncée différente de celle de l'archive."""
     import zipfile
+
     if dest.exists():
         shutil.rmtree(dest, ignore_errors=True)
     try:
@@ -209,8 +230,7 @@ def _powershell() -> str | None:
     if trouve:
         return trouve
     windows = Path(os.environ.get("SystemRoot", r"C:\Windows"))
-    for candidat in (windows / "System32" / "WindowsPowerShell" / "v1.0" / "powershell.exe",
-                     windows / "System32" / "WindowsPowerShell" / "v1.0" / "pwsh.exe"):
+    for candidat in (windows / "System32" / "WindowsPowerShell" / "v1.0" / "powershell.exe", windows / "System32" / "WindowsPowerShell" / "v1.0" / "pwsh.exe"):
         if candidat.is_file():
             return str(candidat)
     return None
@@ -253,12 +273,18 @@ def verifier_signature(path: Path, timeout: float = 45.0) -> dict:
     )
     flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     try:
-        p = subprocess.run([exe, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script],
-                           capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout,
-                           creationflags=flags, env=_env_powershell())
+        p = subprocess.run(
+            [exe, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+            creationflags=flags,
+            env=_env_powershell(),
+        )
     except (OSError, subprocess.TimeoutExpired) as exc:
-        return {"statut": "inconnu", "signataire": "", "empreinte": "",
-                "message": f"vérification impossible ({type(exc).__name__})"}
+        return {"statut": "inconnu", "signataire": "", "empreinte": "", "message": f"vérification impossible ({type(exc).__name__})"}
     sortie = (p.stdout or "").strip()
     ligne = next((l for l in reversed(sortie.splitlines()) if l.strip().startswith("{")), "")
     if p.returncode != 0 or not ligne:
@@ -275,9 +301,12 @@ def verifier_signature(path: Path, timeout: float = 45.0) -> dict:
         normalise = "non_signe"
     else:
         normalise = "invalide"
-    return {"statut": normalise, "signataire": str(data.get("Subject") or ""),
-            "empreinte": _normaliser_empreinte(str(data.get("Thumbprint") or "")),
-            "message": str(data.get("Message") or statut)}
+    return {
+        "statut": normalise,
+        "signataire": str(data.get("Subject") or ""),
+        "empreinte": _normaliser_empreinte(str(data.get("Thumbprint") or "")),
+        "message": str(data.get("Message") or statut),
+    }
 
 
 def evaluer_signature(info: dict, politique: str = "auto", certificat: str = "") -> dict:
@@ -288,19 +317,14 @@ def evaluer_signature(info: dict, politique: str = "auto", certificat: str = "")
         return {"ok": True, "niveau": "attention", "message": "signature Authenticode ignorée (configuration)"}
     if statut == "valide":
         if attendu and _normaliser_empreinte(info.get("empreinte")) != attendu:
-            return {"ok": False, "niveau": "erreur",
-                    "message": "signature valide, mais signataire inattendu : installation refusée"}
+            return {"ok": False, "niveau": "erreur", "message": "signature valide, mais signataire inattendu : installation refusée"}
         signataire = str(info.get("signataire") or "").strip()
-        return {"ok": True, "niveau": "ok",
-                "message": "signature Authenticode valide" + (f" ({signataire[:160]})" if signataire else "")}
+        return {"ok": True, "niveau": "ok", "message": "signature Authenticode valide" + (f" ({signataire[:160]})" if signataire else "")}
     if statut == "non_signe":
         if politique == "requise":
-            return {"ok": False, "niveau": "erreur",
-                    "message": "l'installeur n'est pas signé : installation refusée (signature requise)"}
-        return {"ok": True, "niveau": "attention",
-                "message": "Installeur non signé : vérification SHA-256 seulement."}
-    return {"ok": False, "niveau": "erreur",
-            "message": f"signature Authenticode invalide ou illisible : {info.get('message') or statut}"}
+            return {"ok": False, "niveau": "erreur", "message": "l'installeur n'est pas signé : installation refusée (signature requise)"}
+        return {"ok": True, "niveau": "attention", "message": "Installeur non signé : vérification SHA-256 seulement."}
+    return {"ok": False, "niveau": "erreur", "message": f"signature Authenticode invalide ou illisible : {info.get('message') or statut}"}
 
 
 # --------------------------------------------------------------------------- #
@@ -311,8 +335,8 @@ def _ignorer_racine(source: Path):
         ici = Path(dossier)
         if ici == source:
             return [n for n in noms if n in PROTEGES_RACINE]
-        return [n for n in noms if n in ("__pycache__", ".ruff_cache", ".pytest_cache")
-                or n.endswith((".pyc", ".log", ".tmp", ".lnk"))]
+        return [n for n in noms if n in ("__pycache__", ".ruff_cache", ".pytest_cache") or n.endswith((".pyc", ".log", ".tmp", ".lnk"))]
+
     return ignorer
 
 
@@ -328,12 +352,12 @@ def sauvegarder_installation() -> Path:
     cible = ROLLBACK_DIR / f"v{version}"
     temporaire = ROLLBACK_DIR / f".copie-{version}-{int(time.time())}"
     try:
-        if est_portable():                            # portable : seulement les fichiers du programme
+        if est_portable():  # portable : seulement les fichiers du programme
             temporaire.mkdir(parents=True)
             for nom in PROGRAMME_PORTABLE:
                 el = source / nom
                 if el.is_dir():
-                    shutil.copytree(el, temporaire / nom)   # tout _internal, profils fournis compris
+                    shutil.copytree(el, temporaire / nom)  # tout _internal, profils fournis compris
                 elif el.is_file():
                     shutil.copy2(el, temporaire / nom)
         else:
@@ -353,8 +377,7 @@ def sauvegarder_installation() -> Path:
     except OSError as exc:
         shutil.rmtree(temporaire, ignore_errors=True)
         raise NatifError(f"sauvegarde de l'installation impossible ({exc})") from exc
-    _ecrire(ROLLBACK_DIR / f"v{version}.json",
-            {"version": version, "date": time.time(), "dossier": str(cible)})
+    _ecrire(ROLLBACK_DIR / f"v{version}.json", {"version": version, "date": time.time(), "dossier": str(cible)})
     return cible
 
 
@@ -366,8 +389,7 @@ def sauvegardes_installation() -> list[dict]:
         data = _lire(meta, {}) or {}
         dossier = Path(str(data.get("dossier") or ""))
         if data.get("version") and dossier.is_dir():
-            out.append({"dossier": dossier.name, "version": str(data["version"]), "date": data.get("date"),
-                        "natif": True, "chemin": str(dossier)})
+            out.append({"dossier": dossier.name, "version": str(data["version"]), "date": data.get("date"), "natif": True, "chemin": str(dossier)})
     return out
 
 
@@ -400,10 +422,12 @@ def _job(action: str, backup: Path, expected: str, timeout: int) -> dict:
 
 def construire_job_installation(dispo: dict, installeur: Path, backup: Path) -> dict:
     job = _job("install", backup, str(dispo["version"]), 300)
-    job.update({
-        "installer": str(Path(installeur)),
-        "installer_log": str(NATIF_DIR / f"installateur-{dispo['version']}.log"),
-    })
+    job.update(
+        {
+            "installer": str(Path(installeur)),
+            "installer_log": str(NATIF_DIR / f"installateur-{dispo['version']}.log"),
+        }
+    )
     return job
 
 
@@ -411,8 +435,7 @@ def construire_job_portable(dispo: dict, nouveau: Path, backup: Path) -> dict:
     """Portable : le helper remplace les fichiers du programme par ceux de ``nouveau``."""
     job = _job("portable", backup, str(dispo["version"]), 180)
     nouveaux = [e.name for e in Path(nouveau).iterdir() if e.name.lower() not in {p.lower() for p in PROTEGES_RACINE}]
-    job.update({"source_dir": str(Path(nouveau)), "installer": "", "installer_log": "",
-                "elements": sorted(set(PROGRAMME_PORTABLE) | set(nouveaux))})
+    job.update({"source_dir": str(Path(nouveau)), "installer": "", "installer_log": "", "elements": sorted(set(PROGRAMME_PORTABLE) | set(nouveaux))})
     return job
 
 
@@ -446,14 +469,21 @@ def lancer_helper(job: dict) -> dict:
     except OSError as exc:
         raise NatifError(f"copie du script de mise à jour impossible ({exc})") from exc
     _ecrire(JOB_FILE, job)
-    cmd = [exe, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
-           "-WindowStyle", "Hidden", "-File", str(copie), "-Job", str(JOB_FILE)]
-    if os.environ.get("NEXUS_MAJ_HELPER_DRY") == "1":       # tests : ne lance rien
+    cmd = [exe, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", str(copie), "-Job", str(JOB_FILE)]
+    if os.environ.get("NEXUS_MAJ_HELPER_DRY") == "1":  # tests : ne lance rien
         return {"commande": cmd, "travail": job}
     flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     try:
-        subprocess.Popen(cmd, cwd=str(paths.MAJ_DIR), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                         stderr=subprocess.DEVNULL, creationflags=flags, close_fds=True, env=_env_powershell())
+        subprocess.Popen(
+            cmd,
+            cwd=str(paths.MAJ_DIR),
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=flags,
+            close_fds=True,
+            env=_env_powershell(),
+        )
     except OSError as exc:
         try:
             JOB_FILE.unlink(missing_ok=True)
@@ -482,5 +512,4 @@ def marquer_demarrage_ok() -> bool:
 
 
 def resultat_erreur(type_: str, from_version: str, vers: str, message: str) -> None:
-    _ecrire(RESULT_FILE, {"ok": False, "type": type_, "de": from_version, "vers": vers,
-                          "date": time.time(), "message": message, "journalise": False})
+    _ecrire(RESULT_FILE, {"ok": False, "type": type_, "de": from_version, "vers": vers, "date": time.time(), "message": message, "journalise": False})

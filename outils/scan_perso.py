@@ -2,6 +2,7 @@
 Complète gitleaks (jetons connus) avec ce qui est propre à NEXUS : chemins du PC, nom d'utilisateur Windows,
 IDs Discord, adresses IP / MAC du réseau local, jetons Discord, empreintes de mot de passe, e-mails.
 Usage : python outils/scan_perso.py [dossier ou archive .zip]   (code de sortie 1 si quelque chose est trouvé)"""
+
 from __future__ import annotations
 
 import os
@@ -28,19 +29,55 @@ PATTERNS.append(("chemin de ce dossier sur le PC", re.compile(r"[\\/]+".join(re.
 if len(USER) >= 3:
     PATTERNS.append(("nom d'utilisateur Windows", re.compile(re.escape(USER), re.I)))
 # Faux positifs connus (exemples fictifs, domaines publics, IDs d'apps du Store, versions)
-ALLOW = [re.compile(p) for p in (
-    r"noreply@anthropic\.com", r"@users\.noreply\.github\.com", r"example\.(com|org)", r"exemple\.(com|fr)",
-    r"git@github\.com", r"192\.168\.1\.(?:1|10|42|50|100|254)\b", r"10\.0\.0\.\d+", r"COLLE_ICI", r"TON_ID",
-    r"00:11:22:33:44:55", r"AA:BB:CC:DD:EE:FF", r"(?i)ff[:-]ff[:-]ff[:-]ff[:-]ff[:-]ff",   # diffusion réseau (code)
-    r"\+@app\.",                                            # lignes ajoutées d'un patch de code (@app.post)
-)]
-BINARY = {".png", ".jpg", ".jpeg", ".webp", ".ico", ".woff2", ".woff", ".ttf", ".zip", ".gif", ".exe", ".dll", ".db",
-          ".mp3", ".ogg", ".oga", ".opus", ".wav", ".flac", ".m4a", ".webm"}   # sons : des octets peuvent ressembler à une adresse
+ALLOW = [
+    re.compile(p)
+    for p in (
+        r"noreply@anthropic\.com",
+        r"@users\.noreply\.github\.com",
+        r"example\.(com|org)",
+        r"exemple\.(com|fr)",
+        r"git@github\.com",
+        r"192\.168\.1\.(?:1|10|42|50|100|254)\b",
+        r"10\.0\.0\.\d+",
+        r"COLLE_ICI",
+        r"TON_ID",
+        r"00:11:22:33:44:55",
+        r"AA:BB:CC:DD:EE:FF",
+        r"(?i)ff[:-]ff[:-]ff[:-]ff[:-]ff[:-]ff",  # diffusion réseau (code)
+        r"\+@app\.",  # lignes ajoutées d'un patch de code (@app.post)
+    )
+]
+BINARY = {
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".webp",
+    ".ico",
+    ".woff2",
+    ".woff",
+    ".ttf",
+    ".zip",
+    ".gif",
+    ".exe",
+    ".dll",
+    ".db",
+    ".mp3",
+    ".ogg",
+    ".oga",
+    ".opus",
+    ".wav",
+    ".flac",
+    ".m4a",
+    ".webm",
+}  # sons : des octets peuvent ressembler à une adresse
 
 
 def tracked_files() -> list[tuple[str, bytes]]:
-    out = subprocess.run(["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"], cwd=BASE,
-                         capture_output=True, check=True).stdout.decode("utf-8").split("\0")
+    out = (
+        subprocess.run(["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"], cwd=BASE, capture_output=True, check=True)
+        .stdout.decode("utf-8")
+        .split("\0")
+    )
     return [(f, (BASE / f).read_bytes()) for f in out if f and (BASE / f).is_file()]
 
 
@@ -62,7 +99,7 @@ def scan(files: list[tuple[str, bytes]]) -> list[str]:
         for label, rx in PATTERNS:
             for m in rx.finditer(text):
                 s = m.group(0)
-                ctx = text[max(0, m.start() - 40): m.end() + 40]
+                ctx = text[max(0, m.start() - 40) : m.end() + 40]
                 if any(a.search(s) or a.search(ctx) for a in ALLOW) or (label == "adresse e-mail" and Path(name).name.startswith("OFL")):
                     continue
                 line = text.count("\n", 0, m.start()) + 1

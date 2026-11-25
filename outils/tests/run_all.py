@@ -2,6 +2,7 @@
 dossiers temporaires) : utilisé par la CI et par outils/release.py. Les tests qui pilotent Edge
 (test_ouverture, test_postit*) demandent un serveur de test sur le port 8001 : on les lance à la main.
 Usage : python outils/tests/run_all.py   (code de sortie 0 = tout est passé)"""
+
 import os
 import subprocess
 import sys
@@ -37,8 +38,7 @@ TESTS = [
 
 
 def main() -> int:
-    env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1", NEXUS_NO_BOT="1", NEXUS_DECK_DRYRUN="1",
-               NEXUS_OPEN_BROWSER="0")
+    env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1", NEXUS_NO_BOT="1", NEXUS_DECK_DRYRUN="1", NEXUS_OPEN_BROWSER="0")
     echecs, ignores = [], []
     for nom, args in TESTS:
         # test_maj vérifie les archives de release à partir des fichiers suivis par Git :
@@ -48,8 +48,9 @@ def main() -> int:
             ignores.append(nom)
             continue
         t0 = time.time()
-        r = subprocess.run([sys.executable, str(ICI / nom), *args], cwd=BASE, env=env, capture_output=True,
-                           text=True, encoding="utf-8", errors="replace", timeout=900)
+        r = subprocess.run(
+            [sys.executable, str(ICI / nom), *args], cwd=BASE, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900
+        )
         sortie = (r.stdout or "") + (r.stderr or "")
         ok = r.returncode == 0 and "ÉCHEC" not in sortie
         print(f"{'OK   ' if ok else 'ÉCHEC'} {nom} ({time.time() - t0:.1f} s)")
@@ -63,8 +64,10 @@ def main() -> int:
                 print("\n".join("    " + ligne for ligne in en_echec[:30]))
                 print("    --- fin de la sortie ---")
             print("\n".join("    " + ligne for ligne in lignes[-40:]))
-    print(f"\n{len(TESTS) - len(echecs) - len(ignores)}/{len(TESTS) - len(ignores)} fichiers de tests passés"
-          + (f" ({len(ignores)} ignoré(s) : {', '.join(ignores)})" if ignores else ""))
+    print(
+        f"\n{len(TESTS) - len(echecs) - len(ignores)}/{len(TESTS) - len(ignores)} fichiers de tests passés"
+        + (f" ({len(ignores)} ignoré(s) : {', '.join(ignores)})" if ignores else "")
+    )
     return 1 if echecs else 0
 
 

@@ -35,10 +35,10 @@ import paths
 import version as version_mod
 
 BASE = paths.APP_DIR
-MAJ_DIR = paths.MAJ_DIR                    # téléchargements et fichiers préparés (hors Git, hors release)
-SAUV_DIR = paths.SAUVEGARDES_DIR           # sauvegardes horodatées avant chaque mise à jour (hors Git)
-ETAT_FILE = MAJ_DIR / "etat.json"          # dernière vérification, « plus tard », notification Discord
-EN_COURS = MAJ_DIR / "en_cours.json"       # travail pour maj_demarrage.py (au prochain démarrage)
+MAJ_DIR = paths.MAJ_DIR  # téléchargements et fichiers préparés (hors Git, hors release)
+SAUV_DIR = paths.SAUVEGARDES_DIR  # sauvegardes horodatées avant chaque mise à jour (hors Git)
+ETAT_FILE = MAJ_DIR / "etat.json"  # dernière vérification, « plus tard », notification Discord
+EN_COURS = MAJ_DIR / "en_cours.json"  # travail pour maj_demarrage.py (au prochain démarrage)
 API = "https://api.github.com"
 # Tests uniquement : faux GitHub local (jamais utilisé en temps normal)
 API_TEST = os.environ.get("NEXUS_MAJ_API_TEST", "").rstrip("/")
@@ -46,14 +46,39 @@ DEPOT_RE = re.compile(r"^[A-Za-z0-9-]{1,39}/[A-Za-z0-9._-]{1,100}$")
 JETON_RE = re.compile(r"^(github_pat_[A-Za-z0-9_]{20,255}|gh[pousr]_[A-Za-z0-9]{20,255})$")
 KEYRING_SERVICE = "NEXUS-panel-mises-a-jour"
 # Hôtes où GitHub redirige le téléchargement des fichiers de release (aucun jeton ne leur est envoyé)
-HOTES_FICHIERS = {"objects.githubusercontent.com", "github-releases.githubusercontent.com",
-                  "release-assets.githubusercontent.com", "codeload.github.com"}
+HOTES_FICHIERS = {"objects.githubusercontent.com", "github-releases.githubusercontent.com", "release-assets.githubusercontent.com", "codeload.github.com"}
 MAX_ARCHIVE = 300 * 1024 * 1024
 # Jamais remplacés par une mise à jour (données, configuration, environnement, sauvegardes)
-PROTEGES = {"data", "config.json", "deck.json", "jeux.json", "fan_names.json", "runtime.json", ".env",
-            ".venv", ".venv-build", "venv", "runtime", "runtime.neuf", "runtime.tmp", "logs",
-            "versions", "partage", "maj", "sauvegardes-maj", "LibreHardwareMonitor", "actions", ".git",
-            "dist", ".ruff_cache", ".pytest_cache", "sauvegardes", "backups", "reference", "references"}
+PROTEGES = {
+    "data",
+    "config.json",
+    "deck.json",
+    "jeux.json",
+    "fan_names.json",
+    "runtime.json",
+    ".env",
+    ".venv",
+    ".venv-build",
+    "venv",
+    "runtime",
+    "runtime.neuf",
+    "runtime.tmp",
+    "logs",
+    "versions",
+    "partage",
+    "maj",
+    "sauvegardes-maj",
+    "LibreHardwareMonitor",
+    "actions",
+    ".git",
+    "dist",
+    ".ruff_cache",
+    ".pytest_cache",
+    "sauvegardes",
+    "backups",
+    "reference",
+    "references",
+}
 SEMVER = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$")
 
 
@@ -78,7 +103,7 @@ def reglages() -> dict:
     r = dict(config.get("mises_a_jour"))
     r["depot"] = str(r.get("depot") or "").strip()
     if r["depot"] and not DEPOT_RE.match(r["depot"]):
-        r["depot"] = ""                                  # jamais d'adresse fabriquée avec un nom invalide
+        r["depot"] = ""  # jamais d'adresse fabriquée avec un nom invalide
     try:
         r["intervalle_heures"] = max(1.0, min(168.0, float(r.get("intervalle_heures") or 6)))
     except (TypeError, ValueError):
@@ -93,7 +118,7 @@ def reglages() -> dict:
 
 def _lire(path: Path, defaut):
     try:
-        return json.loads(path.read_text(encoding="utf-8-sig"))     # le helper PowerShell écrit sans BOM
+        return json.loads(path.read_text(encoding="utf-8-sig"))  # le helper PowerShell écrit sans BOM
     except (OSError, ValueError):
         return defaut
 
@@ -119,6 +144,7 @@ def sha256_fichier(path: Path) -> str:
 def _keyring():
     try:
         import keyring
+
         return keyring
     except Exception:
         return None
@@ -126,7 +152,7 @@ def _keyring():
 
 def jeton(depot: str) -> tuple[str, str]:
     """(jeton, où il est rangé : 'windows' | 'config' | 'environnement' | '')."""
-    t = os.environ.get("NEXUS_MAJ_JETON", "").strip()   # tests / CI : lu en mémoire, jamais enregistré
+    t = os.environ.get("NEXUS_MAJ_JETON", "").strip()  # tests / CI : lu en mémoire, jamais enregistré
     if t:
         return t, "environnement"
     kr = _keyring()
@@ -157,11 +183,11 @@ def enregistrer_jeton(depot: str, valeur: str) -> str:
                     kr.delete_password(KEYRING_SERVICE, depot)
                 except Exception:
                     pass
-            _config_set({"jeton": ""})              # jamais en double dans config.json
+            _config_set({"jeton": ""})  # jamais en double dans config.json
             return "windows" if valeur else ""
         except Exception as exc:
             print(f"[MAJ] gestionnaire d'identifiants indisponible ({type(exc).__name__}) : jeton gardé dans config.json")
-    _config_set({"jeton": valeur})                  # repli : config.json, exclu de Git
+    _config_set({"jeton": valeur})  # repli : config.json, exclu de Git
     return "config" if valeur else ""
 
 
@@ -210,7 +236,7 @@ def modifier_reglages(changes: dict) -> dict:
 #  Accès à GitHub (API des releases du dépôt configuré, uniquement)
 # --------------------------------------------------------------------------- #
 class _SansRedirection(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, *args, **kwargs):      # on suit les redirections à la main (sans le jeton)
+    def redirect_request(self, *args, **kwargs):  # on suit les redirections à la main (sans le jeton)
         return None
 
 
@@ -234,7 +260,7 @@ def _requete(url: str, tok: str = "", accept: str = "application/vnd.github+json
         return _OPENER.open(urllib.request.Request(url, headers=headers), timeout=timeout)
     except urllib.error.HTTPError as e:
         if e.code in (301, 302, 303, 307, 308):
-            return e                                     # redirection : traitée par l'appelant
+            return e  # redirection : traitée par l'appelant
         raise _erreur_http(e) from None
     except (urllib.error.URLError, OSError, http.client.HTTPException) as e:
         raise MajError("GitHub injoignable (pas de connexion Internet ?) — réessaie plus tard") from e
@@ -276,12 +302,18 @@ def derniere_release(depot: str, tok: str) -> dict:
     if not SEMVER.match(ver):
         raise MajError(f"la dernière release a un numéro illisible ({tag!r})")
     assets = maj_natif.choisir_assets(list(data.get("assets") or []))
-    return {"version": ver, "tag": tag, "nom": data.get("name") or tag, "notes": str(data.get("body") or "")[:20000],
-            "date": data.get("published_at"), "page": data.get("html_url"),
-            "archive": _asset_public(assets["archive"]),
-            "sha256": _asset_public(assets["sha256"]),
-            "installateur": _asset_public(assets["installateur"]),
-            "sha256_installateur": _asset_public(assets["sha256_installateur"])}
+    return {
+        "version": ver,
+        "tag": tag,
+        "nom": data.get("name") or tag,
+        "notes": str(data.get("body") or "")[:20000],
+        "date": data.get("published_at"),
+        "page": data.get("html_url"),
+        "archive": _asset_public(assets["archive"]),
+        "sha256": _asset_public(assets["sha256"]),
+        "installateur": _asset_public(assets["installateur"]),
+        "sha256_installateur": _asset_public(assets["sha256_installateur"]),
+    }
 
 
 def release_portable(depot: str, tok: str, ver: str) -> dict:
@@ -299,11 +331,11 @@ def _telecharger_asset(depot: str, asset_id: int, tok: str, dest: Path, limite: 
     """Fichier d'une release du dépôt configuré : demande à l'API (avec le jeton), puis suit la redirection
     vers l'hébergeur des fichiers de GitHub SANS le jeton."""
     r = _requete(f"{_base_api()}/repos/{depot}/releases/assets/{int(asset_id)}", tok, accept="application/octet-stream", timeout=60)
-    if isinstance(r, urllib.error.HTTPError):            # redirection
+    if isinstance(r, urllib.error.HTTPError):  # redirection
         loc = r.headers.get("Location") or ""
         u = urllib.parse.urlparse(loc)
         if API_TEST and loc.startswith(API_TEST):
-            pass                                          # faux GitHub des tests
+            pass  # faux GitHub des tests
         elif u.scheme != "https" or u.hostname not in HOTES_FICHIERS:
             raise MajError("redirection de téléchargement refusée (hôte inattendu)")
         try:
@@ -333,7 +365,7 @@ def _telecharger_asset(depot: str, asset_id: int, tok: str, dest: Path, limite: 
 # --------------------------------------------------------------------------- #
 class Updater:
     def __init__(self, notifier=None) -> None:
-        self.notifier = notifier                          # bot Discord : simple message, jamais d'installation
+        self.notifier = notifier  # bot Discord : simple message, jamais d'installation
         self._lock = threading.Lock()
         self.etat = _lire(ETAT_FILE, {})
         self.travail = {"etape": None, "progres": 0, "erreur": None, "vers": None}
@@ -358,8 +390,7 @@ class Updater:
             if paths.FROZEN and maj_natif.est_portable():
                 # « portable » : remplacement automatique ; « manuel » : archive portable pas (encore) publiée
                 # ou dossier en lecture seule (clé verrouillée, Program Files…)
-                auto = bool(dispo.get("portable") and dispo.get("sha256_portable")
-                            and maj_natif.dossier_inscriptible(paths.INSTALL_DIR))
+                auto = bool(dispo.get("portable") and dispo.get("sha256_portable") and maj_natif.dossier_inscriptible(paths.INSTALL_DIR))
                 dispo["mode"] = "portable" if auto else "manuel"
                 dispo["taille"] = (dispo.get("portable") or {}).get("taille")
             elif paths.FROZEN:
@@ -370,8 +401,10 @@ class Updater:
                 dispo["taille"] = (dispo.get("archive") or {}).get("taille")
         sauv = self.retours()
         return {
-            "version": version_mod.current(), "date": version_mod.date_version(),
-            "natif": paths.FROZEN, "portable": maj_natif.est_portable(),
+            "version": version_mod.current(),
+            "date": version_mod.date_version(),
+            "natif": paths.FROZEN,
+            "portable": maj_natif.est_portable(),
             "reglages": {k: r[k] for k in ("depot", "actif", "intervalle_heures", "discord", "signature")},
             "jeton": {"enregistre": bool(ou), "ou": ou},
             "verification": {k: self.etat.get(k) for k in ("derniere", "resultat", "erreur", "a_jour")},
@@ -409,13 +442,15 @@ class Updater:
                     if nouvelle and r["discord"] and self.notifier and self.etat.get("discord_notifie") != rel["version"]:
                         self.etat["discord_notifie"] = rel["version"]
                         try:
-                            self.notifier(f"🆕 NEXUS : la version {rel['version']} est disponible (installée : "
-                                          f"{version_mod.current()}). Installe-la depuis le panel, sur le PC.")
+                            self.notifier(
+                                f"🆕 NEXUS : la version {rel['version']} est disponible (installée : "
+                                f"{version_mod.current()}). Installe-la depuis le panel, sur le PC."
+                            )
                         except Exception:
                             pass
                 except MajError as e:
                     self.etat.update(resultat="erreur", erreur=str(e))
-            self.etat["derniere"] = time.time()          # une fois la réponse reçue (jamais « vérifié » à moitié)
+            self.etat["derniere"] = time.time()  # une fois la réponse reçue (jamais « vérifié » à moitié)
             _ecrire(ETAT_FILE, self.etat)
         return self.public()
 
@@ -442,41 +477,42 @@ class Updater:
             if r["actif"] and r["depot"] and time.time() >= prochaine - 60:
                 try:
                     self.verifier()
-                except Exception as e:                    # jamais d'arrêt du panel à cause d'une vérification
+                except Exception as e:  # jamais d'arrêt du panel à cause d'une vérification
                     self.etat.update(resultat="erreur", erreur=f"{type(e).__name__}")
-            self._stop.wait(300)                          # regarde toutes les 5 min si l'heure est venue
+            self._stop.wait(300)  # regarde toutes les 5 min si l'heure est venue
 
     # -- installation -------------------------------------------------------------
     def installer(self, on_restart) -> None:
         """Lancé dans un fil : prépare tout puis demande le redémarrage. Erreur → self.travail['erreur']."""
         if self.travail["etape"] not in (None, "erreur"):
             raise MajError("une mise à jour est déjà en cours")
-        dispo = (self.public().get("disponible"))
+        dispo = self.public().get("disponible")
         if not dispo:
             raise MajError("aucune version plus récente à installer (vérifie d'abord)")
         if paths.FROZEN:
             if maj_natif.est_portable():
                 if not maj_natif.dossier_inscriptible(paths.INSTALL_DIR):
-                    raise MajError("le dossier du portable est en lecture seule : NEXUS ne peut pas s'y mettre à jour "
-                                   "(copie-le dans un dossier modifiable, ou remplace NEXUS.exe et _internal à la main)")
+                    raise MajError(
+                        "le dossier du portable est en lecture seule : NEXUS ne peut pas s'y mettre à jour "
+                        "(copie-le dans un dossier modifiable, ou remplace NEXUS.exe et _internal à la main)"
+                    )
                 if not dispo.get("portable") or not dispo.get("sha256_portable"):
-                    r = reglages()                       # publiée depuis la dernière vérification ?
+                    r = reglages()  # publiée depuis la dernière vérification ?
                     dispo.update(release_portable(r["depot"], jeton(r["depot"])[0], dispo["version"]))
                     if self.etat.get("disponible"):
                         self.etat["disponible"].update({k: dispo[k] for k in ("portable", "sha256_portable")})
                 if not dispo.get("portable") or not dispo.get("sha256_portable"):
-                    raise MajError(f"la version portable {dispo['version']} n'est pas encore publiée "
-                                   f"(NEXUS-Portable-{dispo['version']}.zip et son .sha256) : réessaie un peu plus tard")
+                    raise MajError(
+                        f"la version portable {dispo['version']} n'est pas encore publiée "
+                        f"(NEXUS-Portable-{dispo['version']}.zip et son .sha256) : réessaie un peu plus tard"
+                    )
                 self.travail = {"etape": "telechargement", "progres": 0, "erreur": None, "vers": dispo["version"]}
-                threading.Thread(target=self._installer_portable, args=(dispo, on_restart), daemon=True,
-                                 name="maj-installation").start()
+                threading.Thread(target=self._installer_portable, args=(dispo, on_restart), daemon=True, name="maj-installation").start()
                 return
             if not dispo.get("installateur") or not dispo.get("sha256_installateur"):
-                raise MajError("cette release n'a pas d'installeur NEXUS-x.y.z-Setup.exe et de fichier .sha256 : "
-                               "installation refusée")
+                raise MajError("cette release n'a pas d'installeur NEXUS-x.y.z-Setup.exe et de fichier .sha256 : installation refusée")
             self.travail = {"etape": "telechargement", "progres": 0, "erreur": None, "vers": dispo["version"]}
-            threading.Thread(target=self._installer_natif, args=(dispo, on_restart), daemon=True,
-                             name="maj-installation").start()
+            threading.Thread(target=self._installer_natif, args=(dispo, on_restart), daemon=True, name="maj-installation").start()
             return
         if not dispo.get("archive") or not dispo.get("sha256"):
             raise MajError("cette release n'a pas d'archive .zip et de fichier .sha256 : installation refusée")
@@ -488,7 +524,7 @@ class Updater:
             prep = self.preparer(dispo, progres=lambda p: self.travail.update(progres=round(p * 100)))
             self.travail.update(etape="redemarrage", progres=100)
             _ecrire(EN_COURS, prep)
-            time.sleep(.8)                                 # la page reçoit l'étape « redémarrage »
+            time.sleep(0.8)  # la page reçoit l'étape « redémarrage »
             on_restart()
         except Exception as e:
             self.travail.update(etape="erreur", erreur=str(e) if isinstance(e, MajError) else f"{type(e).__name__}: {e}")
@@ -509,16 +545,14 @@ class Updater:
 
             self.travail.update(etape="telechargement", progres=0)
             _telecharger_asset(r["depot"], dispo["sha256_installateur"]["id"], tok, somme, limite=4096)
-            _telecharger_asset(r["depot"], dispo["installateur"]["id"], tok, installeur,
-                               progres=lambda p: self.travail.update(progres=round(p * 100)))
+            _telecharger_asset(r["depot"], dispo["installateur"]["id"], tok, installeur, progres=lambda p: self.travail.update(progres=round(p * 100)))
 
             self.travail.update(etape="verification", progres=100)
             attendu = somme.read_text(encoding="utf-8", errors="replace").strip().split()[0].lower() if somme.stat().st_size else ""
             if not maj_natif.SHA256_RE.match(attendu):
                 raise MajError("fichier SHA256 de l'installeur illisible : installation refusée")
             if maj_natif.sha256_fichier(installeur) != attendu:
-                raise MajError("SHA256 différent pour l'installeur : fichier corrompu ou modifié — "
-                               "installation refusée, rien n'a été touché")
+                raise MajError("SHA256 différent pour l'installeur : fichier corrompu ou modifié — installation refusée, rien n'a été touché")
 
             self.travail.update(etape="signature")
             signature = maj_natif.verifier_signature(installeur)
@@ -533,7 +567,7 @@ class Updater:
             job["signature_note"] = "" if evaluation["niveau"] == "ok" else evaluation["message"]
             maj_natif.lancer_helper(job)
             self.travail.update(etape="redemarrage", progres=100)
-            time.sleep(.8)
+            time.sleep(0.8)
             on_restart()
         except Exception as e:
             try:
@@ -543,8 +577,7 @@ class Updater:
             message = str(e) if isinstance(e, (MajError, maj_natif.NatifError)) else f"{type(e).__name__}: {e}"
             self.travail.update(etape="erreur", erreur=message)
             try:
-                maj_natif.resultat_erreur("installation", version_mod.current(), str(dispo.get("version") or ""),
-                                          f"Mise à jour impossible : {message}")
+                maj_natif.resultat_erreur("installation", version_mod.current(), str(dispo.get("version") or ""), f"Mise à jour impossible : {message}")
             except OSError:
                 pass
 
@@ -563,32 +596,29 @@ class Updater:
 
             self.travail.update(etape="telechargement", progres=0)
             _telecharger_asset(r["depot"], dispo["sha256_portable"]["id"], tok, somme, limite=4096)
-            _telecharger_asset(r["depot"], dispo["portable"]["id"], tok, archive,
-                               progres=lambda p: self.travail.update(progres=round(p * 100)))
+            _telecharger_asset(r["depot"], dispo["portable"]["id"], tok, archive, progres=lambda p: self.travail.update(progres=round(p * 100)))
 
             self.travail.update(etape="verification", progres=100)
             attendu = somme.read_text(encoding="utf-8", errors="replace").strip().split()[0].lower() if somme.stat().st_size else ""
             if not maj_natif.SHA256_RE.match(attendu):
                 raise MajError("fichier SHA256 de l'archive portable illisible : installation refusée")
             if maj_natif.sha256_fichier(archive) != attendu:
-                raise MajError("SHA256 différent pour l'archive portable : fichier corrompu ou modifié — "
-                               "installation refusée, rien n'a été touché")
+                raise MajError("SHA256 différent pour l'archive portable : fichier corrompu ou modifié — installation refusée, rien n'a été touché")
             nouveau = maj_natif.extraire_portable(archive, dossier / "fichiers", dispo["version"])
-            archive.unlink(missing_ok=True)                # place disque : seul le dossier extrait sert
+            archive.unlink(missing_ok=True)  # place disque : seul le dossier extrait sert
 
             self.travail.update(etape="sauvegarde")
             backup = maj_natif.sauvegarder_installation()
             maj_natif.lancer_helper(maj_natif.construire_job_portable(dispo, nouveau, backup))
             self.travail.update(etape="redemarrage", progres=100)
-            time.sleep(.8)
+            time.sleep(0.8)
             on_restart()
         except Exception as e:
             shutil.rmtree(dossier, ignore_errors=True)
             message = str(e) if isinstance(e, (MajError, maj_natif.NatifError)) else f"{type(e).__name__}: {e}"
             self.travail.update(etape="erreur", erreur=message)
             try:
-                maj_natif.resultat_erreur("installation", version_mod.current(), str(dispo.get("version") or ""),
-                                          f"Mise à jour impossible : {message}")
+                maj_natif.resultat_erreur("installation", version_mod.current(), str(dispo.get("version") or ""), f"Mise à jour impossible : {message}")
             except OSError:
                 pass
 
@@ -618,9 +648,16 @@ class Updater:
             raise MajError("l'archive ne contient pas la version annoncée : installation refusée")
         self.travail.update(etape="sauvegarde")
         sauv = sauvegarder(f"avant-v{ver}")
-        nettoyer_sauvegardes()                         # au plus 3 sauvegardes de mise à jour (chacune ~ code + data)
-        return {"etat": "a_appliquer", "de": version_mod.current(), "vers": ver, "fichiers": str(racine),
-                "sauvegarde": str(sauv), "date": time.time(), "essais": 0}
+        nettoyer_sauvegardes()  # au plus 3 sauvegardes de mise à jour (chacune ~ code + data)
+        return {
+            "etat": "a_appliquer",
+            "de": version_mod.current(),
+            "vers": ver,
+            "fichiers": str(racine),
+            "sauvegarde": str(sauv),
+            "date": time.time(),
+            "essais": 0,
+        }
 
     def revenir(self, on_restart) -> str:
         sauv = self.retours()
@@ -633,13 +670,22 @@ class Updater:
             except maj_natif.NatifError as exc:
                 raise MajError(str(exc)) from exc
             self.travail = {"etape": "redemarrage", "progres": 100, "erreur": None, "vers": sauv[0]["version"]}
-            threading.Timer(.8, on_restart).start()
+            threading.Timer(0.8, on_restart).start()
             return sauv[0]["version"]
         dossier = SAUV_DIR / sauv[0]["dossier"]
-        _ecrire(EN_COURS, {"etat": "a_restaurer", "de": version_mod.current(), "vers": sauv[0]["version"],
-                           "sauvegarde": str(dossier), "date": time.time(), "code_seulement": True})
+        _ecrire(
+            EN_COURS,
+            {
+                "etat": "a_restaurer",
+                "de": version_mod.current(),
+                "vers": sauv[0]["version"],
+                "sauvegarde": str(dossier),
+                "date": time.time(),
+                "code_seulement": True,
+            },
+        )
         self.travail = {"etape": "redemarrage", "progres": 100, "erreur": None, "vers": sauv[0]["version"]}
-        threading.Timer(.8, on_restart).start()
+        threading.Timer(0.8, on_restart).start()
         return sauv[0]["version"]
 
 
@@ -668,7 +714,7 @@ def extraire_sur(archive: Path, dest: Path) -> Path:
     racine = dest
     enfants = [p for p in dest.iterdir()]
     if len(enfants) == 1 and enfants[0].is_dir():
-        racine = enfants[0]                                # archive avec un dossier NEXUS-x.y.z/ à la racine
+        racine = enfants[0]  # archive avec un dossier NEXUS-x.y.z/ à la racine
     if not (racine / "VERSION").is_file() or not (racine / "app.py").is_file():
         raise MajError("ce n'est pas une archive de NEXUS (VERSION ou app.py manquant)")
     return racine
@@ -694,7 +740,7 @@ def nettoyer_sauvegardes(garder: int = SAUVEGARDES_A_GARDER) -> list[str]:
     """Garde les « garder » sauvegardes de mise à jour les plus récentes (dossiers horodatés du dossier sauvegardes-maj)."""
     dossiers = sorted((d for d in SAUV_DIR.glob("*") if (d / "manifeste.json").is_file()), key=lambda d: d.name, reverse=True)
     retires = []
-    for d in dossiers[max(1, garder):]:
+    for d in dossiers[max(1, garder) :]:
         shutil.rmtree(d, ignore_errors=True)
         retires.append(d.name)
     return retires
@@ -712,10 +758,8 @@ def sauvegarder(etiquette: str) -> Path:
         shutil.copytree(paths.DATA_DIR, dossier / "data", ignore=shutil.ignore_patterns("*.tmp"))
     perso = dossier / "config"
     perso.mkdir(parents=True, exist_ok=True)
-    for src in (paths.CONFIG_FILE, paths.DECK_FILE, paths.JEUX_FILE, paths.FAN_NAMES_FILE,
-                paths.USER_ROOT / ".env"):
+    for src in (paths.CONFIG_FILE, paths.DECK_FILE, paths.JEUX_FILE, paths.FAN_NAMES_FILE, paths.USER_ROOT / ".env"):
         if src.is_file():
             shutil.copy2(src, perso / src.name)
-    _ecrire(dossier / "manifeste.json", {"version": version_mod.current(), "date": time.time(),
-                                         "code": [r.as_posix() for r in fichiers_code(BASE)]})
+    _ecrire(dossier / "manifeste.json", {"version": version_mod.current(), "date": time.time(), "code": [r.as_posix() for r in fichiers_code(BASE)]})
     return dossier

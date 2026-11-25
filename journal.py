@@ -19,14 +19,13 @@ import time
 import config
 import db
 
-MOODS = [("😄", "Super"), ("🙂", "Bien"), ("😐", "Bof"), ("😕", "Pas top"), ("😢", "Triste"),
-         ("😡", "En colère"), ("😴", "Fatigué"), ("🤒", "Malade")]
+MOODS = [("😄", "Super"), ("🙂", "Bien"), ("😐", "Bof"), ("😕", "Pas top"), ("😢", "Triste"), ("😡", "En colère"), ("😴", "Fatigué"), ("🤒", "Malade")]
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 MAX_TEXT = 50_000
 LOCK_IDLE = 15 * 60
 COOKIE = "nexus_journal"
 
-_tokens: dict[str, float] = {}         # empreinte du jeton -> dernière activité
+_tokens: dict[str, float] = {}  # empreinte du jeton -> dernière activité
 _tlock = threading.Lock()
 
 
@@ -56,8 +55,7 @@ def _day(day: str) -> str:
 
 
 def _entry(r) -> dict:
-    return {"jour": r["jour"], "humeur": r["humeur"], "activites": json.loads(r["activites"] or "[]"),
-            "texte": r["texte"], "modifie": r["modifie"]}
+    return {"jour": r["jour"], "humeur": r["humeur"], "activites": json.loads(r["activites"] or "[]"), "texte": r["texte"], "modifie": r["modifie"]}
 
 
 def get(day: str) -> dict:
@@ -78,20 +76,24 @@ def save(day: str, humeur: str, acts: list, texte: str) -> dict:
         raise JournalError(f"texte trop long ({MAX_TEXT} caractères maximum)")
     c = db.conn()
     if not humeur and not acts and not texte.strip():
-        c.execute("DELETE FROM journal WHERE jour = ?", (day,))     # entrée vidée : on n'en garde pas de trace
+        c.execute("DELETE FROM journal WHERE jour = ?", (day,))  # entrée vidée : on n'en garde pas de trace
     else:
-        c.execute("""INSERT INTO journal(jour, humeur, activites, texte, modifie) VALUES(?,?,?,?,?)
+        c.execute(
+            """INSERT INTO journal(jour, humeur, activites, texte, modifie) VALUES(?,?,?,?,?)
                      ON CONFLICT(jour) DO UPDATE SET humeur = excluded.humeur, activites = excluded.activites,
                      texte = excluded.texte, modifie = excluded.modifie""",
-                  (day, humeur, json.dumps(acts, ensure_ascii=False), texte, time.time()))
+            (day, humeur, json.dumps(acts, ensure_ascii=False), texte, time.time()),
+        )
     return get(day)
 
 
 def month(m: str) -> dict[str, dict]:
     if not re.match(r"^\d{4}-\d{2}$", m or ""):
         raise JournalError("mois invalide")
-    return {r["jour"]: {"humeur": r["humeur"], "rempli": True, "activites": json.loads(r["activites"] or "[]")}
-            for r in db.conn().execute("SELECT jour, humeur, activites FROM journal WHERE jour LIKE ?", (m + "-%",))}
+    return {
+        r["jour"]: {"humeur": r["humeur"], "rempli": True, "activites": json.loads(r["activites"] or "[]")}
+        for r in db.conn().execute("SELECT jour, humeur, activites FROM journal WHERE jour LIKE ?", (m + "-%",))
+    }
 
 
 def search(q: str) -> list[dict]:
@@ -104,8 +106,13 @@ def search(q: str) -> list[dict]:
         t = r["texte"]
         i = t.lower().find(q.lower())
         start = max(0, i - 50)
-        out.append({"jour": r["jour"], "humeur": r["humeur"],
-                    "extrait": ("…" if start else "") + t[start:i + len(q) + 80] + ("…" if i + len(q) + 80 < len(t) else "")})
+        out.append(
+            {
+                "jour": r["jour"],
+                "humeur": r["humeur"],
+                "extrait": ("…" if start else "") + t[start : i + len(q) + 80] + ("…" if i + len(q) + 80 < len(t) else ""),
+            }
+        )
     return out
 
 
@@ -154,7 +161,7 @@ def unlocked(token: str | None) -> bool:
     with _tlock:
         last = _tokens.get(h)
         if last and now - last < LOCK_IDLE:
-            _tokens[h] = now                     # chaque action prolonge le déverrouillage
+            _tokens[h] = now  # chaque action prolonge le déverrouillage
             return True
         _tokens.pop(h, None)
     return False

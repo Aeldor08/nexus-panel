@@ -7,6 +7,7 @@ install() (appelé au démarrage) :
 - capte les journaux « logging » de niveau WARNING et plus (uvicorn, bibliothèques).
 Les 80 dernières sont affichées dans la fenêtre « Santé de NEXUS ».
 """
+
 from __future__ import annotations
 
 import collections
@@ -28,7 +29,7 @@ def noter(source: str, message: str, niveau: str = "erreur") -> None:
     if not message:
         return
     with _lock:
-        if ERREURS and ERREURS[-1]["message"] == message[:500]:       # même message répété : compteur
+        if ERREURS and ERREURS[-1]["message"] == message[:500]:  # même message répété : compteur
             ERREURS[-1]["n"] += 1
             ERREURS[-1]["t"] = time.time()
             return
@@ -111,12 +112,13 @@ def install() -> None:
     def crochet(t, v, tb):
         noter("python", "".join(traceback.format_exception_only(t, v)).strip())
         ancien(t, v, tb)
+
     sys.excepthook = crochet
 
     ancien_fil = threading.excepthook
 
     def crochet_fil(args):
-        noter(f"fil {args.thread.name if args.thread else '?'}",
-              "".join(traceback.format_exception_only(args.exc_type, args.exc_value)).strip())
+        noter(f"fil {args.thread.name if args.thread else '?'}", "".join(traceback.format_exception_only(args.exc_type, args.exc_value)).strip())
         ancien_fil(args)
+
     threading.excepthook = crochet_fil

@@ -34,20 +34,28 @@ PROFILES_DIR = paths.PROFILES_DIR
 
 FORMAT_VERSION = 1
 MODES = ("terminal", "sentinelle")
-OUVERTURES = ("fondu", "cercle", "tele")   # fin de transition : fondu, ouverture en rond, vieille télé qui s'allume
+OUVERTURES = ("fondu", "cercle", "tele")  # fin de transition : fondu, ouverture en rond, vieille télé qui s'allume
 DEFAULT_ID = "defaut"
-MAX_TOTAL = 5 * 1024 * 1024          # 5 Mo pour tout le profil
-MAX_CSS = 256 * 1024                 # 256 Ko pour style.css
-MAX_JSON = 16 * 1024                 # 16 Ko pour profil.json
+MAX_TOTAL = 5 * 1024 * 1024  # 5 Mo pour tout le profil
+MAX_CSS = 256 * 1024  # 256 Ko pour style.css
+MAX_JSON = 16 * 1024  # 16 Ko pour profil.json
 MAX_FILES = 60
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,39}$")
 HEX_RE = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 
 # Types autorisés dans assets/ (et type MIME servi)
 ASSET_TYPES = {
-    ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif",
-    ".webp": "image/webp", ".avif": "image/avif", ".svg": "image/svg+xml",
-    ".woff2": "font/woff2", ".woff": "font/woff", ".ttf": "font/ttf", ".otf": "font/otf",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".avif": "image/avif",
+    ".svg": "image/svg+xml",
+    ".woff2": "font/woff2",
+    ".woff": "font/woff",
+    ".ttf": "font/ttf",
+    ".otf": "font/otf",
 }
 # Fichiers tolérés à la racine du profil en plus de profil.json et style.css (jamais servis)
 DOC_FILES = {".md", ".txt"}
@@ -92,12 +100,14 @@ _FORBIDDEN = [
 def _decode_escapes(css: str) -> str:
     """Retire les échappements CSS (\\75 rl(…) = url(…)) pour qu'ils ne cachent rien à l'analyse.
     Les guillemets, barres obliques inverses et retours à la ligne échappés sont conservés."""
+
     def hex_sub(m: re.Match) -> str:
         cp = int(m.group(1), 16)
         if cp == 0 or cp > 0x10FFFF or 0xD800 <= cp <= 0xDFFF:
             return "\ufffd"
         ch = chr(cp)
         return m.group(0) if ch in "\"'\\\n\r\f" else ch
+
     css = _HEX_ESC.sub(hex_sub, css)
     return _CHAR_ESC.sub(lambda m: m.group(0) if m.group(1) in "\"'\\" else m.group(1), css)
 
@@ -145,6 +155,7 @@ def analyze_css(css: str, assets: set[str] | None) -> tuple[str, list[str]]:
             return f'url("{PurePosixPath(ref.strip().replace(chr(92), "/"))}")'
         problems.append(f"ligne {_line(text, m.start())} : {why}")
         return "none"
+
     text = _URL.sub(url_sub, text)
 
     # 2. chaînes qui contiennent une adresse (contournement d'url() par @font-face src, etc.)
@@ -208,7 +219,7 @@ def _check_meta(raw: bytes) -> tuple[dict | None, list[str], list[str]]:
     }
     modes = data.get("modes")
     if not isinstance(modes, list) or not modes:
-        errors.append("champ « modes » manquant : liste parmi \"terminal\" et \"sentinelle\" (ex. [\"terminal\", \"sentinelle\"])")
+        errors.append('champ « modes » manquant : liste parmi "terminal" et "sentinelle" (ex. ["terminal", "sentinelle"])')
         modes = []
     bad = [m for m in modes if m not in MODES]
     if bad:
@@ -222,7 +233,7 @@ def _check_meta(raw: bytes) -> tuple[dict | None, list[str], list[str]]:
     apercu = data.get("apercu") or {}
     couleurs, miniature = [], None
     if not isinstance(apercu, dict):
-        errors.append("champ « apercu » : un objet est attendu, ex. {\"couleurs\": [\"#101010\", \"#00ff9c\"]}")
+        errors.append('champ « apercu » : un objet est attendu, ex. {"couleurs": ["#101010", "#00ff9c"]}')
     else:
         c = apercu.get("couleurs") or []
         if not isinstance(c, list) or len(c) > 5 or not all(isinstance(x, str) and HEX_RE.match(x) for x in c):
@@ -238,7 +249,7 @@ def _check_meta(raw: bytes) -> tuple[dict | None, list[str], list[str]]:
     meta["animations"] = None
     if anim is not None:
         if not isinstance(anim, dict):
-            errors.append("champ « animations » : un objet est attendu, ex. {\"intro_ms\": 6000}")
+            errors.append('champ « animations » : un objet est attendu, ex. {"intro_ms": 6000}')
         else:
             out_a = {}
             for key, lo, hi in (("intro_ms", 0, 10000), ("transition_ms", 300, 5000)):
@@ -253,7 +264,7 @@ def _check_meta(raw: bytes) -> tuple[dict | None, list[str], list[str]]:
                     errors.append("animations.remplace_transition : true ou false")
                 else:
                     out_a["remplace_transition"] = anim["remplace_transition"]
-            if "ouverture" in anim:                    # comment la page de garde laisse place au sommaire
+            if "ouverture" in anim:  # comment la page de garde laisse place au sommaire
                 if anim["ouverture"] not in OUVERTURES:
                     errors.append(f"animations.ouverture : {', '.join(OUVERTURES)}")
                 else:
@@ -268,9 +279,10 @@ def _check_meta(raw: bytes) -> tuple[dict | None, list[str], list[str]]:
     meta["panel_min_version"] = None
     if pmv is not None:
         if not isinstance(pmv, str) or not re.fullmatch(r"\d+\.\d+\.\d+", pmv.strip()):
-            errors.append("champ « panel_min_version » : numéro de version du panel, ex. \"1.0.0\"")
+            errors.append('champ « panel_min_version » : numéro de version du panel, ex. "1.0.0"')
         else:
             import version as _version
+
             cur = _version.current()
             if tuple(int(x) for x in pmv.split(".")) > tuple(int(x) for x in (re.findall(r"\d+", cur) + ["0", "0", "0"])[:3]):
                 errors.append(f"ce profil demande NEXUS {pmv} ou plus récent (installé : {cur}) : mets le panel à jour")
@@ -340,7 +352,7 @@ def validate_dir(folder: Path, strict: bool = True) -> dict:
     if not pj.is_file():
         errors.append("profil.json manquant")
     else:
-        meta, e, w = _check_meta(pj.read_bytes()[:MAX_JSON + 1])
+        meta, e, w = _check_meta(pj.read_bytes()[: MAX_JSON + 1])
         errors += e
         warnings += w
         res["meta"] = meta
@@ -392,7 +404,7 @@ class ProfileLibrary:
     def __init__(self, root: Path = PROFILES_DIR) -> None:
         self.root = root
         self._lock = threading.Lock()
-        self._cache: dict[str, tuple[str, dict]] = {}     # id -> (signature, résultat de validation)
+        self._cache: dict[str, tuple[str, dict]] = {}  # id -> (signature, résultat de validation)
 
     # -- lecture -----------------------------------------------------------------
     def _signature(self, folder: Path) -> str:
@@ -408,8 +420,7 @@ class ProfileLibrary:
     def _folders(self) -> list[Path]:
         if not self.root.is_dir():
             return []
-        return sorted(p for p in self.root.iterdir()
-                      if p.is_dir() and not p.name.startswith(("_", ".")) and not p.is_symlink())
+        return sorted(p for p in self.root.iterdir() if p.is_dir() and not p.name.startswith(("_", ".")) and not p.is_symlink())
 
     def _load(self, folder: Path) -> tuple[str, dict]:
         sig = self._signature(folder)
@@ -419,8 +430,7 @@ class ProfileLibrary:
         res = validate_dir(folder, strict=False)
         if folder.name == DEFAULT_ID or not ID_RE.match(folder.name):
             res["ok"] = False
-            res["errors"].append(f"nom de dossier « {folder.name} » invalide ou réservé "
-                                 "(minuscules, chiffres et tirets, 40 caractères max, pas « defaut »)")
+            res["errors"].append(f"nom de dossier « {folder.name} » invalide ou réservé (minuscules, chiffres et tirets, 40 caractères max, pas « defaut »)")
         self._cache[folder.name] = (sig, res)
         return sig, res
 
@@ -441,22 +451,42 @@ class ProfileLibrary:
                     continue
                 m = res["meta"]
                 mini = m["apercu"]["miniature"]
-                profiles.append({
-                    "id": folder.name, "nom": m["nom"], "auteur": m["auteur"], "version": m["version"],
-                    "description": m["description"], "modes": m["modes"], "couleurs": m["apercu"]["couleurs"],
-                    "miniature": f"/profils/{folder.name}/{mini}?v={sig}" if mini else None,
-                    "css": f"/profils/{folder.name}/style.css?v={sig}", "avertissements": res["warnings"][:12],
-                    "animations": m.get("animations"),
-                })
+                profiles.append(
+                    {
+                        "id": folder.name,
+                        "nom": m["nom"],
+                        "auteur": m["auteur"],
+                        "version": m["version"],
+                        "description": m["description"],
+                        "modes": m["modes"],
+                        "couleurs": m["apercu"]["couleurs"],
+                        "miniature": f"/profils/{folder.name}/{mini}?v={sig}" if mini else None,
+                        "css": f"/profils/{folder.name}/style.css?v={sig}",
+                        "avertissements": res["warnings"][:12],
+                        "animations": m.get("animations"),
+                    }
+                )
             for gone in set(self._cache) - names:
                 del self._cache[gone]
         profiles.sort(key=lambda p: p["nom"].lower())
-        default = {"id": DEFAULT_ID, "nom": "Défaut", "auteur": "NEXUS", "version": "intégré",
-                   "description": "L'apparence d'origine du mode. Toujours disponible.",
-                   "modes": list(MODES), "couleurs": [], "miniature": None, "css": None, "avertissements": [],
-                   "integre": True}
-        return {"profils": [default] + profiles, "invalides": invalid,
-                "limites": {"total_mo": MAX_TOTAL // 1048576, "css_ko": MAX_CSS // 1024, "fichiers": MAX_FILES}}
+        default = {
+            "id": DEFAULT_ID,
+            "nom": "Défaut",
+            "auteur": "NEXUS",
+            "version": "intégré",
+            "description": "L'apparence d'origine du mode. Toujours disponible.",
+            "modes": list(MODES),
+            "couleurs": [],
+            "miniature": None,
+            "css": None,
+            "avertissements": [],
+            "integre": True,
+        }
+        return {
+            "profils": [default] + profiles,
+            "invalides": invalid,
+            "limites": {"total_mo": MAX_TOTAL // 1048576, "css_ko": MAX_CSS // 1024, "fichiers": MAX_FILES},
+        }
 
     def _valid(self, pid: str) -> dict | None:
         if not ID_RE.match(pid or "") or pid == DEFAULT_ID:
@@ -484,7 +514,7 @@ class ProfileLibrary:
         header = f"/* Profil NEXUS « {res['meta']['nom']} » — CSS vérifié et nettoyé par le serveur */\n"
         # Adresses des fichiers versionnées (?v=…) : le navigateur les garde en cache, et une nouvelle version
         # du profil change l'adresse (jamais d'image périmée)
-        css = re.sub(r"""url\((["']?)(assets/[^"'()?]+)\1\)""", lambda m: f'url({m.group(1)}{m.group(2)}?v={sig}{m.group(1)})', res["css"])
+        css = re.sub(r"""url\((["']?)(assets/[^"'()?]+)\1\)""", lambda m: f"url({m.group(1)}{m.group(2)}?v={sig}{m.group(1)})", res["css"])
         return header + css
 
     def asset(self, pid: str, rel: str) -> tuple[Path, str] | None:
@@ -509,10 +539,10 @@ class ProfileLibrary:
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
             z.write(folder / "profil.json", f"{pid}/profil.json")
-            z.writestr(f"{pid}/style.css", res["css"])       # la version vérifiée
+            z.writestr(f"{pid}/style.css", res["css"])  # la version vérifiée
             for a in res["assets"]:
                 z.write(folder / a, f"{pid}/{a}")
-            for doc in sorted(folder.iterdir()):           # licences des polices, LISEZMOI… (jamais servis)
+            for doc in sorted(folder.iterdir()):  # licences des polices, LISEZMOI… (jamais servis)
                 if doc.is_file() and not doc.is_symlink() and doc.suffix.lower() in DOC_FILES and doc.stat().st_size <= 256 * 1024:
                     z.write(doc, f"{pid}/{doc.name}")
         return f"profil-{pid}.zip", buf.getvalue()

@@ -4,6 +4,7 @@ des tâches) : pid, pid parent, nom, temps processeur cumulé (s) et mémoire (w
 Environ 100 fois plus rapide que d'interroger chaque processus avec psutil (qui ouvre chaque processus, et
 échoue lentement sur ceux qui sont protégés). Sans Windows, ou si l'appel échoue : None (l'appelant revient à psutil).
 """
+
 from __future__ import annotations
 
 import ctypes
@@ -12,13 +13,13 @@ import sys
 
 _SYSTEM_PROCESS_INFORMATION = 5
 _STATUS_INFO_LENGTH_MISMATCH = 0xC0000004
-_buf_taille = 1 << 20                      # agrandi tout seul si besoin (et gardé pour les appels suivants)
+_buf_taille = 1 << 20  # agrandi tout seul si besoin (et gardé pour les appels suivants)
 
 if sys.platform == "win32" and struct.calcsize("P") == 8:
     _ntdll = ctypes.WinDLL("ntdll")
     _ntdll.NtQuerySystemInformation.restype = ctypes.c_long
     _ntdll.NtQuerySystemInformation.argtypes = [ctypes.c_ulong, ctypes.c_void_p, ctypes.c_ulong, ctypes.POINTER(ctypes.c_ulong)]
-else:                                      # (le panel ne tourne que sous Windows 64 bits)
+else:  # (le panel ne tourne que sous Windows 64 bits)
     _ntdll = None
 
 # Décalages dans SYSTEM_PROCESS_INFORMATION (Windows 64 bits)
@@ -51,12 +52,12 @@ def processus() -> list[tuple[int, int, str, float, int]] | None:
         while True:
             nxt = struct.unpack_from("<I", brut, off + _O_NEXT)[0]
             pid = lire_q(brut, off + _O_PID)[0]
-            if pid:                                         # (pid 0 : processus inactif du système)
+            if pid:  # (pid 0 : processus inactif du système)
                 longueur = struct.unpack_from("<H", brut, off + _O_NAME_LEN)[0]
                 ptr = lire_q(brut, off + _O_NAME_PTR)[0]
                 if ptr and longueur:
-                    debut = ptr - base                      # le nom est dans le même tampon
-                    nom = brut[debut:debut + longueur].decode("utf-16-le", "replace")
+                    debut = ptr - base  # le nom est dans le même tampon
+                    nom = brut[debut : debut + longueur].decode("utf-16-le", "replace")
                 else:
                     nom = "System" if pid == 4 else f"pid {pid}"
                 cpu = (lire_q(brut, off + _O_USER)[0] + lire_q(brut, off + _O_KERNEL)[0]) / 1e7

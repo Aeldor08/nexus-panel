@@ -6,6 +6,7 @@ philibert (éclosion, évolutions, vétérinaire, vacances de l'iguane).
 Une ligne JSON par évènement dans data/activite.jsonl (données personnelles : hors Git, jamais partagé).
 Jamais de secret dans le journal : ni mot de passe, ni jeton, ni contenu privé.
 """
+
 from __future__ import annotations
 
 import json
@@ -15,16 +16,14 @@ import time
 import store
 
 FICHIER = store.DATA_DIR / "activite.jsonl"
-MAX_LIGNES, GARDER = 3000, 2000          # au-delà de 3000 lignes, on garde les 2000 plus récentes
-CATEGORIES = {"deck": "Deck", "maj": "Mises à jour", "appareil": "Appareils", "processus": "Processus",
-              "focus": "Focus", "philibert": "Philibert"}
+MAX_LIGNES, GARDER = 3000, 2000  # au-delà de 3000 lignes, on garde les 2000 plus récentes
+CATEGORIES = {"deck": "Deck", "maj": "Mises à jour", "appareil": "Appareils", "processus": "Processus", "focus": "Focus", "philibert": "Philibert"}
 _lock = threading.Lock()
-_n = None                                # nombre de lignes (compté à la première écriture)
-_vus: dict[str, float] = {}              # anti-répétition (ex. un appareil non appairé qui réessaie en boucle)
+_n = None  # nombre de lignes (compté à la première écriture)
+_vus: dict[str, float] = {}  # anti-répétition (ex. un appareil non appairé qui réessaie en boucle)
 
 
-def noter(categorie: str, action: str, resultat: str = "ok", detail: str = "", ip: str = "", source: str = "web",
-          unique_s: float = 0) -> None:
+def noter(categorie: str, action: str, resultat: str = "ok", detail: str = "", ip: str = "", source: str = "web", unique_s: float = 0) -> None:
     """Ajoute un évènement. Ne lève jamais d'exception (le journal ne doit rien casser).
     unique_s : ignore le même évènement (catégorie, action, ip) répété dans ce délai."""
     global _n
@@ -35,9 +34,18 @@ def noter(categorie: str, action: str, resultat: str = "ok", detail: str = "", i
             if now - _vus.get(cle, 0) < unique_s:
                 return
             _vus[cle] = now
-        ligne = json.dumps({"t": round(now, 1), "cat": categorie if categorie in CATEGORIES else "deck",
-                            "action": str(action)[:80], "resultat": str(resultat)[:20], "detail": str(detail)[:240],
-                            "ip": str(ip or "")[:45], "source": str(source or "")[:12]}, ensure_ascii=False)
+        ligne = json.dumps(
+            {
+                "t": round(now, 1),
+                "cat": categorie if categorie in CATEGORIES else "deck",
+                "action": str(action)[:80],
+                "resultat": str(resultat)[:20],
+                "detail": str(detail)[:240],
+                "ip": str(ip or "")[:45],
+                "source": str(source or "")[:12],
+            },
+            ensure_ascii=False,
+        )
         with _lock:
             FICHIER.parent.mkdir(parents=True, exist_ok=True)
             if _n is None:

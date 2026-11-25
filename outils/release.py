@@ -13,6 +13,7 @@ push → gh release create. Avec .venv-build et Inno Setup 6 (sinon --sans-natif
 NEXUS-X.Y.Z-Setup.exe (+ .sha256, mises à jour automatiques des versions installées) va dans la même release, et
 NEXUS-Portable-X.Y.Z.zip dans une pré-release « portable-X.Y.Z » à part. Rien n'est poussé si une étape échoue.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -30,11 +31,14 @@ BASE = Path(__file__).resolve().parents[1]
 DIST = BASE / "dist"
 SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 # Jamais dans une archive, même s'ils étaient suivis par erreur
-INTERDITS = re.compile(r"(^|/)(data|logs|versions|partage|maj|sauvegardes-maj|sauvegardes|backups|reference|references|"
-                       r"\.venv|venv|runtime|runtime\.neuf|runtime\.tmp|dist|__pycache__|LibreHardwareMonitor)(/|$)|"
-                       r"(^|/)(config|deck|jeux|fan_names|runtime)\.json$|"
-                       r"(^|/)\.env|\.(db|sqlite3?|log|bak|pem|key|pfx|p12|lnk)$", re.I)
-HORS_ARCHIVE = (".github/",)               # utile au dépôt seulement
+INTERDITS = re.compile(
+    r"(^|/)(data|logs|versions|partage|maj|sauvegardes-maj|sauvegardes|backups|reference|references|"
+    r"\.venv|venv|runtime|runtime\.neuf|runtime\.tmp|dist|__pycache__|LibreHardwareMonitor)(/|$)|"
+    r"(^|/)(config|deck|jeux|fan_names|runtime)\.json$|"
+    r"(^|/)\.env|\.(db|sqlite3?|log|bak|pem|key|pfx|p12|lnk)$",
+    re.I,
+)
+HORS_ARCHIVE = (".github/",)  # utile au dépôt seulement
 
 
 class Arret(Exception):
@@ -42,8 +46,7 @@ class Arret(Exception):
 
 
 def _cmd(*args, capture=True, check=True, env=None, timeout=1800) -> str:
-    r = subprocess.run(list(args), cwd=BASE, capture_output=capture, text=True, encoding="utf-8", errors="replace",
-                       env=env, timeout=timeout)
+    r = subprocess.run(list(args), cwd=BASE, capture_output=capture, text=True, encoding="utf-8", errors="replace", env=env, timeout=timeout)
     if check and r.returncode != 0:
         sortie = ((r.stdout or "") + (r.stderr or "")).strip()
         raise Arret(f"échec de « {' '.join(str(a) for a in args[:3])} … » :\n{sortie[-3000:]}")
@@ -105,34 +108,38 @@ def titre_release(ver: str, titre: str = "") -> str:
     return f"NEXUS {ver} — {titre}" if titre else f"NEXUS {ver}"
 
 
-def notes_release(notes: str, ver: str, depot: str, taille_mo: float, installeur_mo: float = 0.0,
-                  portable: bool = False) -> str:
+def notes_release(notes: str, ver: str, depot: str, taille_mo: float, installeur_mo: float = 0.0, portable: bool = False) -> str:
     """Notes de la release GitHub : d'abord un encadré « Télécharger » (lien direct vers l'archive et installation en
     trois lignes, pour qui arrive sur la page), puis le CHANGELOG de la version, puis la vérification SHA256."""
     nom = f"NEXUS-{ver}.zip"
     lien = f"https://github.com/{depot}/releases/download/v{ver}/{nom}"
     quoi = "version source " if installeur_mo else "c'est le seul fichier à prendre "
-    tete = (f"## ⬇️ Télécharger NEXUS {ver}\n\n"
-            f"**[{nom}]({lien})** ({taille_mo:.1f} Mo, Windows 10/11) : {quoi}"
-            "(pas « Source code »).\n\n"
-            "1. Clic droit sur le zip → **Extraire tout…**, puis range le dossier (par exemple dans Documents).\n"
-            "2. Double-clique sur **`installer.bat`** : rien d'autre à installer, NEXUS apporte son propre Python "
-            "(il faut Internet la première fois).\n"
-            "3. Ouvre NEXUS avec le raccourci du Bureau : son icône apparaît près de l'horloge.\n\n"
-            "Déjà installé ? Pas besoin de retélécharger : NEXUS propose la mise à jour tout seul "
-            "(**⚙ Réglages → Version et mises à jour**).\n\n")
+    tete = (
+        f"## ⬇️ Télécharger NEXUS {ver}\n\n"
+        f"**[{nom}]({lien})** ({taille_mo:.1f} Mo, Windows 10/11) : {quoi}"
+        "(pas « Source code »).\n\n"
+        "1. Clic droit sur le zip → **Extraire tout…**, puis range le dossier (par exemple dans Documents).\n"
+        "2. Double-clique sur **`installer.bat`** : rien d'autre à installer, NEXUS apporte son propre Python "
+        "(il faut Internet la première fois).\n"
+        "3. Ouvre NEXUS avec le raccourci du Bureau : son icône apparaît près de l'horloge.\n\n"
+        "Déjà installé ? Pas besoin de retélécharger : NEXUS propose la mise à jour tout seul "
+        "(**⚙ Réglages → Version et mises à jour**).\n\n"
+    )
     if installeur_mo:
         setup = f"NEXUS-{ver}-Setup.exe"
-        tete += (f"**Application Windows** : **[{setup}](https://github.com/{depot}/releases/download/v{ver}/{setup})** "
-                 f"({installeur_mo:.1f} Mo) — installation en un clic (sans droits administrateur), fenêtre native, "
-                 "**mises à jour automatiques**. Non signé : si Windows SmartScreen s'affiche, "
-                 "*Informations complémentaires → Exécuter quand même*.\n\n")
+        tete += (
+            f"**Application Windows** : **[{setup}](https://github.com/{depot}/releases/download/v{ver}/{setup})** "
+            f"({installeur_mo:.1f} Mo) — installation en un clic (sans droits administrateur), fenêtre native, "
+            "**mises à jour automatiques**. Non signé : si Windows SmartScreen s'affiche, "
+            "*Informations complémentaires → Exécuter quand même*.\n\n"
+        )
     if portable:
-        tete += (f"**Version portable** (sans installation) : [NEXUS-Portable-{ver}.zip]"
-                 f"(https://github.com/{depot}/releases/tag/portable-{ver}) — décompresse et lance `NEXUS.exe`.\n\n")
+        tete += (
+            f"**Version portable** (sans installation) : [NEXUS-Portable-{ver}.zip]"
+            f"(https://github.com/{depot}/releases/tag/portable-{ver}) — décompresse et lance `NEXUS.exe`.\n\n"
+        )
     tete += "---\n\n"
-    return (tete + notes + f"\n\nVérifier l'archive : `certutil -hashfile {nom} SHA256` doit donner "
-            "le contenu du fichier `.sha256`.\n")
+    return tete + notes + f"\n\nVérifier l'archive : `certutil -hashfile {nom} SHA256` doit donner le contenu du fichier `.sha256`.\n"
 
 
 def dater_changelog(ver: str, date: str, titre: str = "") -> None:
@@ -141,7 +148,7 @@ def dater_changelog(ver: str, date: str, titre: str = "") -> None:
     m = re.search(r"^## \[Non publié\][^\n]*\n(.*?)(?=^## \[|\Z)", t, re.M | re.S)
     if not m or not re.search(r"^\s*- ", m.group(1), re.M):
         raise Arret("CHANGELOG.md : la section « ## [Non publié] » est vide. Note les changements avant de publier.")
-    t = t[:m.start()] + f"## [Non publié]\n\n{entete_version(ver, date, titre)}\n{m.group(1)}" + t[m.end():]
+    t = t[: m.start()] + f"## [Non publié]\n\n{entete_version(ver, date, titre)}\n{m.group(1)}" + t[m.end() :]
     p.write_text(t, encoding="utf-8", newline="\n")
 
 
@@ -175,7 +182,7 @@ def construire_archive(ver: str, depot: str, fichiers: list[str], dest: Path = D
                 z.write(src, f"{nom}/{rel}")
             pris += 1
         if depot:
-            z.writestr(f"{nom}/DEPOT", depot + "\n")       # dépôt surveillé proposé à l'installation
+            z.writestr(f"{nom}/DEPOT", depot + "\n")  # dépôt surveillé proposé à l'installation
     h = hashlib.sha256(archive.read_bytes()).hexdigest()
     somme.write_text(f"{h}  {archive.name}\n", encoding="utf-8", newline="\n")
     print(f"  {archive.name} : {pris} fichiers, {archive.stat().st_size / 1e6:.1f} Mo, SHA256 {h[:16]}…")
@@ -197,11 +204,21 @@ def verifier_archive(archive: Path, ver: str) -> None:
         if any(not n.startswith(racine) for n in noms):
             raise Arret("archive : tout doit être dans un seul dossier NEXUS-x.y.z/")
         for n in noms:
-            rel = n[len(racine):]
+            rel = n[len(racine) :]
             if INTERDITS.search(rel) and not rel.endswith(".example.json"):
                 raise Arret(f"archive : fichier interdit {rel}")
-        for indispensable in ("VERSION", "app.py", "maj_demarrage.py", "requirements.txt", "lancer.bat", "installer.bat",
-                            "nexus.pyw", "superviseur.py", "outils/installer_python.ps1", "outils/python-prive.json"):
+        for indispensable in (
+            "VERSION",
+            "app.py",
+            "maj_demarrage.py",
+            "requirements.txt",
+            "lancer.bat",
+            "installer.bat",
+            "nexus.pyw",
+            "superviseur.py",
+            "outils/installer_python.ps1",
+            "outils/python-prive.json",
+        ):
             if racine + indispensable not in noms:
                 raise Arret(f"archive : {indispensable} manquant")
         if z.read(racine + "VERSION").decode().strip() != ver:
@@ -250,13 +267,18 @@ def main() -> int:
     ap.add_argument("--sans-publier", action="store_true", help="tout préparer sans pousser ni créer la release")
     ap.add_argument("--construire-seulement", action="store_true", help="seulement l'archive et son SHA256 (CI)")
     ap.add_argument("--depot", default="", help="propriétaire/nom écrit dans l'archive (par défaut : origin)")
-    ap.add_argument("--titre", default="", help="titre de la version (ex. « Philibert arrive ! ») : dans l'en-tête du "
-                                                "CHANGELOG (« ## [X.Y.Z] - date - titre ») et comme titre de la release GitHub")
-    ap.add_argument("--sans-natif", action="store_true",
-                    help="ne pas construire l'installeur Windows ni la version portable (.venv-build + Inno Setup 6)")
-    ap.add_argument("--branche", action="store_true",
-                    help="publier depuis une branche de release (ex. sans une fonction pas encore prête) : "
-                         "seul le tag est poussé, main n'est pas touchée")
+    ap.add_argument(
+        "--titre",
+        default="",
+        help="titre de la version (ex. « Philibert arrive ! ») : dans l'en-tête du "
+        "CHANGELOG (« ## [X.Y.Z] - date - titre ») et comme titre de la release GitHub",
+    )
+    ap.add_argument("--sans-natif", action="store_true", help="ne pas construire l'installeur Windows ni la version portable (.venv-build + Inno Setup 6)")
+    ap.add_argument(
+        "--branche",
+        action="store_true",
+        help="publier depuis une branche de release (ex. sans une fonction pas encore prête) : seul le tag est poussé, main n'est pas touchée",
+    )
     a = ap.parse_args()
     titre = verifier_titre(a.titre)
     git = outil("git")
@@ -289,10 +311,10 @@ def main() -> int:
     build_py = BASE / ".venv-build" / "Scripts" / "python.exe"
     if not a.sans_natif:
         if not build_py.is_file():
-            raise Arret("environnement de build absent (.venv-build) : lance une fois Creer-NEXUS-Portable.bat, "
-                        "ou publie avec --sans-natif")
+            raise Arret("environnement de build absent (.venv-build) : lance une fois Creer-NEXUS-Portable.bat, ou publie avec --sans-natif")
         sys.path.insert(0, str(BASE / "outils"))
         import build_native
+
         if not build_native.find_iscc():
             raise Arret("Inno Setup 6 introuvable (winget install JRSoftware.InnoSetup), ou publie avec --sans-natif")
 
@@ -321,8 +343,9 @@ def main() -> int:
         setup = setup_sha = portable = portable_sha = None
         if not a.sans_natif:
             etape("Installeur Windows et version portable")
-            r = subprocess.run([str(build_py), str(BASE / "outils" / "build_native.py"), "--installer", "--portable",
-                                "--skip-tests", "--depot", depot], cwd=BASE)
+            r = subprocess.run(
+                [str(build_py), str(BASE / "outils" / "build_native.py"), "--installer", "--portable", "--skip-tests", "--depot", depot], cwd=BASE
+            )
             if r.returncode != 0:
                 raise Arret("construction de l'installeur / du portable impossible (voir ci-dessus)")
             setup, portable = DIST / f"NEXUS-{ver}-Setup.exe", DIST / f"NEXUS-Portable-{ver}.zip"
@@ -331,30 +354,32 @@ def main() -> int:
                 if not f.is_file():
                     raise Arret(f"fichier natif manquant : {f.name}")
     except Arret:
-        _cmd(git, "tag", "-d", tag, check=False)           # pas de tag local orphelin
+        _cmd(git, "tag", "-d", tag, check=False)  # pas de tag local orphelin
         raise
     if a.sans_publier:
-        print(f"\nPrêt (non publié) : tag {tag} local, {archive.name} et {somme.name} dans dist\\."
-              + (f" Titre : « {titre_release(ver, titre)} »." if titre else ""))
+        print(
+            f"\nPrêt (non publié) : tag {tag} local, {archive.name} et {somme.name} dans dist\\."
+            + (f" Titre : « {titre_release(ver, titre)} »." if titre else "")
+        )
         return 0
     etape("Envoi sur GitHub")
     if not a.branche:
         _cmd(git, "push", "origin", "main")
-    _cmd(git, "push", "origin", tag)                       # (avec --branche : seul le tag part, pas la branche)
+    _cmd(git, "push", "origin", tag)  # (avec --branche : seul le tag part, pas la branche)
     notes_f = DIST / f"notes-{ver}.md"
-    notes_f.write_text(notes_release(notes, ver, depot, archive.stat().st_size / 1e6,
-                                     setup.stat().st_size / 1e6 if setup else 0.0, bool(portable)), encoding="utf-8")
+    notes_f.write_text(
+        notes_release(notes, ver, depot, archive.stat().st_size / 1e6, setup.stat().st_size / 1e6 if setup else 0.0, bool(portable)), encoding="utf-8"
+    )
     # Release vX.Y.Z : archive source + installeur. JAMAIS le ZIP portable ici : les versions source prennent
     # le dernier .zip de la release pour se mettre à jour.
     fichiers = [str(archive), str(somme)] + ([str(setup), str(setup_sha)] if setup else [])
     existe = subprocess.run([gh, "release", "view", tag, "--repo", depot], cwd=BASE, capture_output=True).returncode == 0
-    if existe:                                              # créée entre-temps par la CI (release.yml)
+    if existe:  # créée entre-temps par la CI (release.yml)
         _cmd(gh, "release", "upload", tag, *fichiers, "--repo", depot, "--clobber")
         if titre:
             _cmd(gh, "release", "edit", tag, "--repo", depot, "--title", titre_release(ver, titre))
     else:
-        _cmd(gh, "release", "create", tag, *fichiers, "--repo", depot, "--title", titre_release(ver, titre),
-             "--notes-file", str(notes_f), "--verify-tag")
+        _cmd(gh, "release", "create", tag, *fichiers, "--repo", depot, "--title", titre_release(ver, titre), "--notes-file", str(notes_f), "--verify-tag")
     if portable:
         # Release portable à part, en pré-version : /releases/latest (mises à jour) ne la voit jamais.
         # Tag sans « v » : le workflow build-native.yml ne se déclenche pas.
@@ -373,11 +398,27 @@ def main() -> int:
             "jamais touchées et l'ancienne version revient toute seule en cas de problème. Plus ancien, ou dossier en "
             "lecture seule : remplace `NEXUS.exe` et `_internal\\` à la main en gardant `config.json`, `data\\`, "
             "`logs\\`, `profils\\` et `actions\\`.\n\n"
-            f"SHA256 : `{portable_sha.read_text(encoding='utf-8').split()[0]}`\n", encoding="utf-8")
-        _cmd(gh, "release", "create", ptag, str(portable), str(portable_sha), "--repo", depot,
-             "--target", _cmd(git, "rev-list", "-n", "1", tag).strip(),   # un commit : GitHub refuse un tag annoté
-             "--title", f"NEXUS {ver} — version portable Windows", "--notes-file", str(pnotes),
-             "--prerelease", "--latest=false")
+            f"SHA256 : `{portable_sha.read_text(encoding='utf-8').split()[0]}`\n",
+            encoding="utf-8",
+        )
+        _cmd(
+            gh,
+            "release",
+            "create",
+            ptag,
+            str(portable),
+            str(portable_sha),
+            "--repo",
+            depot,
+            "--target",
+            _cmd(git, "rev-list", "-n", "1", tag).strip(),  # un commit : GitHub refuse un tag annoté
+            "--title",
+            f"NEXUS {ver} — version portable Windows",
+            "--notes-file",
+            str(pnotes),
+            "--prerelease",
+            "--latest=false",
+        )
     print(f"\n✔ Release {tag} publiée : https://github.com/{depot}/releases/tag/{tag}")
     return 0
 

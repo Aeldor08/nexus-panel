@@ -26,11 +26,11 @@ CONFIG_FILE = paths.CONFIG_FILE
 DECK_FILE, DECK_EXAMPLE = paths.DECK_FILE, paths.DECK_EXAMPLE
 
 sys.path.insert(0, str(BASE))
-from config import DEFAULTS          # noqa: E402  (valeurs par défaut : seuils d'alerte…)
-from deck import hash_password       # noqa: E402
+from config import DEFAULTS  # noqa: E402  (valeurs par défaut : seuils d'alerte…)
+from deck import hash_password  # noqa: E402
 
 INTERACTIVE = sys.stdin.isatty()
-ID_RE = re.compile(r"^\d{15,22}$")                     # les ID Discord sont des nombres de 17 à 20 chiffres
+ID_RE = re.compile(r"^\d{15,22}$")  # les ID Discord sont des nombres de 17 à 20 chiffres
 TOKEN_RE = re.compile(r"^[\w-]{20,}\.[\w-]{4,}\.[\w-]{20,}$")
 
 
@@ -150,13 +150,15 @@ def step_updates(previous: dict | None) -> str:
 
 def build_config(password: str, discord: dict, previous: dict | None = None, depot: str | None = None) -> dict:
     previous = previous or {}
-    alerts = {**DEFAULTS["alerts"], **(previous.get("alerts") or {})}       # garde les seuils déjà réglés
-    deck = {"password_hash": hash_password(password), "password": "",
-            "rate_limit_per_minute": (previous.get("deck") or {}).get("rate_limit_per_minute",
-                                                                       DEFAULTS["deck"]["rate_limit_per_minute"])}
+    alerts = {**DEFAULTS["alerts"], **(previous.get("alerts") or {})}  # garde les seuils déjà réglés
+    deck = {
+        "password_hash": hash_password(password),
+        "password": "",
+        "rate_limit_per_minute": (previous.get("deck") or {}).get("rate_limit_per_minute", DEFAULTS["deck"]["rate_limit_per_minute"]),
+    }
     agenda_cfg = {**DEFAULTS["agenda"], **(previous.get("agenda") or {})}  # garde les réglages des rappels
     journal_cfg = {**DEFAULTS["journal"], **(previous.get("journal") or {})}  # garde les activités choisies
-    cfg = dict(previous)                     # garde aussi les autres sections (mises à jour, numéro de schéma…)
+    cfg = dict(previous)  # garde aussi les autres sections (mises à jour, numéro de schéma…)
     cfg.update({"discord": discord, "alerts": alerts, "agenda": agenda_cfg, "journal": journal_cfg, "deck": deck})
     if depot is not None:
         cfg["mises_a_jour"] = {**DEFAULTS["mises_a_jour"], **(previous.get("mises_a_jour") or {}), "depot": depot}

@@ -20,7 +20,9 @@ import store
 DB_FILE = store.DATA_DIR / "nexus.db"
 
 MIGRATIONS: list[tuple[int, str]] = [
-    (1, """
+    (
+        1,
+        """
     CREATE TABLE reglages (cle TEXT PRIMARY KEY, valeur TEXT NOT NULL);
 
     -- Souvenirs : une ligne par photo (fichiers dans data/souvenirs/)
@@ -53,8 +55,11 @@ MIGRATIONS: list[tuple[int, str]] = [
         jour TEXT PRIMARY KEY, humeur TEXT NOT NULL DEFAULT '', activites TEXT NOT NULL DEFAULT '[]',
         texte TEXT NOT NULL DEFAULT '', modifie REAL NOT NULL
     );
-    """),
-    (2, """
+    """,
+    ),
+    (
+        2,
+        """
     -- Souvenirs : notes façon post-it rattachées à un jour (épinglée = visible aussi les jours suivants)
     CREATE TABLE souvenir_notes (
         id TEXT PRIMARY KEY, jour TEXT NOT NULL, texte TEXT NOT NULL DEFAULT '',
@@ -69,13 +74,17 @@ MIGRATIONS: list[tuple[int, str]] = [
         x REAL NOT NULL, y REAL NOT NULL, largeur REAL NOT NULL, hauteur REAL NOT NULL, z INTEGER NOT NULL,
         PRIMARY KEY (jour, element)
     );
-    """),
+    """,
+    ),
     (3, "_disposition_photos_existantes"),
-    (4, """
+    (
+        4,
+        """
     -- Post-it : couleur d'écriture (« auto » = foncée sur fond clair, claire sur fond sombre) et police
     ALTER TABLE souvenir_notes ADD COLUMN encre TEXT NOT NULL DEFAULT 'auto';
     ALTER TABLE souvenir_notes ADD COLUMN fonte TEXT NOT NULL DEFAULT 'theme'
-    """),
+    """,
+    ),
 ]
 VERSION = MIGRATIONS[-1][0]
 
@@ -83,13 +92,17 @@ VERSION = MIGRATIONS[-1][0]
 def _disposition_photos_existantes(con: sqlite3.Connection) -> None:
     """Migration 3 : chaque jour qui a déjà des photos reçoit une disposition automatique (grille)."""
     import mur
+
     days: dict[str, list] = {}
     for r in con.execute("SELECT id, jour, largeur, hauteur FROM photos ORDER BY jour, ajoute"):
         days.setdefault(r["jour"], []).append(("p:" + r["id"], *mur.taille_photo(r["largeur"], r["hauteur"])))
     for day, items in days.items():
         for eid, e in mur.grille(items).items():
-            con.execute("INSERT OR IGNORE INTO souvenir_disposition(jour, element, x, y, largeur, hauteur, z)"
-                        " VALUES(?,?,?,?,?,?,?)", (day, eid, e["x"], e["y"], e["w"], e["h"], e["z"]))
+            con.execute(
+                "INSERT OR IGNORE INTO souvenir_disposition(jour, element, x, y, largeur, hauteur, z) VALUES(?,?,?,?,?,?,?)",
+                (day, eid, e["x"], e["y"], e["w"], e["h"], e["z"]),
+            )
+
 
 _local = threading.local()
 _init_lock = threading.Lock()
@@ -115,7 +128,7 @@ def migrate() -> int:
         try:
             _migrer(con, existed)
         finally:
-            con.close()                          # (aussi si une migration échoue)
+            con.close()  # (aussi si une migration échoue)
         _ready = True
         return VERSION
 
@@ -130,10 +143,10 @@ def _migrer(con: sqlite3.Connection, existed: bool) -> None:
     for v, sql in todo:
         con.execute("BEGIN")
         try:
-            if sql.startswith("_"):              # étape en Python (ex. calcul de dispositions)
+            if sql.startswith("_"):  # étape en Python (ex. calcul de dispositions)
                 globals()[sql](con)
             else:
-                for statement in _split(sql):    # dans la transaction (executescript la validerait)
+                for statement in _split(sql):  # dans la transaction (executescript la validerait)
                     con.execute(statement)
             con.execute(f"PRAGMA user_version = {v}")
             con.execute("COMMIT")
@@ -159,6 +172,7 @@ def conn() -> sqlite3.Connection:
 
 def get_setting(key: str, default=None):
     import json
+
     row = conn().execute("SELECT valeur FROM reglages WHERE cle = ?", (key,)).fetchone()
     if row is None:
         return default
@@ -170,5 +184,5 @@ def get_setting(key: str, default=None):
 
 def set_setting(key: str, value) -> None:
     import json
-    conn().execute("INSERT INTO reglages(cle, valeur) VALUES(?, ?) ON CONFLICT(cle) DO UPDATE SET valeur = excluded.valeur",
-                   (key, json.dumps(value)))
+
+    conn().execute("INSERT INTO reglages(cle, valeur) VALUES(?, ?) ON CONFLICT(cle) DO UPDATE SET valeur = excluded.valeur", (key, json.dumps(value)))
