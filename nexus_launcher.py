@@ -281,7 +281,7 @@ class _SetupApi:
                     depot = ""
 
             try:
-                cfg = json.loads(paths.CONFIG_FILE.read_text(encoding="utf-8"))
+                cfg = json.loads(paths.CONFIG_FILE.read_text(encoding="utf-8-sig"))
                 if not isinstance(cfg, dict):
                     cfg = {}
             except (OSError, ValueError):

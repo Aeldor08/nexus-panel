@@ -119,7 +119,7 @@ def load(force: bool = False) -> dict:
     user = {}
     if CONFIG_FILE.exists():
         try:
-            user = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+            user = json.loads(CONFIG_FILE.read_text(encoding="utf-8-sig"))
             if not isinstance(user, dict):
                 raise ValueError("le fichier doit contenir un objet JSON")
         except (OSError, ValueError) as exc:
@@ -146,7 +146,7 @@ def ranger_secrets() -> None:
     (appelé au démarrage et après chaque assistant de configuration). Sans gestionnaire : rien ne change.
     Bot désactivé sans jeton : l'ancienne entrée de Windows est effacée."""
     try:
-        data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+        data = json.loads(CONFIG_FILE.read_text(encoding="utf-8-sig"))
     except (OSError, ValueError):
         return
     d = data.get("discord")
@@ -179,7 +179,7 @@ def migrer() -> int:
     if not CONFIG_FILE.exists():
         return CONFIG_VERSION
     try:
-        data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+        data = json.loads(CONFIG_FILE.read_text(encoding="utf-8-sig"))
     except (OSError, ValueError):
         return 0  # illisible : load() le signale, on n'y touche pas
     cur = int(data.get("config_version") or 0)

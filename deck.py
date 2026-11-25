@@ -252,7 +252,7 @@ class Deck:
     def load(self) -> None:
         self.warnings = []
         try:
-            raw = json.loads(DECK_FILE.read_text(encoding="utf-8"))
+            raw = json.loads(DECK_FILE.read_text(encoding="utf-8-sig"))  # (BOM : Bloc-notes, PowerShell)
             items = raw.get("buttons", []) if isinstance(raw, dict) else raw
         except (OSError, ValueError) as exc:
             self.warnings.append(f"deck.json illisible : {exc}")

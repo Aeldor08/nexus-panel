@@ -177,7 +177,7 @@ def _config_set(changes: dict) -> None:
     data = {}
     if path.exists():
         try:
-            data = json.loads(path.read_text(encoding="utf-8"))
+            data = json.loads(path.read_text(encoding="utf-8-sig"))
         except (OSError, ValueError):
             raise MajError("config.json illisible : corrige-le ou relance configurer.bat")
     sec = dict(data.get("mises_a_jour") or {})

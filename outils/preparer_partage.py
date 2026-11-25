@@ -107,7 +107,7 @@ def sensitive_values() -> list[tuple[str, str]]:
             vals.append((label, v))
 
     try:
-        cfg = json.loads((BASE / "config.json").read_text(encoding="utf-8"))
+        cfg = json.loads((BASE / "config.json").read_text(encoding="utf-8-sig"))
         d, k = cfg.get("discord") or {}, cfg.get("deck") or {}
         add("jeton Discord", d.get("token"))
         add("ID Discord", d.get("user_id"))

@@ -59,6 +59,11 @@ ok(c["deck"]["rate_limit_per_minute"] == 7, "valeur de l'utilisateur gardée")
 ok("inconnu" not in c, "clé inconnue ignorée (pas de section inventée)")
 ok(all(k in c["alerts"] for k in config.DEFAULTS["alerts"]), "section fusionnée : les autres clés gardent leur défaut")
 
+# config.json enregistré avec un BOM (Bloc-notes « UTF-8 avec BOM », PowerShell) : lu normalement
+config.CONFIG_FILE.write_bytes(b"\xef\xbb\xbf" + json.dumps({"deck": {"rate_limit_per_minute": 7}, "alerts": {"cpu_temp_warn": 70}}).encode())
+c = config.load(force=True)
+ok(c["deck"]["rate_limit_per_minute"] == 7 and not any("illisible" in w for w in config.warnings), "config.json avec BOM lu normalement")
+
 # migration du schéma : sauvegarde puis section mises_a_jour explicite
 (paths.APP_DIR / "DEPOT").exists() and print("  (DEPOT présent dans le dépôt : ignoré par ce test)")
 version_cfg = config.migrer()

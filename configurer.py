@@ -183,7 +183,7 @@ def main() -> int:
     previous = None
     if CONFIG_FILE.exists():
         try:
-            previous = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+            previous = json.loads(CONFIG_FILE.read_text(encoding="utf-8-sig"))
         except (OSError, ValueError):
             previous = None
         if not yes("\nUne configuration existe déjà. La remplacer ?"):
