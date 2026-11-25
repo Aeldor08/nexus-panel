@@ -196,7 +196,7 @@ class DiscordBot:
             return
         token = str(cfg.get("token") or "").strip()
         if not token or "COLLE_ICI" in token:
-            self._warn("no_token", "jeton absent dans config.json (discord.token) : le bot ne démarre pas")
+            self._warn("no_token", "jeton du bot absent (configurer.bat ou « Configurer NEXUS ») : le bot ne démarre pas")
             return
         if not config.as_int(cfg.get("user_id")) or not config.as_int(cfg.get("alert_channel_id")):
             self._warn("bad_config", "discord.user_id ou discord.alert_channel_id manquant ou invalide dans config.json")
@@ -223,7 +223,7 @@ class DiscordBot:
                 self._loop.run_until_complete(client.start(token))
                 return
             except discord.LoginFailure:
-                self._warn("bad_token", "jeton refusé par Discord (invalide ou régénéré) : mets à jour discord.token dans config.json")
+                self._warn("bad_token", "jeton refusé par Discord (invalide ou régénéré) : entre le nouveau avec configurer.bat ou « Configurer NEXUS »")
                 return
             except discord.PrivilegedIntentsRequired:
                 self._warn("error", "intents non autorisés pour ce bot")

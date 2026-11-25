@@ -300,6 +300,7 @@ class _SetupApi:
             tmp = paths.CONFIG_FILE.with_suffix(".tmp")
             tmp.write_text(json.dumps(cfg, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             tmp.replace(paths.CONFIG_FILE)
+            config.ranger_secrets()  # jeton du bot : dans le gestionnaire d'identifiants de Windows
             try:  # mot de passe changé : anciennes sessions invalides
                 (paths.DATA_DIR / "deck_sessions.json").unlink(missing_ok=True)
             except OSError:

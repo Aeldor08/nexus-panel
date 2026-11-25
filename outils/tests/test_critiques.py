@@ -68,6 +68,44 @@ ok(isinstance(data.get("mises_a_jour"), dict) and "intervalle_heures" in data["m
 ok(data["deck"]["rate_limit_per_minute"] == 7, "migration : valeurs de l'utilisateur intactes")
 ok(any((paths.DATA_DIR / "backups").glob("config-*.json")) or any(paths.DATA_DIR.rglob("config*.json")), "migration : sauvegarde de config.json")
 
+# --- jeton du bot Discord : rangé dans le gestionnaire d'identifiants (faux keyring en mémoire)
+import identifiants
+
+coffre = {}
+
+
+class FauxKeyring:
+    @staticmethod
+    def get_password(s, k):
+        return coffre.get((s, k))
+
+    @staticmethod
+    def set_password(s, k, v):
+        coffre[(s, k)] = v
+
+    @staticmethod
+    def delete_password(s, k):
+        coffre.pop((s, k), None)
+
+
+identifiants._keyring = lambda: FauxKeyring
+JETON = "MTIz.abc.def-jeton-de-test"
+config.CONFIG_FILE.write_text(json.dumps({"discord": {"enabled": True, "token": JETON, "user_id": "1", "alert_channel_id": "2"}}), encoding="utf-8")
+config.ranger_secrets()
+brut = json.loads(config.CONFIG_FILE.read_text(encoding="utf-8"))
+ok(brut["discord"]["token"] == "" and brut["discord"].get("token_windows") is True, "jeton Discord retiré de config.json")
+ok(coffre.get((identifiants.SERVICE_DISCORD, identifiants.CLE_JETON_BOT)) == JETON, "jeton Discord rangé dans Windows")
+ok(config.load(force=True)["discord"]["token"] == JETON, "jeton Discord relu depuis Windows par NEXUS")
+config.CONFIG_FILE.write_text(json.dumps({"discord": {"enabled": False, "token": ""}}), encoding="utf-8")
+config.ranger_secrets()
+ok((identifiants.SERVICE_DISCORD, identifiants.CLE_JETON_BOT) not in coffre, "bot retiré : jeton effacé de Windows")
+identifiants._keyring = lambda: None
+config.CONFIG_FILE.write_text(json.dumps({"discord": {"token": JETON}}), encoding="utf-8")
+config.ranger_secrets()
+ok(json.loads(config.CONFIG_FILE.read_text(encoding="utf-8"))["discord"]["token"] == JETON, "sans gestionnaire : jeton gardé dans config.json (repli)")
+config.CONFIG_FILE.unlink()
+config.load(force=True)
+
 # =========================================================================== base de données
 print("--- base de données")
 v = db.migrate()

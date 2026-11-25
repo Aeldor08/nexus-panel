@@ -30,6 +30,7 @@ import zipfile
 from pathlib import Path
 
 import config
+import identifiants
 import maj_natif
 import paths
 import version as version_mod
@@ -44,7 +45,7 @@ API = "https://api.github.com"
 API_TEST = os.environ.get("NEXUS_MAJ_API_TEST", "").rstrip("/")
 DEPOT_RE = re.compile(r"^[A-Za-z0-9-]{1,39}/[A-Za-z0-9._-]{1,100}$")
 JETON_RE = re.compile(r"^(github_pat_[A-Za-z0-9_]{20,255}|gh[pousr]_[A-Za-z0-9]{20,255})$")
-KEYRING_SERVICE = "NEXUS-panel-mises-a-jour"
+KEYRING_SERVICE = identifiants.SERVICE_MAJ
 # Hôtes où GitHub redirige le téléchargement des fichiers de release (aucun jeton ne leur est envoyé)
 HOTES_FICHIERS = {"objects.githubusercontent.com", "github-releases.githubusercontent.com", "release-assets.githubusercontent.com", "codeload.github.com"}
 MAX_ARCHIVE = 300 * 1024 * 1024
@@ -141,28 +142,14 @@ def sha256_fichier(path: Path) -> str:
 # --------------------------------------------------------------------------- #
 #  Jeton (lecture seule) : gestionnaire d'identifiants de Windows, sinon config.json
 # --------------------------------------------------------------------------- #
-def _keyring():
-    try:
-        import keyring
-
-        return keyring
-    except Exception:
-        return None
-
-
 def jeton(depot: str) -> tuple[str, str]:
     """(jeton, où il est rangé : 'windows' | 'config' | 'environnement' | '')."""
     t = os.environ.get("NEXUS_MAJ_JETON", "").strip()  # tests / CI : lu en mémoire, jamais enregistré
     if t:
         return t, "environnement"
-    kr = _keyring()
-    if kr and depot:
-        try:
-            t = kr.get_password(KEYRING_SERVICE, depot)
-            if t:
-                return t, "windows"
-        except Exception:
-            pass
+    t = identifiants.lire(KEYRING_SERVICE, depot)
+    if t:
+        return t, "windows"
     t = str(config.get("mises_a_jour").get("jeton") or "").strip()
     return (t, "config") if t else ("", "")
 
@@ -173,20 +160,13 @@ def enregistrer_jeton(depot: str, valeur: str) -> str:
         raise MajError("indique d'abord le dépôt à surveiller (propriétaire/nom)")
     if valeur and not JETON_RE.match(valeur):
         raise MajError("ce n'est pas un jeton GitHub (il commence par github_pat_ ou ghp_)")
-    kr = _keyring()
-    if kr:
-        try:
-            if valeur:
-                kr.set_password(KEYRING_SERVICE, depot, valeur)
-            else:
-                try:
-                    kr.delete_password(KEYRING_SERVICE, depot)
-                except Exception:
-                    pass
-            _config_set({"jeton": ""})  # jamais en double dans config.json
-            return "windows" if valeur else ""
-        except Exception as exc:
-            print(f"[MAJ] gestionnaire d'identifiants indisponible ({type(exc).__name__}) : jeton gardé dans config.json")
+    if not valeur:
+        identifiants.supprimer(KEYRING_SERVICE, depot)
+        _config_set({"jeton": ""})
+        return ""
+    if identifiants.ecrire(KEYRING_SERVICE, depot, valeur):
+        _config_set({"jeton": ""})  # jamais en double dans config.json
+        return "windows"
     _config_set({"jeton": valeur})  # repli : config.json, exclu de Git
     return "config" if valeur else ""
 

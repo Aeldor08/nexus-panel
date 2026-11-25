@@ -171,6 +171,9 @@ def write_config(cfg: dict) -> None:
     tmp = CONFIG_FILE.with_suffix(".tmp")
     tmp.write_text(json.dumps(cfg, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     tmp.replace(CONFIG_FILE)
+    import config
+
+    config.ranger_secrets()  # jeton du bot : dans le gestionnaire d'identifiants de Windows
 
 
 def main() -> int:

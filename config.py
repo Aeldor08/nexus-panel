@@ -1,6 +1,8 @@
 """Configuration de NEXUS : fichier config.json à la racine (exclu de Git, voir .gitignore).
 
-Contient les secrets (jeton du bot Discord, mot de passe du stream deck) et les seuils d'alerte.
+Contient l'empreinte du mot de passe du stream deck et les seuils d'alerte. Le jeton du bot Discord est rangé
+dans le gestionnaire d'identifiants de Windows (ranger_secrets(), au démarrage) ; config.json ne garde alors
+que « token_windows »: true. Repli : jeton dans config.json si le gestionnaire est indisponible.
 Modèle : config.example.json. Si config.json est absent ou illisible, NEXUS démarre quand même
 avec les valeurs par défaut (bot et deck désactivés) et affiche un avertissement.
 """
@@ -10,6 +12,7 @@ from __future__ import annotations
 import copy
 import json
 
+import identifiants
 import paths
 
 CONFIG_FILE = paths.CONFIG_FILE
@@ -128,7 +131,40 @@ def load(force: bool = False) -> dict:
             "(raccourci « Configurer NEXUS ») pour définir le mot de passe du deck et le bot Discord"
         )
     _cache = _merge(DEFAULTS, user)
+    _jeton_discord_depuis_windows(_cache, user)
     return _cache
+
+
+def _jeton_discord_depuis_windows(cfg: dict, user: dict) -> None:
+    d_user = user.get("discord") if isinstance(user.get("discord"), dict) else {}
+    if not str(cfg["discord"].get("token") or "").strip() and d_user.get("token_windows"):
+        cfg["discord"]["token"] = identifiants.lire(identifiants.SERVICE_DISCORD, identifiants.CLE_JETON_BOT) or ""
+
+
+def ranger_secrets() -> None:
+    """Déplace le jeton du bot Discord de config.json vers le gestionnaire d'identifiants de Windows
+    (appelé au démarrage et après chaque assistant de configuration). Sans gestionnaire : rien ne change.
+    Bot désactivé sans jeton : l'ancienne entrée de Windows est effacée."""
+    try:
+        data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    d = data.get("discord")
+    if not isinstance(d, dict):
+        return
+    jeton = str(d.get("token") or "").strip()
+    if not jeton:
+        if not d.get("token_windows"):
+            identifiants.supprimer(identifiants.SERVICE_DISCORD, identifiants.CLE_JETON_BOT)
+        return
+    if not identifiants.ecrire(identifiants.SERVICE_DISCORD, identifiants.CLE_JETON_BOT, jeton):
+        return  # gestionnaire indisponible : le jeton reste dans config.json (repli)
+    d["token"], d["token_windows"] = "", True
+    tmp = CONFIG_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.replace(CONFIG_FILE)
+    print("[Config] jeton du bot Discord rangé dans le gestionnaire d'identifiants de Windows (plus dans config.json)")
+    load(force=True)
 
 
 def get(section: str) -> dict:
@@ -159,6 +195,7 @@ def migrer() -> int:
         tmp.replace(CONFIG_FILE)
     if todo:
         load(force=True)
+    ranger_secrets()
     return cur
 
 
