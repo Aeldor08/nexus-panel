@@ -98,6 +98,14 @@ try:
     paths.prepare()
     ok((donnees4 / "data" / "nexus.db").is_file(), "premier lancement : ancienne version trouvée et reprise")
 
+    # 4 bis. raccourci déjà remplacé par l'installeur : dossier noté par lui (ancienne-version.txt)
+    donnees4b = TMP / "LocalAppData-4b"
+    paths = charger_paths(donnees4b)
+    paths._raccourci_bureau = lambda: None
+    paths._ancienne_version_notee = lambda: ancien
+    paths.prepare()
+    ok((donnees4b / "data" / "nexus.db").is_file(), "premier lancement : dossier noté par l'installeur repris")
+
     # 5. lancements suivants : plus de détection (les données de l'utilisateur ne sont jamais complétées en douce)
     donnees5 = TMP / "LocalAppData-5"
     paths = charger_paths(donnees5)

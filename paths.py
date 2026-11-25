@@ -195,6 +195,15 @@ def _raccourci_bureau() -> Path | None:
     return Path(out) if out else None
 
 
+def _ancienne_version_notee() -> Path | None:
+    """Dossier noté par l'installeur (ancienne-version.txt) avant qu'il ne remplace le raccourci du Bureau."""
+    try:
+        texte = (INSTALL_DIR / "ancienne-version.txt").read_text(encoding="utf-8-sig").strip()
+    except OSError:
+        return None
+    return Path(texte) if texte else None
+
+
 def _premier_lancement() -> bool:
     return not (CONFIG_FILE.exists() or (DATA_DIR / "nexus.db").exists() or _LAYOUT_MARKER.exists())
 
@@ -211,7 +220,7 @@ def _importer_version_source() -> list[str]:
             _dire(f"[Données] {source} n'est pas un dossier NEXUS avec des données (app.py, nexus.pyw, config.json ou data/nexus.db)")
             return []
     elif _premier_lancement():
-        source = _raccourci_bureau()
+        source = _ancienne_version_notee() or _raccourci_bureau()
         if source is None or not est_version_source(source):
             return []
     else:

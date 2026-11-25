@@ -99,6 +99,7 @@ Filename: "{sys}\taskkill.exe"; Parameters: "/IM NEXUS.exe /F"; Flags: runhidden
 ; Fichiers créés par NEXUS dans son dossier de programme (LibreHardwareMonitor compris s'il n'est plus lancé).
 ; Les données personnelles (%LOCALAPPDATA%\NEXUS) : voir CurUninstallStepChanged plus bas.
 Type: filesandordirs; Name: "{app}\LibreHardwareMonitor"
+Type: files; Name: "{app}\ancienne-version.txt"
 Type: dirifempty; Name: "{app}"
 
 [Code]
@@ -127,6 +128,25 @@ begin
            'Windows 11 et la plupart des Windows 10 le possèdent déjà.',
            mbInformation, MB_OK);
   end;
+end;
+
+// Avant de copier les fichiers (et de remplacer le raccourci « NEXUS » du Bureau) : si ce raccourci mène à une
+// ancienne version source de NEXUS (dossier avec nexus.pyw), son dossier est noté dans {app}\ancienne-version.txt.
+// Au premier lancement, NEXUS y reprend les données (copie, l'ancien dossier n'est pas modifié : paths.py).
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  Code: Integer;
+  Script: String;
+begin
+  if CurStep <> ssInstall then
+    exit;
+  ForceDirectories(ExpandConstant('{app}'));
+  Script := '$l=Join-Path ([Environment]::GetFolderPath(''Desktop'')) ''NEXUS.lnk''; ' +
+            'if(Test-Path -LiteralPath $l){$w=(New-Object -ComObject WScript.Shell).CreateShortcut($l).WorkingDirectory; ' +
+            'if($w -and (Test-Path -LiteralPath (Join-Path $w ''nexus.pyw''))){' +
+            'Set-Content -LiteralPath ''' + ExpandConstant('{app}\ancienne-version.txt') + ''' -Value $w -Encoding UTF8}}';
+  Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'), '-NoProfile -NonInteractive -Command "' + Script + '"',
+       '', SW_HIDE, ewWaitUntilTerminated, Code);
 end;
 
 // Désinstallation : garder ou supprimer les données de l'utilisateur (garder par défaut).
