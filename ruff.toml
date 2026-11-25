@@ -1,12 +1,43 @@
-# Lint de NEXUS (lancé par la CI et par outils/release.py) : erreurs réelles seulement, pas de style imposé.
+# Lint et formatage de NEXUS (lancés par la CI, outils/build.py et outils/release.py).
+#   ruff check .          erreurs et mauvaises pratiques
+#   ruff format .         mise en forme (ruff format --check . en CI)
 target-version = "py311"
 line-length = 160
-extend-exclude = [".venv", "versions", "partage", "sauvegardes-maj", "maj", "dist", "data"]
+extend-exclude = [".venv", ".venv-build", "runtime", "versions", "partage", "sauvegardes-maj", "maj", "dist", "build", "data", "android"]
 
 [lint]
-select = ["E9", "F", "B"]
-# B904 / B905 : style ; B023 / B007 : faux positifs (fonctions appelées dans la boucle même)
-ignore = ["B904", "B905", "B023", "B007"]
+# E/W pycodestyle, F pyflakes, B bugbear, UP pyupgrade, SIM simplifications, I ordre des imports,
+# C4 compréhensions, PIE / RET / RUF divers.
+select = ["E", "W", "F", "B", "UP", "SIM", "I", "C4", "PIE", "RET", "RUF"]
+ignore = [
+    "E501",    # longueur des lignes : le formateur s'en charge (seules restent de longues chaînes de texte)
+    "B904",    # « raise ... from » : nos erreurs (BadRequest, MajError…) portent déjà un message complet
+    "B905",    # zip(strict=) : listes de même longueur par construction
+    "B023",    # fonctions définies et appelées dans le même tour de boucle (faux positifs)
+    "B007",    # variable de boucle non utilisée : explicite dans le code
+    "SIM105",  # contextlib.suppress : try/except/pass est plus lisible ici
+    "SIM108",  # opérateur ternaire imposé : pas toujours plus lisible
+    "RUF001", "RUF002", "RUF003",  # « », ’, espaces insécables : typographie française voulue
+    "RUF005",  # [*a, b] plutôt que a + [b] : style
+    "RUF007",  # itertools.pairwise : style
+    "RET504", "RET505", "RET506", "RET507", "RET508",  # « else » après return : style
+]
+
+[lint.per-file-ignores]
+# Scripts et tests qui ajoutent le dossier de NEXUS à sys.path avant d'importer ses modules
+"outils/**" = ["E402"]
+"nexus.pyw" = ["E402"]
+# app.py : paths.prepare() doit préparer le dossier de données avant le chargement des autres modules
+"app.py" = ["E402"]
+"valider_profil.py" = ["E402"]
+# Noms de variables d'environnement Windows tels qu'ils existent (ProgramFiles, SystemRoot, PSModulePath)
+"*" = ["SIM112"]
+
+[lint.isort]
+known-first-party = ["activite", "agenda", "app", "audio", "bot", "config", "configurer", "db", "deck", "focus",
+    "gamemode", "journal", "lan", "launcher", "logs", "maj", "maj_demarrage", "maj_natif", "media", "mur",
+    "nexus_launcher", "paths", "philibert", "profiles", "reminders", "remote", "sante", "souvenirs", "statistiques",
+    "stats", "store", "superviseur", "valider_profil", "version", "winproc", "build_native", "release"]
 
 [format]
 # Formatage automatique (ruff format) : même largeur de ligne que le lint, guillemets doubles.

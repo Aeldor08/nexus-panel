@@ -1965,9 +1965,8 @@ class Philibert:
         on = bool(p.get("on", not s["lumiere"]))
         if on == s["lumiere"]:
             return {"message": "La lumière est déjà " + ("allumée." if on else "éteinte.")}
-        if not heure_de_dormir(now):
-            if not on:
-                return {"message": "Il fait jour : pas besoin d'éteindre, le soleil éclaire l'île."}
+        if not heure_de_dormir(now) and not on:
+            return {"message": "Il fait jour : pas besoin d'éteindre, le soleil éclaire l'île."}
         s["lumiere"] = on
         if not on:
             if s["nuit_eteinte"] != _jour(now - 7 * H):

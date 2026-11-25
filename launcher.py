@@ -184,7 +184,9 @@ def exe_icon(exe: str) -> Path | None:
     out = ICON_DIR / (hashlib.md5(exe.lower().encode()).hexdigest()[:12] + ".png")
     if not out.exists():
         # Chemins passés en base64 pour éviter tout problème d'échappement PowerShell.
-        b = lambda s: base64.b64encode(s.encode("utf-16-le")).decode()
+        def b(s: str) -> str:
+            return base64.b64encode(s.encode("utf-16-le")).decode()
+
         ps = (
             "Add-Type -AssemblyName System.Drawing;"
             f"$e=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('{b(exe)}'));"

@@ -2,12 +2,15 @@
 Prérequis : serveur de TEST sur le port 8001 avec une base VIDE (jamais le NEXUS en service) et Edge sans fenêtre
 avec --remote-debugging-port=9333 (voir cdp.py). Usage : python outils/tests/test_postit_couleurs.py"""
 
-import json, sys, time
+import json
+import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from cdp import Page
 import tempfile
+
+from cdp import Page
 
 S = Path(tempfile.gettempdir())
 pg = Page()

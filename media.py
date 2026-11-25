@@ -214,7 +214,7 @@ class MediaMonitor:
             try:
                 await asyncio.wait_for(self._wake.wait(), timeout=self.POLL_S)
                 await asyncio.sleep(self.COALESCE_S)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
             self._wake.clear()
 
@@ -265,7 +265,7 @@ class MediaMonitor:
             try:
                 updated = tl.last_updated_time
                 if status == "playing" and updated is not None:
-                    age = (dt.datetime.now(dt.timezone.utc) - updated).total_seconds()
+                    age = (dt.datetime.now(dt.UTC) - updated).total_seconds()
                     if 0 < age < 6 * 3600:
                         pos += age
             except Exception:

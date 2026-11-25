@@ -2,7 +2,9 @@
 Prérequis : serveur de TEST sur le port 8001 (jamais le NEXUS en service) et Edge sans fenêtre avec
 --remote-debugging-port=9333 (voir cdp.py). Usage : python outils/tests/test_ouverture.py"""
 
-import json, sys, time
+import json
+import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))

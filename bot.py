@@ -113,7 +113,7 @@ def help_fields(commands: list[tuple[str, str]], deck_labels: list[str], th: dic
     out.append(
         (
             "🎛️ Boutons utilisables avec /deck",
-            ", ".join(f"`{l}`" for l in deck_labels)
+            ", ".join(f"`{nom}`" for nom in deck_labels)
             if deck_labels
             else "aucun — coche « Autoriser /deck depuis Discord » sur un bouton, dans le mode édition du Deck",
         )

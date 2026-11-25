@@ -2,7 +2,11 @@
 exécution hors de la boucle (le réglage ne bloque plus le serveur). Le mélangeur est remplacé par un
 enregistreur : aucun vrai volume n'est touché."""
 
-import os, sys, threading, time, tempfile
+import os
+import sys
+import tempfile
+import threading
+import time
 from pathlib import Path
 
 BASE = Path(sys.argv[1])
@@ -16,8 +20,9 @@ import db
 
 db.DB_FILE = store.DATA_DIR / "nexus.db"
 db.migrate()
-import app
 from fastapi.testclient import TestClient
+
+import app
 
 passed = failed = 0
 

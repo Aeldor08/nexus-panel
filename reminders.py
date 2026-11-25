@@ -21,7 +21,7 @@ import datetime as dt
 import json
 import threading
 import time
-from typing import Callable
+from collections.abc import Callable
 
 import agenda
 import config

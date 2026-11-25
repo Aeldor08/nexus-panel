@@ -3,7 +3,10 @@ aucun vrai volume du PC n'est touché. Le vrai fil audio (file de travaux, threa
 Règle vérifiée : une fois set() revenu, toute lecture de l'état montre la nouvelle valeur (jamais l'ancienne),
 même quand d'autres requêtes lisent l'état en même temps (sondages du mélangeur et des jauges)."""
 
-import random, sys, threading, time
+import random
+import sys
+import threading
+import time
 from pathlib import Path
 
 BASE = Path(sys.argv[1])

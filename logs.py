@@ -71,7 +71,7 @@ def install() -> Path | None:
     try:
         paths.LOG_DIR.mkdir(parents=True, exist_ok=True)
         _rotate()
-        handle = open(paths.LOG_FILE, "a", encoding="utf-8", buffering=1)
+        handle = open(paths.LOG_FILE, "a", encoding="utf-8", buffering=1)  # noqa: SIM115 (reste ouvert : journal du processus)
     except OSError:
         return None
     handle.write(f"\n===== NEXUS {time.strftime('%Y-%m-%d %H:%M:%S')} (pid {os.getpid()}) =====\n")

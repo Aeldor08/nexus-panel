@@ -2,7 +2,8 @@
 Faux processus, dossier de données temporaire (data/gamemode.json n'est pas touché), plan d'alimentation simulé.
 Usage : python outils/tests/test_modejeu.py <dossier de NEXUS>"""
 
-import sys, tempfile
+import sys
+import tempfile
 from pathlib import Path
 
 BASE = Path(sys.argv[1])

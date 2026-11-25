@@ -2,7 +2,9 @@
 résumé « sig », attente d'un changement, classement musique / vidéo des statistiques.
 Usage : python outils/tests/test_media.py"""
 
-import sys, threading, time
+import sys
+import threading
+import time
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parents[2]
@@ -92,7 +94,7 @@ S.idle_seconds = lambda: 0.0
 
 def cat(session):
     t = S.Tracker(media_state=lambda: {"sessions": [session]})
-    t.mapping = lambda: {}
+    t.mapping = dict
     return [(a["nom"], a["categorie"]) for a in t.sample()["applis"]]
 
 

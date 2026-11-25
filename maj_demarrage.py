@@ -162,7 +162,7 @@ def tester_demarrage(attendue: str) -> tuple[bool, str]:
         return False, "le test de démarrage n'a pas répondu à temps"
     if p.returncode == 0:
         return True, ""
-    lignes = [l for l in (p.stdout + "\n" + p.stderr).splitlines() if l.strip()]
+    lignes = [x for x in (p.stdout + "\n" + p.stderr).splitlines() if x.strip()]
     return False, (lignes[-1] if lignes else f"code de sortie {p.returncode}")[:300]
 
 

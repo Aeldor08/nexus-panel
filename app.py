@@ -31,7 +31,6 @@ import paths
 paths.prepare()
 
 import activite
-import logs
 import agenda as agenda_mod
 import audio as audio_mod
 import bot as bot_mod
@@ -43,6 +42,8 @@ import gamemode as gamemode_mod
 import journal as journal_mod
 import lan
 import launcher as launcher_mod
+import logs
+import maj as maj_mod
 import media as media_mod
 import philibert as philibert_mod
 import profiles as profiles_mod
@@ -50,10 +51,9 @@ import reminders as reminders_mod
 import remote as remote_mod
 import sante as sante_mod
 import souvenirs as souvenirs_mod
-import stats
 import statistiques as statistiques_mod
+import stats
 import store
-import maj as maj_mod
 import version as version_mod
 
 HOST = "127.0.0.1"
@@ -327,7 +327,7 @@ def _agenda_error(exc: agenda_mod.AgendaError) -> JSONResponse:
     return JSONResponse({"error": str(exc), "champs": exc.champs}, status_code=400)
 
 
-def _range_param(value: str | None, default) -> "dt.date":
+def _range_param(value: str | None, default) -> dt.date:
     try:
         return agenda_mod.parse_date(value) if value else default
     except ValueError:
@@ -556,7 +556,7 @@ async def api_souv_delete(pid: str, request: Request) -> JSONResponse:
 @app.get("/api/statistiques")
 def api_perso_stats(periode: str = "jour") -> JSONResponse:
     data = statistiques_mod.report(periode)
-    data["service"] = {k: v for k, v in tracker.status.items()}
+    data["service"] = dict(tracker.status)
     return _private(data)
 
 
@@ -1681,7 +1681,7 @@ def start_services() -> None:
         return
     _services_started = True
     # Diagnostic matériel en arrière-plan : il ne retarde pas le démarrage du serveur
-    threading.Thread(target=lambda: [print(l, flush=True) for l in sensors.hardware_report()], daemon=True, name="materiel").start()
+    threading.Thread(target=lambda: [print(ligne, flush=True) for ligne in sensors.hardware_report()], daemon=True, name="materiel").start()
     discord_bot.start()  # thread séparé ; un jeton absent ou invalide n'empêche pas NEXUS de démarrer
     try:
         agenda_mod.load()  # migre l'agenda au format 2 si besoin (avec sauvegarde) avant les rappels
@@ -1761,6 +1761,7 @@ def _test_demarrage(attendue: str) -> int:
     répondre la version attendue. Code 0 = la nouvelle version démarre ; sinon la mise à jour est annulée."""
     import json as _json
     import urllib.request
+
     import uvicorn
 
     paths.prepare()

@@ -157,7 +157,7 @@ def _migrer(con: sqlite3.Connection, existed: bool) -> None:
 
 def _split(sql: str) -> list[str]:
     """Découpe un script en instructions (pas de « ; » dans nos chaînes), sans les commentaires."""
-    lines = [l for l in sql.splitlines() if not l.strip().startswith("--")]
+    lines = [ligne for ligne in sql.splitlines() if not ligne.strip().startswith("--")]
     return [s.strip() for s in "\n".join(lines).split(";") if s.strip()]
 
 

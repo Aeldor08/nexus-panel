@@ -14,14 +14,14 @@ from pathlib import Path
 
 BASE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(BASE))
-import store  # noqa: E402
+import store
 
 store.DATA_DIR = Path(tempfile.mkdtemp(prefix="nexus-test-focus-"))
-import activite  # noqa: E402
-import focus as focus_mod  # noqa: E402
-import sante  # noqa: E402
-import stats  # noqa: E402
-import statistiques as S  # noqa: E402
+import activite
+import focus as focus_mod
+import sante
+import statistiques as S
+import stats
 
 activite.FICHIER = store.DATA_DIR / "activite.jsonl"
 focus_mod.FICHIER = store.DATA_DIR / "focus.json"
@@ -131,7 +131,7 @@ for nom in ("svchost.exe", "csrss.exe", "explorer.exe"):
     except ValueError:
         ok(True, f"{nom} : fermeture refusée")
 # NEXUS lui-même : vérifié SANS appeler fermer() sur python.exe (le vrai NEXUS du PC en est un aussi)
-import os  # noqa: E402
+import os
 
 moi = stats._pids_nexus()
 ok(os.getpid() in moi, "NEXUS (ce processus et ses parents) repéré")
@@ -149,8 +149,9 @@ except ValueError:
     ok(True, "plus aucun processus de ce nom : message clair")
 
 # ---- lecture rapide des processus (un seul appel système) ----------------------------------
-import winproc  # noqa: E402
-import psutil  # noqa: E402
+import psutil
+
+import winproc
 
 t0 = time.perf_counter()
 liste = winproc.processus()
@@ -167,8 +168,8 @@ pareils = sum(1 for x in communs if x[2] == noms_psutil[x[0]])
 ok(pareils >= len(communs) - 3, f"winproc : mêmes noms que psutil ({pareils}/{len(communs)})")
 
 # ---- rétention de l'espace disque ------------------------------------------------------------
-import maj  # noqa: E402
-import version as version_mod  # noqa: E402
+import maj
+import version as version_mod
 
 tmp = Path(tempfile.mkdtemp(prefix="nexus-test-retention-"))
 version_mod.VERSIONS_DIR = tmp / "versions"

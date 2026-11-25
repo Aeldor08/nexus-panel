@@ -28,7 +28,7 @@ def mesure(procs, jeu_mode_jeu, premier_plan=None):
     S.psutil.process_iter = lambda attrs=None: [P(n) for n in procs]
     S.foreground_process = lambda: premier_plan
     S.idle_seconds = lambda: 0.0
-    t = S.Tracker(game_state=lambda: {"game": jeu_mode_jeu} if jeu_mode_jeu else {}, media_state=lambda: {})
+    t = S.Tracker(game_state=lambda: {"game": jeu_mode_jeu} if jeu_mode_jeu else {}, media_state=dict)
     t.mapping = lambda: {"valorant-win64-shipping.exe": {"nom": "Valorant", "categorie": "jeu", "ouverte": False}}
     return sorted(a["nom"] for a in t.sample()["applis"] if a["categorie"] == "jeu")
 

@@ -16,8 +16,8 @@ os.environ.update(NEXUS_NO_BOT="1", NEXUS_DECK_DRYRUN="1")
 tmp = Path(tempfile.mkdtemp(prefix="nexus-deck-"))
 os.environ["NEXUS_DATA_DIR"] = str(tmp)
 
-import config  # noqa: E402
-import deck as deck_mod  # noqa: E402
+import config
+import deck as deck_mod
 
 passed = failed = 0
 

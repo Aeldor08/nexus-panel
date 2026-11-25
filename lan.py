@@ -198,6 +198,7 @@ def _quality(avg, jitter, loss, down) -> dict:
     for limit, grade, label in ((90, "excellente", "Excellente"), (75, "bonne", "Bonne"), (50, "moyenne", "Moyenne"), (-1, "mauvaise", "Mauvaise")):
         if score >= limit:
             return {"grade": grade, "label": label, "score": score}
+    return {"grade": "mauvaise", "label": "Mauvaise", "score": score}  # (score toujours >= 0 : par sécurité)
 
 
 # --------------------------------------------------------------------------- #

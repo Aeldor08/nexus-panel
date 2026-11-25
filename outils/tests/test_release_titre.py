@@ -9,8 +9,8 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(BASE))
 sys.path.insert(0, str(BASE / "outils"))
-import release  # noqa: E402
-import version  # noqa: E402
+import release
+import version
 
 passed = failed = 0
 

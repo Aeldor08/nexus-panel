@@ -84,8 +84,8 @@ def detect_gpus() -> list[dict]:
     if sys.platform != "win32":
         return []
     import ctypes
-    from ctypes import wintypes
     import winreg
+    from ctypes import wintypes
 
     class DISPLAY_DEVICEW(ctypes.Structure):
         _fields_ = [
@@ -225,7 +225,7 @@ class WindowsGpuCounters:
             if m:
                 used[m.group(1).lower()] = used.get(m.group(1).lower(), 0.0) + v
         luids = set(load) | set(used)
-        rows = [{"luid": l, "load_percent": round(min(100.0, load.get(l, 0.0)), 1), "vram_used": int(used.get(l, 0))} for l in luids]
+        rows = [{"luid": lu, "load_percent": round(min(100.0, load.get(lu, 0.0)), 1), "vram_used": int(used.get(lu, 0))} for lu in luids]
         return sorted(rows, key=lambda r: (-r["vram_used"], -r["load_percent"]))
 
 

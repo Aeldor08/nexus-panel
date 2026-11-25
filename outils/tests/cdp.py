@@ -1,7 +1,15 @@
 """Mini client CDP (websocket, bibliothèque standard). Usage : python cdp.py <port> <fichier.js> [url]
 Ouvre l'url (option), évalue le JS (promesse attendue) et affiche le résultat en JSON."""
 
-import base64, json, os, socket, struct, sys, time, urllib.request
+import base64
+import json
+import os
+import socket
+import struct
+import sys
+import time
+import urllib.request
+from pathlib import Path
 from urllib.parse import urlparse
 
 
@@ -94,11 +102,11 @@ class Page:
         p = {"format": "png", "captureBeyondViewport": bool(clip)}
         if clip:
             p["clip"] = {**clip, "scale": 1}
-        open(path, "wb").write(base64.b64decode(self.call("Page.captureScreenshot", p)["data"]))
+        Path(path).write_bytes(base64.b64decode(self.call("Page.captureScreenshot", p)["data"]))
 
 
 def main():
-    port, js = int(sys.argv[1]), open(sys.argv[2], encoding="utf-8-sig").read()
+    port, js = int(sys.argv[1]), Path(sys.argv[2]).read_text(encoding="utf-8-sig")
     pg = Page(port)
     if len(sys.argv) > 3:
         pg.go(sys.argv[3])

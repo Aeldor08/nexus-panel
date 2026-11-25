@@ -133,7 +133,7 @@ def sensitive_values() -> list[tuple[str, str]]:
             pass
     # « Windows » / « Desktop » comme nom de domaine ou de PC seraient trop génériques
     generic = {"windows", "workgroup", "desktop", "user", "admin", "pc"}
-    return [(l, v) for l, v in vals if v.lower() not in generic]
+    return [(lib, v) for lib, v in vals if v.lower() not in generic]
 
 
 PATTERNS = [

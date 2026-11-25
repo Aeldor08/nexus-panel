@@ -554,9 +554,8 @@ def _quit(*_args) -> None:
             pass
     if sys.platform == "win32":
         handle = _WINDOW_HANDLE or _find_window_handle(require_title=True)
-        if handle and ctypes.windll.user32.IsWindow(handle):
-            if ctypes.windll.user32.PostMessageW(handle, 0x0010, 0, 0):  # WM_CLOSE
-                return
+        if handle and ctypes.windll.user32.IsWindow(handle) and ctypes.windll.user32.PostMessageW(handle, 0x0010, 0, 0):  # WM_CLOSE
+            return
     if _WINDOW is not None:
         try:
             _WINDOW.destroy()
@@ -571,6 +570,7 @@ def _start_tray() -> None:
     try:
         import pystray
         from PIL import Image
+
         import paths
 
         icon_path = paths.APP_DIR / "panel.ico"
@@ -595,6 +595,7 @@ def _start_tray() -> None:
 def _run_server(host: str, port: int) -> None:
     global _SERVER
     import uvicorn
+
     import app
 
     config = uvicorn.Config(app.app, host=host, port=port, log_level="warning", access_log=False)

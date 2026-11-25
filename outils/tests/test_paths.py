@@ -31,11 +31,11 @@ def ok(c, m):
 try:
     import paths
 
-    ok(paths.USER_ROOT == root.resolve(), f"USER_ROOT : {paths.USER_ROOT}")
-    ok(paths.DATA_DIR == root.resolve() / "data", f"DATA_DIR : {paths.DATA_DIR}")
-    ok(paths.CONFIG_FILE == root.resolve() / "config.json", "config.json dans le dossier de données")
-    ok(paths.LOG_FILE == root.resolve() / "logs" / "nexus.log", "journal dans logs/")
-    ok(paths.ACTIONS_DIR == root.resolve() / "actions", "actions/ dans le dossier de données")
+    ok(root.resolve() == paths.USER_ROOT, f"USER_ROOT : {paths.USER_ROOT}")
+    ok(root.resolve() / "data" == paths.DATA_DIR, f"DATA_DIR : {paths.DATA_DIR}")
+    ok(root.resolve() / "config.json" == paths.CONFIG_FILE, "config.json dans le dossier de données")
+    ok(root.resolve() / "logs" / "nexus.log" == paths.LOG_FILE, "journal dans logs/")
+    ok(root.resolve() / "actions" == paths.ACTIONS_DIR, "actions/ dans le dossier de données")
     paths.prepare()
     ok(paths.DATA_DIR.is_dir() and paths.LOG_DIR.is_dir() and paths.ACTIONS_DIR.is_dir(), "arborescence créée")
     ok(paths.DECK_FILE.is_file() and paths.JEUX_FILE.is_file(), "fichiers d'exemple copiés")

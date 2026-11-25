@@ -286,7 +286,7 @@ def verifier_signature(path: Path, timeout: float = 45.0) -> dict:
     except (OSError, subprocess.TimeoutExpired) as exc:
         return {"statut": "inconnu", "signataire": "", "empreinte": "", "message": f"vérification impossible ({type(exc).__name__})"}
     sortie = (p.stdout or "").strip()
-    ligne = next((l for l in reversed(sortie.splitlines()) if l.strip().startswith("{")), "")
+    ligne = next((x for x in reversed(sortie.splitlines()) if x.strip().startswith("{")), "")
     if p.returncode != 0 or not ligne:
         detail = ((p.stderr or "").strip() or sortie or "réponse vide")[:300]
         return {"statut": "inconnu", "signataire": "", "empreinte": "", "message": detail}

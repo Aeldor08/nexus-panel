@@ -2,7 +2,11 @@
 lanceur au lieu de quitter le processus (NEXUS.exe n'a pas de lancer.bat pour le relancer) ; état du
 pare-feu et route de création de la règle limitée à la version exe."""
 
-import os, sys, tempfile, threading, time
+import os
+import sys
+import tempfile
+import threading
+import time
 from pathlib import Path
 
 BASE = Path(sys.argv[1])
@@ -16,8 +20,9 @@ import db
 
 db.DB_FILE = store.DATA_DIR / "nexus.db"
 db.migrate()
-import app
 from fastapi.testclient import TestClient
+
+import app
 
 passed = failed = 0
 

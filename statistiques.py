@@ -107,8 +107,8 @@ def foreground_process() -> str | None:
 class Tracker:
     def __init__(self, game_state=None, media_state=None, gpu_load=None, en_focus=None) -> None:
         self.en_focus = en_focus or (lambda: False)  # séance de travail Pomodoro en cours (focus.py)
-        self.game_state = game_state or (lambda: {})  # mode jeu (gamemode.py) : jeu reconnu
-        self.media_state = media_state or (lambda: {})  # panneau multimédia Windows (media.py)
+        self.game_state = game_state or (dict)  # mode jeu (gamemode.py) : jeu reconnu
+        self.media_state = media_state or (dict)  # panneau multimédia Windows (media.py)
         self.gpu_load = gpu_load or (lambda: None)  # charge GPU en % (stats.py)
         self.status = {"etat": "arrete", "erreur": None, "derniere_mesure": None}
         self._map, self._map_mtime, self._map_checked = {}, None, 0.0
@@ -194,9 +194,8 @@ class Tracker:
                     apps[(m["nom"], m["categorie"])] = True
         # autres catégories : appli au premier plan, si tu es actif
         m = mp.get(fg or "")
-        if m and active and m["categorie"] not in ("jeu",):
-            if not (m["categorie"] in ("musique", "video") and any(k[1] == m["categorie"] for k in apps)):
-                apps[(m["nom"], m["categorie"])] = True
+        if m and active and m["categorie"] not in ("jeu",) and not (m["categorie"] in ("musique", "video") and any(k[1] == m["categorie"] for k in apps)):
+            apps[(m["nom"], m["categorie"])] = True
         # Séance Pomodoro (phase de travail) : compte comme du TRAVAIL et comme présence, même sans toucher au PC
         # (lecture, prise de notes). Les autres applis « travail » de ce moment ne sont pas comptées en plus,
         # pour que le total « travail » reste le vrai temps passé.
@@ -379,7 +378,7 @@ def day_detail(day: str) -> dict:
         {"nom": r["nom"], "categorie": r["categorie"], "secondes": r["secondes"]}
         for r in c.execute("SELECT nom, categorie, secondes FROM temps_appli WHERE jour = ? ORDER BY secondes DESC", (day,))
     ]
-    cats = {k: 0.0 for k in CATEGORIES}
+    cats = dict.fromkeys(CATEGORIES, 0.0)
     for a in apps:
         cats[a["categorie"]] = cats.get(a["categorie"], 0) + a["secondes"]
     t0 = dt.datetime.combine(d, dt.time()).timestamp()

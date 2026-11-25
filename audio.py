@@ -21,6 +21,7 @@ sys.coinit_flags = 0  # COINIT_MULTITHREADED
 try:
     import comtypes
     import comtypes.client
+
     import paths
 
     # comtypes génère ses modules au premier usage : dans un exe installé, le dossier du

@@ -24,8 +24,8 @@ import sys
 import threading
 import time
 import webbrowser
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 BASE = Path(__file__).resolve().parent
 RESTART_CODE = 3  # app.py : « relance-moi » (mise à jour, accès téléphone)

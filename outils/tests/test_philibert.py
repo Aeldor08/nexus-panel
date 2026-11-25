@@ -14,10 +14,10 @@ from pathlib import Path
 
 BASE = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(BASE))
-import store  # noqa: E402
+import store
 
 store.DATA_DIR = Path(tempfile.mkdtemp(prefix="nexus-test-philibert-"))
-import philibert as P  # noqa: E402
+import philibert as P
 
 passed = failed = 0
 
@@ -176,7 +176,7 @@ p.s["evenement"] = {"id": "croquettes", "t": horloge[0]}
 f3, c3 = p.s["j"]["faim"], p.s["coquillages"]
 r = p.action("nourrir", {"aliment": "croquettes"})
 ok(
-    r["reaction"] == "refus" and p.s["j"]["faim"] == f3 and "herbivore" in r["message"] + r["astuce"] or "chats" in r["astuce"],
+    (r["reaction"] == "refus" and p.s["j"]["faim"] == f3 and "herbivore" in r["message"] + r["astuce"]) or "chats" in r["astuce"],
     "piège : il refuse les croquettes (mimique + astuce)",
 )
 ok(
@@ -1096,13 +1096,14 @@ ok("**76 le jour, 72 la nuit**" in doc, "doc admin : lampe chauffante")
 # ---- routes de l'API --------------------------------------------------------------------------
 os.chdir(BASE)
 os.environ.update(NEXUS_NO_BOT="1", NEXUS_DECK_DRYRUN="1")
-import db  # noqa: E402
+import db
 
 db.DB_FILE = store.DATA_DIR / "nexus.db"
 db.migrate()
 P.FICHIER = store.DATA_DIR / "philibert-api.json"
-import app  # noqa: E402
-from fastapi.testclient import TestClient  # noqa: E402
+from fastapi.testclient import TestClient
+
+import app
 
 c = TestClient(app.app, client=("127.0.0.1", 5000), base_url="http://127.0.0.1:8000")
 r = c.get("/api/philibert")
@@ -1130,7 +1131,7 @@ ok(tel.post("/api/philibert/action", json={"action": "caresser"}).status_code ==
 app.remote_svc.enabled = ancien
 r = c.post("/api/philibert/jeu/xyz", json={})
 ok(r.status_code == 404, "étape de jeu inconnue : 404")
-import activite  # noqa: E402
+import activite
 
 ok("philibert" in activite.CATEGORIES, "catégorie « Philibert » dans le journal d'activité")
 

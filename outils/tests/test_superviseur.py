@@ -14,7 +14,7 @@ from pathlib import Path
 
 BASE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(BASE))
-import superviseur as S  # noqa: E402
+import superviseur as S
 
 echecs = 0
 

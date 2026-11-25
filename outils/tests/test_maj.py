@@ -31,7 +31,7 @@ from pathlib import Path
 
 BASE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(BASE / "outils"))
-import release  # noqa: E402
+import release
 
 DEPOT = "nexus-test/faux-depot"
 MDP = "motdepasse-de-test"
@@ -84,7 +84,7 @@ class FauxGitHub:
                 fg.vus.append((self.path, self.headers.get("Authorization")))
                 if fg.mode == "hors_ligne":
                     self.connection.close()  # connexion coupée sans réponse
-                    return
+                    return None
                 if self.path.startswith("/fichiers/"):
                     nom = self.path.split("/")[-1]
                     r = fg.release
@@ -151,7 +151,7 @@ class Panel:
         )
 
     def demarrer(self):
-        self.log = open(self.journal, "a", encoding="utf-8")
+        self.log = open(self.journal, "a", encoding="utf-8")  # noqa: SIM115 (fermé à l'arrêt du serveur de test)
         self.proc = subprocess.Popen(
             [sys.executable, "app.py"],
             cwd=self.dir,
@@ -338,7 +338,7 @@ def main() -> int:
             JETON not in (inst / "config.json").read_text(encoding="utf-8") or m["jeton"]["ou"] == "config",
             f"jeton rangé hors de config.json quand c'est possible (gestionnaire Windows : {m['jeton']['ou'] == 'windows'})",
         )
-        c, m2 = panel.post("/api/maj/jeton", {"jeton": "mot-de-passe-github"})
+        c, _ = panel.post("/api/maj/jeton", {"jeton": "mot-de-passe-github"})
         ok(c == 400, "un texte qui n'est pas un jeton GitHub est refusé")
         fg.mode = "limite"
         _, m = panel.post("/api/maj/verifier")

@@ -1,7 +1,10 @@
 """Mode jeu actif : l'onglet PC n'est jamais mis en pause (les processus continuent d'être relevés).
 Jeu simulé, dossier de données temporaire. Usage : python outils/tests/test_modejeu_pc.py <dossier de NEXUS>"""
 
-import os, sys, tempfile, time
+import os
+import sys
+import tempfile
+import time
 from pathlib import Path
 
 BASE = Path(sys.argv[1])
@@ -15,8 +18,9 @@ import db
 
 db.DB_FILE = store.DATA_DIR / "nexus.db"
 db.migrate()
-import app
 from fastapi.testclient import TestClient
+
+import app
 
 passed = failed = 0
 

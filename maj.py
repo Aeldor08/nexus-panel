@@ -712,7 +712,7 @@ def extraire_sur(archive: Path, dest: Path) -> Path:
                 raise MajError("archive trop volumineuse une fois extraite")
         z.extractall(dest)
     racine = dest
-    enfants = [p for p in dest.iterdir()]
+    enfants = list(dest.iterdir())
     if len(enfants) == 1 and enfants[0].is_dir():
         racine = enfants[0]  # archive avec un dossier NEXUS-x.y.z/ à la racine
     if not (racine / "VERSION").is_file() or not (racine / "app.py").is_file():
