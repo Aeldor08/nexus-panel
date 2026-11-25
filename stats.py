@@ -809,14 +809,13 @@ class ProcessMonitor:
                 cibles.append(p)
         if not cibles:
             raise ValueError(f"aucun processus « {nom} » en cours")
-        refuses = 0
         for p in cibles:
             try:
                 p.terminate()
             except psutil.NoSuchProcess:
                 pass
             except psutil.AccessDenied:
-                refuses += 1
+                pass                              # (compté dans « refuses » : il reste en vie)
         _, restants = psutil.wait_procs(cibles, timeout=delai)
         for p in restants:
             try:
@@ -824,7 +823,7 @@ class ProcessMonitor:
             except psutil.NoSuchProcess:
                 pass
             except psutil.AccessDenied:
-                refuses += 1
+                pass                              # (compté dans « refuses » : il reste en vie)
         _, encore = psutil.wait_procs(restants, timeout=2) if restants else ([], [])
         return {"nom": nom, "trouves": len(cibles), "fermes": len(cibles) - len(encore), "forces": len(restants),
                 "refuses": len(encore)}

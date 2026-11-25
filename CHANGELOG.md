@@ -73,7 +73,7 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 - Signature configurable : `mises_a_jour.signature` (`auto`, `requise`, `ignoree`) et `mises_a_jour.certificat` (empreinte SHA1 attendue)
 - Build : `outils/build_native.py` signe l'exe avant l'installeur et écrit `*.sha256` + `SHA256SUMS.txt` ; CI Windows sur tag `v*` (artefacts, sans publication automatique) et documentation du fork (`docs/GITHUB-FORK.md`)
 - Version portable : `outils/build_native.py --portable` produit `NEXUS-Portable-x.y.z.zip` (exe, `_internal`, `portable.flag`, `Lancer NEXUS.bat`, `LISEZMOI.txt`) ; le drapeau `portable.flag` place les données dans le dossier de l'exe, désactive le démarrage automatique et donne un mutex d'instance unique propre au dossier ; mise à jour manuelle, sans installeur
-- Adaptation des futures versions : `docs/MODOP-PORTABLE.md`, inventaire `docs/PERSONNALISATION.md`, patch de référence `docs/PATCH-PERSONNALISATION-1.4.1.patch` et vérificateur `outils/verifier_personnalisation.py`
+- Adaptation des futures versions : kit de personnalisation (retiré en 1.9.3, désormais intégré au dépôt)
 
 ### Corrigé
 - Tests : `test_modejeu.py` n'utilise plus `StopIteration` dans une génératrice (interdit depuis Python 3.7) ; `run_all.py` ignore proprement `test_maj.py` hors dépôt Git

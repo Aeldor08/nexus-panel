@@ -93,7 +93,6 @@ class Tracker:
         self.status = {"etat": "arrete", "erreur": None, "derniere_mesure": None}
         self._map, self._map_mtime, self._map_checked = {}, None, 0.0
         self._last_tick = None
-        self._session_id = None
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._thread = None

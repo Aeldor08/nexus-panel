@@ -87,14 +87,9 @@ BACKUP_DIR = DATA_DIR / "backups"
 STATIC_DIR = APP_DIR / "static"
 BUNDLED_PROFILES_DIR = APP_DIR / "profils"
 DEPOT_FILE = APP_DIR / "DEPOT"
-VERSION_FILE = APP_DIR / "VERSION"
-CHANGELOG_FILE = APP_DIR / "CHANGELOG.md"
-CONFIG_EXAMPLE = APP_DIR / "config.example.json"
 DECK_EXAMPLE = APP_DIR / "deck.example.json"
 JEUX_EXAMPLE = APP_DIR / "jeux.example.json"
 ACTIONS_EXAMPLE = APP_DIR / "actions" / "exemple.bat"
-LICENSE_FILE = APP_DIR / "LICENSE"
-THIRD_PARTY_FILE = APP_DIR / "THIRD_PARTY.md"
 
 # Dossier d'installation (exe + LHM + éventuels fichiers portables) et ancien emplacement
 # des données. En mode source, les deux valent le dossier du projet.

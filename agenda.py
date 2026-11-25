@@ -224,7 +224,6 @@ def save(db: dict) -> None:
 # --------------------------------------------------------------------------- #
 #  Validation
 # --------------------------------------------------------------------------- #
-FIELDS = ("title", "date", "time", "duration", "description", "repeat", "until", "birthday", "birth_year", "reminders")
 ONE_FIELDS = ("title", "date", "time", "duration", "description", "reminders")
 
 

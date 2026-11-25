@@ -212,10 +212,7 @@ leurs `.sha256` et `SHA256SUMS.txt`. Équivalent à la main :
 Le dépôt GitHub à surveiller pour les mises à jour (remote `origin`, ou `--depot proprietaire/nom`) est embarqué
 dans l'exe : une installation sait donc toute seule où chercher ses mises à jour. L'installeur n'est pas signé
 (seule l'empreinte SHA-256 est vérifiée) ; pour signer avec un certificat Authenticode, voir
-`outils\sign_native.ps1` et `docs\MODOP-PORTABLE.md`.
-
-Pour adapter une future version du dépôt d'origine, lire `docs\MODOP-PORTABLE.md` et utiliser
-`outils\verifier_personnalisation.py`.
+`outils\sign_native.ps1` (section « Signature de code » plus bas).
 
 ## Dépannage
 

@@ -33,7 +33,6 @@ import sys
 import time
 from pathlib import Path
 
-import config
 import paths
 import version as version_mod
 
@@ -105,10 +104,6 @@ def est_portable() -> bool:
         return paths.FROZEN and paths.INSTALL_DIR.resolve() == paths.USER_ROOT.resolve()
     except OSError:
         return False
-
-
-def peut_utiliser_installeur() -> bool:
-    return paths.FROZEN and not est_portable()
 
 
 # --------------------------------------------------------------------------- #
@@ -198,16 +193,6 @@ def extraire_portable(archive: Path, dest: Path, version: str) -> Path:
     if vtuple(lue) != vtuple(version):
         raise NatifError("l'archive portable ne contient pas la version annoncée : installation refusée")
     return racine
-
-
-def politique_signature() -> tuple[str, str]:
-    """(politique, empreinte attendue). NEXUS_MAJ_SIGNATURE / NEXUS_MAJ_CERTIFICAT pour les tests."""
-    reg = dict(config.get("mises_a_jour"))
-    politique = str(os.environ.get("NEXUS_MAJ_SIGNATURE") or reg.get("signature") or "auto").strip().lower()
-    if politique not in ("auto", "requise", "ignoree"):
-        politique = "auto"
-    certificat = str(os.environ.get("NEXUS_MAJ_CERTIFICAT") or reg.get("certificat") or "").strip()
-    return politique, certificat
 
 
 def _normaliser_empreinte(valeur: str) -> str:

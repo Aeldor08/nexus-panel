@@ -38,7 +38,7 @@ def _charger_discord() -> bool:
         AVAILABLE, IMPORT_ERROR = False, str(exc)
         return False
 
-COLOR_OK, COLOR_WARN, COLOR_HOT, COLOR_INFO = 0x3DFFA2, 0xFFB000, 0xFF2A55, 0x00F0FF
+COLOR_OK, COLOR_HOT, COLOR_INFO = 0x3DFFA2, 0xFF2A55, 0x00F0FF
 HYSTERESIS = {"temp": 3.0, "percent": 2.0}   # marge avant d'annoncer le retour à la normale
 
 
