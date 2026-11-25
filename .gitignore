@@ -75,3 +75,7 @@ desktop.ini
 
 # Dépôt surveillé, écrit le temps du build natif (outils/build_native.py)
 /DEPOT
+
+# Mesure de couverture des tests
+.couverture/
+.coverage*

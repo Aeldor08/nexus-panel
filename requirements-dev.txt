@@ -1,4 +1,6 @@
-# Outils de développement et de test (pas nécessaires pour utiliser NEXUS) : CI et outils/release.py
+# Outils de développement et de test (pas nécessaires pour utiliser NEXUS) : CI, outils/build.py et outils/release.py
 ruff==0.17.4
 httpx>=0.27     # client de test de FastAPI / Starlette (anciennes versions)
 httpx2>=2.0     # client de test des versions récentes de Starlette
+coverage>=7.6   # couverture des tests : python outils/tests/run_all.py --couverture
+pip-audit>=2.7  # vulnérabilités connues des dépendances

@@ -1,7 +1,8 @@
 """Lance tous les tests SANS navigateur ni serveur en service (faux processus, faux haut-parleurs, faux GitHub,
 dossiers temporaires) : utilisé par la CI et par outils/release.py. Les tests qui pilotent Edge
 (test_ouverture, test_postit*) demandent un serveur de test sur le port 8001 : on les lance à la main.
-Usage : python outils/tests/run_all.py   (code de sortie 0 = tout est passé)"""
+Usage : python outils/tests/run_all.py [--couverture]   (code de sortie 0 = tout est passé)
+--couverture : mesure la couverture du code (paquet coverage, requirements-dev.txt) et affiche le rapport."""
 
 import os
 import subprocess
@@ -30,6 +31,7 @@ TESTS = [
     ("test_maj_natif.py", [str(BASE)]),
     ("test_telephone_natif.py", [str(BASE)]),
     ("test_deck_sessions.py", [str(BASE)]),
+    ("test_critiques.py", [str(BASE)]),
     ("test_focus_sante.py", []),
     ("test_philibert.py", [str(BASE)]),
     ("test_release_titre.py", []),
@@ -38,6 +40,12 @@ TESTS = [
 
 
 def main() -> int:
+    couverture = "--couverture" in sys.argv[1:]
+    if couverture:
+        (BASE / ".couverture").mkdir(exist_ok=True)
+        for f in (BASE / ".couverture").glob(".coverage*"):
+            f.unlink()
+    lanceur = [sys.executable, "-m", "coverage", "run", f"--rcfile={BASE / '.coveragerc'}"] if couverture else [sys.executable]
     env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1", NEXUS_NO_BOT="1", NEXUS_DECK_DRYRUN="1", NEXUS_OPEN_BROWSER="0")
     echecs, ignores = [], []
     for nom, args in TESTS:
@@ -49,7 +57,7 @@ def main() -> int:
             continue
         t0 = time.time()
         r = subprocess.run(
-            [sys.executable, str(ICI / nom), *args], cwd=BASE, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900
+            [*lanceur, str(ICI / nom), *args], cwd=BASE, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=900
         )
         sortie = (r.stdout or "") + (r.stderr or "")
         ok = r.returncode == 0 and "ÉCHEC" not in sortie
@@ -68,6 +76,10 @@ def main() -> int:
         f"\n{len(TESTS) - len(echecs) - len(ignores)}/{len(TESTS) - len(ignores)} fichiers de tests passés"
         + (f" ({len(ignores)} ignoré(s) : {', '.join(ignores)})" if ignores else "")
     )
+    if couverture:
+        rc = f"--rcfile={BASE / '.coveragerc'}"
+        subprocess.run([sys.executable, "-m", "coverage", "combine", rc], cwd=BASE, capture_output=True)
+        subprocess.run([sys.executable, "-m", "coverage", "report", rc], cwd=BASE)
     return 1 if echecs else 0
 
 
