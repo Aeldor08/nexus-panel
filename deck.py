@@ -352,7 +352,31 @@ class Deck:
         pw = str(cfg.get("password") or "")
         return bool(pw) and "CHOISIS" not in pw
 
+    @staticmethod
+    def empreinte(cfg: dict) -> str:
+        """Résumé du mot de passe en vigueur : s'il change, les sessions ouvertes avant ne valent plus rien."""
+        secret = str(cfg.get("password_hash") or "") or str(cfg.get("password") or "")
+        return hashlib.sha256(secret.encode()).hexdigest()[:16]
+
+    def suivre_mot_de_passe(self, cfg: dict) -> None:
+        """Révoque toutes les sessions si le mot de passe a changé depuis leur ouverture (configurer.bat,
+        « Configurer NEXUS » ou config.json modifié à la main, NEXUS en marche ou non)."""
+        e = self.empreinte(cfg)
+        with self._lock:
+            if self._empreinte is None:
+                self._empreinte = e
+                return
+            if e == self._empreinte:
+                return
+            self._empreinte = e
+            had = bool(self._sessions)
+            self._sessions.clear()
+            self._save_sessions()
+        if had:
+            print("[Deck] mot de passe changé : sessions ouvertes révoquées")
+
     def login(self, cfg: dict, password: str) -> str | None:
+        self.suivre_mot_de_passe(cfg)
         if not self.password_set(cfg) or not verify_password(cfg, str(password)):
             return None
         token = secrets.token_urlsafe(32)
@@ -379,23 +403,25 @@ class Deck:
                 self._sessions.pop(hashlib.sha256(token.encode()).hexdigest(), None)
                 self._save_sessions()
 
-    def revoke_all_sessions(self) -> None:
-        with self._lock:
-            self._sessions.clear()
-            self._save_sessions()
-
     def _load_sessions(self) -> None:
+        """Fichier : {"empreinte": …, "sessions": {jeton haché: expiration}} (ancien format : les sessions seules)."""
+        self._empreinte = None
         try:
             data = json.loads(SESSIONS_FILE.read_text(encoding="utf-8"))
-            now = time.time()
-            self._sessions = {k: v for k, v in data.items() if isinstance(v, (int, float)) and v > now}
         except (OSError, ValueError):
-            self._sessions = {}
+            data = {}
+        if not isinstance(data, dict):
+            data = {}
+        if isinstance(data.get("sessions"), dict):
+            self._empreinte = str(data.get("empreinte") or "") or None
+            data = data["sessions"]
+        now = time.time()
+        self._sessions = {k: v for k, v in data.items() if isinstance(v, (int, float)) and v > now}
 
     def _save_sessions(self) -> None:
         SESSIONS_FILE.parent.mkdir(parents=True, exist_ok=True)
         tmp = SESSIONS_FILE.with_suffix(".tmp")
-        tmp.write_text(json.dumps(self._sessions), encoding="utf-8")
+        tmp.write_text(json.dumps({"empreinte": self._empreinte, "sessions": self._sessions}), encoding="utf-8")
         tmp.replace(SESSIONS_FILE)
 
     def rate_ok(self, ip: str, bucket: str, per_minute: int) -> bool:

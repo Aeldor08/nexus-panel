@@ -982,6 +982,7 @@ def deck_guard(request: Request) -> None:
     cfg = config.get("deck")
     if not deck.rate_ok(_ip(request), "deck", int(cfg.get("rate_limit_per_minute") or 30)):
         raise BadRequest("trop de requêtes : réessaie dans une minute", 429)
+    deck.suivre_mot_de_passe(cfg)
     if not deck.check_session(request.cookies.get(deck_mod.SESSION_COOKIE)):
         raise BadRequest("mot de passe du deck requis", 401)
 
@@ -1016,6 +1017,7 @@ async def api_deck_logout(request: Request) -> JSONResponse:
 
 @app.get("/api/deck")
 def api_deck(request: Request) -> JSONResponse:
+    deck.suivre_mot_de_passe(config.get("deck"))
     if not deck.check_session(request.cookies.get(deck_mod.SESSION_COOKIE)):
         return JSONResponse({"logged_in": False, "password_set": deck.password_set(config.get("deck"))},
                             headers={"Cache-Control": "no-store"})

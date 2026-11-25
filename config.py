@@ -75,6 +75,7 @@ def _migration_1(cfg: dict) -> dict:
 MIGRATIONS = [(1, _migration_1)]
 
 _cache: dict | None = None
+_cache_mtime: float | None = None       # date de config.json au moment de la lecture
 warnings: list[str] = []
 
 
@@ -88,10 +89,21 @@ def _merge(base: dict, user: dict) -> dict:
     return out
 
 
+def _mtime() -> float | None:
+    try:
+        return CONFIG_FILE.stat().st_mtime
+    except OSError:
+        return None
+
+
 def load(force: bool = False) -> dict:
-    global _cache
-    if _cache is not None and not force:
+    """Configuration fusionnée (valeurs par défaut + config.json). Relue dès que config.json change sur le disque :
+    « Configurer NEXUS » (un autre processus) prend effet sans redémarrer, ancien mot de passe compris."""
+    global _cache, _cache_mtime
+    mtime = _mtime()
+    if _cache is not None and not force and mtime == _cache_mtime:
         return _cache
+    _cache_mtime = mtime
     warnings.clear()
     user = {}
     if CONFIG_FILE.exists():
