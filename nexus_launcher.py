@@ -754,6 +754,8 @@ def main() -> int:
     import logs
 
     log_path = logs.install()
+    for message in paths.MESSAGES:  # (écrits avant l'ouverture du journal : migration des données…)
+        print(message)
     import sante
 
     sante.install()

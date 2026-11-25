@@ -99,8 +99,12 @@ LEGACY_DIR = INSTALL_DIR
 _LAYOUT_MARKER = USER_ROOT / ".layout-v2"
 
 
+MESSAGES: list[str] = []  # messages de prepare() (migration…), recopiés dans le journal une fois celui-ci ouvert
+
+
 def _dire(message: str) -> None:
     """Écrit sur la console si elle existe (pythonw peut avoir stdout/stderr à None)."""
+    MESSAGES.append(message)
     try:
         print(message, flush=True)
     except Exception:

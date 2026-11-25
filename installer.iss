@@ -41,7 +41,8 @@ UninstallDisplayName={#MyAppName} {#MyVersion}
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
-CloseApplications=yes
+; NEXUS se réduit dans la zone de notification au lieu de se fermer : fermeture forcée s'il ne répond pas
+CloseApplications=force
 CloseApplicationsFilter=NEXUS.exe
 RestartApplications=no
 UsePreviousAppDir=yes
@@ -92,8 +93,8 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 Filename: "{app}\{#MyAppExeName}"; Description: "Lancer NEXUS"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
-; NEXUS ouvert (zone de notification) : on le ferme avant de supprimer ses fichiers.
-Filename: "{sys}\taskkill.exe"; Parameters: "/IM NEXUS.exe /F"; Flags: runhidden; RunOnceId: "FermerNEXUS"
+; NEXUS ouvert (zone de notification) : on ferme SEULEMENT celui de ce dossier (jamais un portable ou une autre copie).
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -NonInteractive -Command ""Get-Process NEXUS -ErrorAction SilentlyContinue | Where-Object {{ $_.Path -eq '{app}\NEXUS.exe' } | Stop-Process -Force"""; Flags: runhidden; RunOnceId: "FermerNEXUS"
 
 [UninstallDelete]
 ; Fichiers créés par NEXUS dans son dossier de programme (LibreHardwareMonitor compris s'il n'est plus lancé).
