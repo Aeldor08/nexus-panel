@@ -123,21 +123,20 @@ def _copier_dossier(src: Path, dst: Path) -> bool:
     return True
 
 
-def _migrer_anciennes_donnees() -> list[str]:
-    """Copie les anciennes données posées à côté de l'exe vers USER_ROOT (jamais d'écrasement)."""
-    if not FROZEN or LEGACY_DIR.resolve() == USER_ROOT.resolve() or _LAYOUT_MARKER.exists():
-        return []
+def _copier_depuis(source: Path, dossiers: tuple[str, ...]) -> list[str]:
+    """Copie les données d'une ancienne installation vers USER_ROOT, sans jamais écraser ni modifier l'original
+    (qui reste donc une sauvegarde complète)."""
     copied: list[str] = []
     for name in ("config.json", "deck.json", "jeux.json", "fan_names.json", ".env"):
-        if _copier_fichier(LEGACY_DIR / name, USER_ROOT / name):
+        if _copier_fichier(source / name, USER_ROOT / name):
             copied.append(name)
-    for name in ("data", "logs", "actions", "versions", "sauvegardes-maj", "maj"):
-        if _copier_dossier(LEGACY_DIR / name, USER_ROOT / name):
+    for name in dossiers:
+        if _copier_dossier(source / name, USER_ROOT / name):
             copied.append(name + "/")
     # Profils : on copie aussi les profils officiels de l'ancien dossier (l'utilisateur a pu
     # les modifier). Les profils officiels manquants seront ajoutés ensuite par
     # _copier_profils_fournis(), sans écraser ceux qui viennent d'être copiés.
-    old_profiles = LEGACY_DIR / "profils"
+    old_profiles = source / "profils"
     if old_profiles.is_dir():
         for folder in old_profiles.iterdir():
             if not folder.is_dir() or folder.name.startswith(("_", ".")):
@@ -146,8 +145,79 @@ def _migrer_anciennes_donnees() -> list[str]:
                 copied.append(f"profils/{folder.name}/")
     if copied:
         _LAYOUT_MARKER.parent.mkdir(parents=True, exist_ok=True)
-        _LAYOUT_MARKER.write_text("Migration depuis " + str(LEGACY_DIR) + " le " + time.strftime("%Y-%m-%d %H:%M:%S") + "\n", encoding="utf-8")
+        _LAYOUT_MARKER.write_text("Migration depuis " + str(source) + " le " + time.strftime("%Y-%m-%d %H:%M:%S") + "\n", encoding="utf-8")
     return copied
+
+
+def _migrer_anciennes_donnees() -> list[str]:
+    """Ancienne version exe : données posées à côté de l'exe, copiées vers USER_ROOT."""
+    if not FROZEN or LEGACY_DIR.resolve() == USER_ROOT.resolve() or _LAYOUT_MARKER.exists():
+        return []
+    return _copier_depuis(LEGACY_DIR, ("data", "logs", "actions", "versions", "sauvegardes-maj", "maj"))
+
+
+# --- Ancienne version source (dossier avec lancer.bat) ------------------------------------------------
+IMPORTER_ENV = "NEXUS_IMPORTER"  # posé par « NEXUS.exe --importer <dossier> »
+
+
+def est_version_source(dossier: Path) -> bool:
+    """Un dossier de la version source de NEXUS qui contient des données à reprendre."""
+    try:
+        return (
+            (dossier / "app.py").is_file()
+            and (dossier / "nexus.pyw").is_file()
+            and ((dossier / "config.json").is_file() or (dossier / "data" / "nexus.db").is_file())
+        )
+    except OSError:
+        return False
+
+
+def _raccourci_bureau() -> Path | None:
+    """Dossier visé par le raccourci « NEXUS » du Bureau créé par installer.bat (version source)."""
+    if os.name != "nt":
+        return None
+    import subprocess
+
+    script = (
+        "$d=[Environment]::GetFolderPath('Desktop'); $l=Join-Path $d 'NEXUS.lnk';"
+        "if(Test-Path -LiteralPath $l){(New-Object -ComObject WScript.Shell).CreateShortcut($l).WorkingDirectory}"
+    )
+    try:
+        out = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        ).stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return Path(out) if out else None
+
+
+def _premier_lancement() -> bool:
+    return not (CONFIG_FILE.exists() or (DATA_DIR / "nexus.db").exists() or _LAYOUT_MARKER.exists())
+
+
+def _importer_version_source() -> list[str]:
+    """Version installée, premier lancement : reprend les données de l'ancienne version source.
+    Dossier donné par « NEXUS.exe --importer <dossier> », sinon trouvé grâce au raccourci du Bureau."""
+    if not FROZEN or INSTALL_DIR.resolve() == USER_ROOT.resolve():  # (portable : ses données sont à côté de l'exe)
+        return []
+    demande = os.environ.get(IMPORTER_ENV, "").strip()
+    if demande:
+        source = Path(demande)
+        if not est_version_source(source):
+            _dire(f"[Données] {source} n'est pas un dossier NEXUS avec des données (app.py, nexus.pyw, config.json ou data/nexus.db)")
+            return []
+    elif _premier_lancement():
+        source = _raccourci_bureau()
+        if source is None or not est_version_source(source):
+            return []
+    else:
+        return []
+    # (data/ seulement : versions/, sauvegardes-maj/ et maj/ sont des copies du code de la version source)
+    return _copier_depuis(source, ("data", "actions"))
 
 
 def _copier_profils_fournis() -> None:
@@ -166,7 +236,7 @@ def prepare() -> None:
     # Migration AVANT de créer data/, logs/, actions/… : sinon _copier_dossier verrait une
     # destination déjà présente et ne copierait rien de l'ancienne installation.
     try:
-        copied = _migrer_anciennes_donnees()
+        copied = _migrer_anciennes_donnees() or _importer_version_source()
     except Exception as exc:  # ne jamais empêcher NEXUS de démarrer
         _dire(f"[Données] AVERTISSEMENT : migration de l'ancien dossier impossible ({exc})")
         copied = []

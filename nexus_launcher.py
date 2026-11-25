@@ -58,6 +58,7 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("--debug", action="store_true", help="outils de développement WebView2")
     p.add_argument("--portable", action="store_true", help="données à côté de l'exécutable")
     p.add_argument("--data-dir", default="", help="dossier de données personnalisé")
+    p.add_argument("--importer", default="", metavar="DOSSIER", help="reprendre les données d'une ancienne version source de NEXUS (dossier avec lancer.bat)")
     p.add_argument("--install-autostart", action="store_true", help="ajouter NEXUS au démarrage Windows")
     p.add_argument("--remove-autostart", action="store_true", help="retirer NEXUS du démarrage Windows")
     p.add_argument("--configure", action="store_true", help="ouvrir la fenêtre de configuration")
@@ -728,6 +729,8 @@ def main() -> int:
     # Les variables doivent être posées AVANT d'importer paths/app.
     if _ARGS.data_dir:
         os.environ["NEXUS_DATA_DIR"] = _ARGS.data_dir
+    if _ARGS.importer:
+        os.environ["NEXUS_IMPORTER"] = _ARGS.importer  # lu par paths.prepare() (copie, jamais d'écrasement)
     if _ARGS.configure:
         return _run_setup()
     if not _single_instance():
