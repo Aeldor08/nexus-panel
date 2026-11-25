@@ -13,7 +13,7 @@ BASE = Path(sys.argv[1])
 os.chdir(BASE)
 sys.path.insert(0, str(BASE))
 os.environ.update(NEXUS_NO_BOT="1", NEXUS_DECK_DRYRUN="1")
-tmp = Path(tempfile.mkdtemp(prefix="nexus-deck-"))
+tmp = Path(tempfile.mkdtemp(prefix="nexus-deck-")).resolve()  # nom long (TEMP en 8.3 sur la CI)
 os.environ["NEXUS_DATA_DIR"] = str(tmp)
 
 import config

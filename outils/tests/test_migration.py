@@ -12,7 +12,7 @@ from pathlib import Path
 
 BASE = Path(sys.argv[1])
 sys.path.insert(0, str(BASE))
-TMP = Path(tempfile.mkdtemp(prefix="nexus-migration-"))
+TMP = Path(tempfile.mkdtemp(prefix="nexus-migration-")).resolve()  # nom long (TEMP en 8.3 sur la CI)
 
 passed = failed = 0
 
