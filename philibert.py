@@ -131,11 +131,13 @@ SEUIL_ATTENTION = 30
 METEO_FORCEE: str | None = None  # tests : "soleil", "nuages", "pluie"
 SAISON_FORCEE: str | None = None  # tests : "printemps", "ete", "automne", "hiver"
 # Saisons : DEUX systèmes qui cohabitent.
-# 1. Les saisons du calendrier (mois réels, comme à l'origine) : printemps, été, saison des pluies, saison fraîche ;
-#    probabilités de pluie et de nuages, chaleur en plus ou en moins, produit de saison (1 coquillage de moins).
+# 1. Les quatre saisons de l'année de l'île : printemps, été, saison des pluies, saison fraîche. Elles se suivent dans
+#    l'ordre, comme une année en accéléré (3 à 6 jours chacune, au hasard, propre à chaque île) : elles ne suivent plus
+#    les mois réels (la saison des pluies durait trois mois). Probabilités de pluie et de nuages, chaleur en plus ou en
+#    moins, produit de saison (1 coquillage de moins).
 # 2. Les saisons de l'île (SAISONS_ILE), qui n'ont rien à voir avec le calendrier : chaque île a son roulement (tiré de
 #    sa graine), une période de 2 à 7 jours, puis une autre (jamais la même deux fois de suite) ; parfois aucune
-#    (« temps ordinaire »). Elles s'AJOUTENT à la saison du calendrier : un peu plus ou moins de pluie et de nuages,
+#    (« temps ordinaire »). Elles s'AJOUTENT à la saison de l'année : un peu plus ou moins de pluie et de nuages,
 #    de chaleur, un second produit de saison, leur décor.
 SAISONS = {
     "printemps": {"nom": "Printemps", "pluie": .15, "nuages": .45, "chaleur": 0, "promo": "fleur_pissenlit",
@@ -216,12 +218,42 @@ def periode_saison_ile(t: float, graine: str = "") -> tuple[str | None, float, f
     return L[lo][2], L[lo][0], L[lo][1]
 
 
+ANNEE = ("printemps", "ete", "automne", "hiver")           # l'année de l'île, dans l'ordre
+ANNEE_DUREE = (3, 6)                                          # jours, au hasard pour chaque saison
+_ANNEES: dict[str, list[tuple[float, float, str]]] = {}
+
+
+def periode_saison(t: float, graine: str = "") -> tuple[str, float, float]:
+    """(saison, début, fin) au temps t pour l'île de cette graine : les quatre saisons se suivent dans l'ordre
+    (printemps, été, saison des pluies, saison fraîche), chacune 3 à 6 jours au hasard (reproductible) ; chaque île
+    commence son année à une saison différente (tirée de sa graine)."""
+    L = _ANNEES.setdefault(graine, [])
+    i0 = int(_alea(graine, "annee-depart") * len(ANNEE)) % len(ANNEE)
+
+    def suivante(i: int, debut: float) -> tuple[float, float, str]:
+        d = (ANNEE_DUREE[0] + (ANNEE_DUREE[1] - ANNEE_DUREE[0]) * _alea(graine, "annee-duree", i)) * JOUR
+        return (debut, debut + d, ANNEE[(i0 + i) % len(ANNEE)])
+    if not L:
+        L.append(suivante(0, ROTATION_DEBUT))
+    if t < L[0][0]:
+        return L[0][2], L[0][0], L[0][1]
+    while L[-1][1] <= t:
+        L.append(suivante(len(L), L[-1][1]))
+    lo, hi = 0, len(L) - 1
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if L[mid][1] <= t:
+            lo = mid + 1
+        else:
+            hi = mid
+    return L[lo][2], L[lo][0], L[lo][1]
+
+
 def saison(t: float, graine: str = "") -> str:
-    """Saison du calendrier (mois réels), comme à l'origine."""
+    """Saison de l'année de l'île (printemps → été → saison des pluies → saison fraîche, 3 à 6 jours chacune)."""
     if SAISON_FORCEE:
         return SAISON_FORCEE
-    m = datetime.fromtimestamp(t).month
-    return "printemps" if 3 <= m <= 5 else "ete" if 6 <= m <= 8 else "automne" if 9 <= m <= 11 else "hiver"
+    return periode_saison(t, graine)[0]
 
 
 def saison_ile(t: float, graine: str = "") -> str | None:

@@ -635,14 +635,28 @@ ok(erreur(p.action, "_avancer", {}) is not None and erreur(p.action, "__init__",
 
 # ---- saisons de l'île -------------------------------------------------------------------------
 P.SAISON_FORCEE = None
-ok(P.saison(datetime(2026, 4, 10).timestamp()) == "printemps" and P.saison(datetime(2026, 7, 10).timestamp()) == "ete"
-   and P.saison(datetime(2026, 10, 10).timestamp()) == "automne" and P.saison(datetime(2026, 1, 10).timestamp()) == "hiver"
-   and P.saison(datetime(2026, 12, 24).timestamp()) == "hiver", "saisons selon le mois réel")
+# l'année de l'île : les quatre saisons se suivent dans l'ordre, 3 à 6 jours chacune (plus de saison des pluies
+# bloquée pendant trois mois comme avec les mois réels)
+t, periodes = P.ROTATION_DEBUT + 1, []
+while t < P.ROTATION_DEBUT + 200 * P.JOUR:
+    sa, deb, fin = P.periode_saison(t, "graine-test")
+    periodes.append((sa, deb, fin))
+    t = fin + 1
+durees = [(f - d) / P.JOUR for _, d, f in periodes]
+ok(all(3 <= x <= 6 for x in durees) and max(durees) - min(durees) > 1.5, f"chaque saison dure de 3 à 6 jours, au hasard ({min(durees):.1f} à {max(durees):.1f} j)")
+ordre = [x[0] for x in periodes]
+ok(all(P.ANNEE[(P.ANNEE.index(a) + 1) % 4] == b for a, b in zip(ordre, ordre[1:])), "dans l'ordre : printemps → été → saison des pluies → saison fraîche → printemps…")
+ok(all(a[2] == b[1] for a, b in zip(periodes, periodes[1:])), "les saisons s'enchaînent sans trou")
+nov = [P.saison(datetime(2026, 11, j, 12).timestamp(), "graine-test") for j in range(1, 31)]
+ok(len(set(nov)) == 4, f"en un mois réel (novembre), l'île passe par les quatre saisons ({sorted(set(nov))})")
+ok(len({P.saison(P.ROTATION_DEBUT + 1, f"ile-{k}") for k in range(12)}) >= 3, "chaque île commence son année à une saison différente")
+ok(P.periode_saison(P.ROTATION_DEBUT + 40 * P.JOUR, "graine-test") == P.periode_saison(P.ROTATION_DEBUT + 40 * P.JOUR, "graine-test"), "roulement reproductible (même saison sur le PC et le téléphone)")
 P.METEO_FORCEE = None
-debut = int(datetime(2026, 7, 1).timestamp() // (2 * H))
-ete = sum(P._ciel_brut("graine-test", b) == "pluie" for b in range(debut, debut + 360))
-debut = int(datetime(2026, 10, 1).timestamp() // (2 * H))
-pluies = sum(P._ciel_brut("graine-test", b) == "pluie" for b in range(debut, debut + 360))
+P.SAISON_FORCEE = "ete"
+ete = sum(P._ciel_brut("graine-test", b) == "pluie" for b in range(1000, 1360))
+P.SAISON_FORCEE = "automne"
+pluies = sum(P._ciel_brut("graine-test", b) == "pluie" for b in range(1000, 1360))
+P.SAISON_FORCEE = None
 ok(pluies > ete * 2, f"saison des pluies : bien plus d'averses qu'en été ({pluies} contre {ete} sur 360 tranches de 2 h)")
 temps = {}
 for sa in ("ete", "hiver"):
@@ -721,7 +735,7 @@ P.SAISON_FORCEE = None
 p = nouveau()
 e = p.etat()
 si = e["ciel"]["saison_ile"]
-ok(e["ciel"]["saison"] == P.saison(horloge[0]) and (si or {}).get("id") == P.saison_ile(horloge[0], p.s["graine"]), "la page sait quelle saison de l'île il fait")
+ok(e["ciel"]["saison"] == P.saison(horloge[0], p.s["graine"]) and (si or {}).get("id") == P.saison_ile(horloge[0], p.s["graine"]), "la page sait quelle saison de l'île il fait")
 P.SAISON_ILE_FORCEE = "brumes"
 e = nouveau().etat()
 ok(set(e["ciel"]["saison_ile"]) == {"id", "nom", "texte"} and not any(k for k in e["ciel"] if "reste" in k or "fin" in k), "aucune durée ni compte à rebours de saison n'est envoyé à la page")

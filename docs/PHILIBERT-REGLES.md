@@ -89,7 +89,7 @@ réchauffe vite et se refroidit lentement :
 | Dans l'eau (bain) | 40 | 40 | 40 |
 | **La nuit** (21 h–6 h) | plage 25 · palmier 28 · rocher 30 | idem | idem |
 
-Puis on ajoute la **saison du calendrier** : printemps 0 · été **+5** · saison des pluies **−2** · saison fraîche
+Puis on ajoute la **saison de l'année de l'île** : printemps 0 · été **+5** · saison des pluies **−2** · saison fraîche
 **−6** ; et, s'il y en a une, la **saison de l'île** : grande floraison +2 · tempêtes −4 · brumes −3 · ponte des
 tortues +3 (les deux s'additionnent : une saison des tempêtes en saison fraîche, c'est −10).
 
@@ -123,19 +123,21 @@ la tranche qui suit une pluie, s'il fait beau, c'est l'**arc-en-ciel**.
 
 Deux systèmes de saisons **cohabitent** :
 
-**1. Les saisons du calendrier** (mois réels, les mêmes pour toutes les îles) — la base de la météo :
+**1. L'année de l'île** — la base de la météo. Les quatre saisons se suivent **dans l'ordre** (printemps → été →
+saison des pluies → saison fraîche → printemps…), **3 à 6 jours chacune** (au hasard, reproductible, propre à chaque
+île, qui commence son année à une saison tirée de sa graine). Elles ne suivent plus les mois réels.
 
-| Saison (mois réels) | Pluie | Nuages | Soleil | Chaleur | Produit de saison (−1 coquillage) | Décor |
+| Saison | Pluie | Nuages | Soleil | Chaleur | Produit de saison (−1 coquillage) | Décor |
 |---|---|---|---|---|---|---|
-| Printemps (mars–mai) | 15 % | 30 % | 55 % | 0 | fleur de pissenlit | buisson d'hibiscus, fleurs, papillons |
-| Été (juin–août) | 8 % | 22 % | 70 % | **+5** | mangue | étoiles de mer, mer plus vive, papillons |
-| Saison des pluies (sept.–nov.) | 26 % | 32 % | 42 % | −2 | figue | noix de coco tombées, flaque plus grande, tonnerre lointain |
-| Saison fraîche (déc.–févr.) | 14 % | 41 % | 45 % | **−6** | chou vert | bois flotté, ciel plus pâle, pas de lucioles |
+| Printemps | 15 % | 30 % | 55 % | 0 | fleur de pissenlit | buisson d'hibiscus, fleurs, papillons |
+| Été | 8 % | 22 % | 70 % | **+5** | mangue | étoiles de mer, mer plus vive, papillons |
+| Saison des pluies | 26 % | 32 % | 42 % | −2 | figue | noix de coco tombées, flaque plus grande, tonnerre lointain |
+| Saison fraîche | 14 % | 41 % | 45 % | **−6** | chou vert | bois flotté, ciel plus pâle, pas de lucioles |
 
 **2. Les saisons de l'île**, qui n'ont rien à voir avec le calendrier. Chaque île a son propre **roulement** (tiré
 de sa graine, depuis le 1ᵉʳ janvier 2026) : une période dure **entre 2 et 7 jours** (au hasard), puis une autre lui
 succède, jamais la même deux fois de suite ; une période peut aussi être du **temps ordinaire** (aucune saison de
-l'île). Elles **s'ajoutent** à la saison du calendrier (points de pourcentage en plus ou en moins) ; l'en-tête de
+l'île). Elles **s'ajoutent** à la saison de l'année (points de pourcentage en plus ou en moins) ; l'en-tête de
 l'île montre les deux puces : quelle saison il fait, **sans durée ni compte à rebours** (la fin d'une saison de l'île
 reste une surprise).
 
@@ -148,7 +150,7 @@ reste une surprise).
 
 Exemple : saison des tempêtes en été → pluie 22 %, nuages 40 %, soleil 38 %. (Les pourcentages sont ceux du
 tirage ; « jamais deux pluies de suite » en retire un peu au profit des nuages.) Succès « Les quatre saisons » (les
-4 du calendrier) et « Saisons de l'île » (les 4 de l'île).
+4 de l'année) et « Saisons de l'île » (les 4 de l'île).
 
 ## 5. Les soins (effet immédiat)
 

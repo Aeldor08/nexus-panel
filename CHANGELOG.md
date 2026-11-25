@@ -8,6 +8,9 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Corrigé
+- Philibert : la saison en haut de l'île ne reste plus **bloquée sur « Saison des pluies »** (elle suivait les mois réels, de septembre à novembre) : les quatre saisons de l'année de l'île (printemps, été, saison des pluies, saison fraîche) se suivent maintenant dans l'ordre, 3 à 6 jours chacune ; les saisons spéciales de l'île continuent de s'y ajouter
+
 ## [1.9.0] - 2026-11-24
 
 ### Ajouté

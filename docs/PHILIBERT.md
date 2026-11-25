@@ -46,13 +46,14 @@ Deux principes guident toutes les règles :
   pluie (jamais deux tranches de pluie de suite), arc-en-ciel la tranche qui suit une pluie. Les proportions
   dépendent de la saison (ci-dessous).
 - **Saisons** : deux systèmes qui cohabitent (chiffres complets dans `docs/PHILIBERT-REGLES.md`).
-  - **Saisons du calendrier** (mois réels, comme à l'origine) : printemps (mars–mai), été (juin–août), saison des
-    pluies (sept.–nov.), saison fraîche (déc.–févr.). Elles fixent la météo de base (pluie, nuages, soleil,
-    arc-en-ciel), la chaleur, le produit de saison et le décor ; fiches « Le savais-tu ? » de saison, succès « Les
-    quatre saisons ».
+  - **L'année de l'île** : printemps, été, saison des pluies, saison fraîche, qui se suivent **dans l'ordre**, comme
+    une année en accéléré : **3 à 6 jours chacune** (au hasard, reproductible ; chaque île commence à une saison
+    différente). Elles ne suivent plus les mois réels (la saison des pluies durait trois mois, de septembre à
+    novembre). Elles fixent la météo de base (pluie, nuages, soleil, arc-en-ciel), la chaleur, le produit de saison
+    et le décor ; fiches « Le savais-tu ? » de saison, succès « Les quatre saisons ».
   - **Saisons de l'île**, sans lien avec le calendrier : chaque île a son roulement, une période de 2 à 7 jours (au
     hasard, reproductible), jamais la même deux fois de suite, parfois du temps ordinaire. Grande floraison, saison
-    des tempêtes, saison des brumes, ponte des tortues : elles **s'ajoutent** à la saison du calendrier (un peu plus
+    des tempêtes, saison des brumes, ponte des tortues : elles **s'ajoutent** à la saison de l'année (un peu plus
     ou moins de pluie et de nuages, de chaleur), donnent un 2ᵉ produit de saison et leur décor ; succès « Saisons de
     l'île ». L'en-tête montre les deux puces. La guirlande de décembre reste liée au vrai mois de décembre.
 - **Sieste sur le rocher** : fatigué en plein soleil, il fait sa sieste à plat ventre sur le rocher chaud et s'y
