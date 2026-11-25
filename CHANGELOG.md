@@ -8,6 +8,36 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Ajouté
+- **Installeur** : LibreHardwareMonitor livré en option cochée (températures du processeur, des disques et
+  ventilateurs ; version 0.9.6 officielle, empreinte vérifiée) ; à la désinstallation, choix de **garder** (par
+  défaut) ou **supprimer** ses données, jeton du bot compris. Le ZIP portable livre aussi LibreHardwareMonitor
+- **Reprise d'une ancienne version source** (dossier avec `lancer.bat`) : au premier lancement de l'application
+  installée, ses données sont copiées (configuration, base, photos, Philibert, actions, profils), l'ancien dossier
+  n'est jamais modifié ; `NEXUS.exe --importer <dossier>` pour un dossier donné
+- Le **jeton du bot Discord** est rangé dans le gestionnaire d'identifiants de Windows (plus en clair dans
+  `config.json`)
+- `outils/build.py` : tout construire d'une commande (lint, tests, audit, exe, installeur, portable, SHA256) ;
+  la CI publie l'installeur et le portable à chaque tag s'ils manquent
+
+### Corrigé
+- **Deck** : un mot de passe changé avec « Configurer NEXUS » pendant que NEXUS tournait n'était pris en compte
+  qu'au redémarrage (l'ancien restait accepté, les sessions ouvertes aussi) : `config.json` est relu dès qu'il
+  change et les sessions sont révoquées
+- `config.json` (ou `deck.json`) enregistré en « UTF-8 avec BOM » (Bloc-notes, PowerShell) était déclaré
+  illisible : NEXUS repartait sur les valeurs par défaut (Deck désactivé)
+- Installeur : textes accentués abîmés dans l'assistant (« CrÃ©er un raccourci ») ; la désinstallation fermait
+  aussi un NEXUS portable ouvert ; installer par-dessus un NEXUS ouvert s'arrêtait
+- Points d'accès sans corps (vérifier les mises à jour, etc.) : JSON obligatoire, comme les autres, pour qu'un
+  autre site ouvert dans le navigateur ne puisse pas les déclencher (version source)
+- Les erreurs des boucles de fond (relevé des processus, mode jeu) sont écrites dans le journal au lieu d'être
+  ignorées en silence
+
+### Modifié
+- Code reformaté (ruff format) et lint élargi ; fins de ligne uniformisées ; tests des parties critiques
+  (configuration, base et migrations, authentification, profils, statistiques, migration des données)
+- Retirés : le kit de personnalisation 1.6.0 (patch de 243 Ko et documents, désormais intégrés) et du code mort
+
 ## [1.9.2] - 2026-11-25
 
 ### Corrigé
