@@ -40,7 +40,13 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 UninstallDisplayName={#MyAppName} {#MyVersion}
 Compression=lzma2/ultra64
 SolidCompression=yes
-WizardStyle=modern
+; Habillage aux couleurs de NEXUS (sombre, logo, dégradé cyan → magenta) : images dessinées par
+; outils\images_installeur.py, une par zoom de Windows (Inno Setup choisit la plus proche)
+WizardStyle=modern dark hidebevels includetitlebar
+DisableWelcomePage=no
+WizardImageFile=installeur\gauche-202x386.png,installeur\gauche-269x515.png,installeur\gauche-336x643.png,installeur\gauche-403x772.png,installeur\gauche-430x824.png,installeur\gauche-534x1022.png
+WizardSmallImageFile=installeur\logo-58.png,installeur\logo-77.png,installeur\logo-97.png,installeur\logo-116.png,installeur\logo-124.png,installeur\logo-159.png
+WizardBackImageFile=installeur\fond-596x432.png,installeur\fond-796x576.png,installeur\fond-994x720.png,installeur\fond-1272x922.png
 ; NEXUS se réduit dans la zone de notification au lieu de se fermer : fermeture forcée s'il ne répond pas
 CloseApplications=force
 CloseApplicationsFilter=NEXUS.exe
@@ -58,6 +64,34 @@ VersionInfoCopyright=NEXUS, licence MIT
 
 [Languages]
 Name: "french"; MessagesFile: "compiler:Languages\French.isl"
+
+[Messages]
+WelcomeLabel1=Bienvenue dans NEXUS
+WelcomeLabel2=NEXUS va s'installer sur ton PC : tableau de bord en direct, musique et son, stream deck, agenda, souvenirs, statistiques… et Philibert, ton iguane.%n%nUne minute suffit, sans droits administrateur. Si NEXUS est ouvert, il sera fermé le temps de l'installation ; tes données sont gardées.
+FinishedHeadingLabel=NEXUS est prêt
+FinishedLabel=NEXUS est installé. Tu le retrouves dans le menu Démarrer, et son icône près de l'horloge quand il tourne.%n%nIl se mettra à jour tout seul : tu n'auras plus besoin de cet installeur.
+FinishedLabelNoIcons=NEXUS est installé. Son icône apparaît près de l'horloge quand il tourne.%n%nIl se mettra à jour tout seul : tu n'auras plus besoin de cet installeur.
+; le reste de l'assistant tutoie aussi, comme NEXUS
+ClickNext=Clique sur Suivant pour continuer, ou sur Annuler pour quitter.
+ClickFinish=Clique sur Terminer pour fermer l'assistant.
+LicenseLabel=NEXUS est un logiciel libre, sous licence MIT.
+LicenseLabel3=Voici la licence de NEXUS : tu peux l'utiliser, le copier et le modifier librement. Accepte-la pour continuer.
+LicenseAccepted=J'&accepte la licence
+LicenseNotAccepted=Je &refuse la licence
+SelectDirDesc=Où installer NEXUS ?
+SelectDirLabel3=NEXUS va s'installer dans ce dossier, pour ton compte Windows seulement (pas besoin des droits administrateur).
+SelectDirBrowseLabel=Clique sur Suivant pour continuer, ou sur Parcourir pour choisir un autre dossier.
+DiskSpaceMBLabel=Il faut au moins [mb] Mo d'espace libre.
+DiskSpaceGBLabel=Il faut au moins [gb] Go d'espace libre.
+WizardSelectTasks=Options
+SelectTasksDesc=Que veux-tu en plus ?
+SelectTasksLabel2=Coche ce que tu veux, puis clique sur Suivant.
+ReadyLabel1=Tout est prêt pour installer NEXUS sur ton PC.
+ReadyLabel2a=Clique sur Installer pour lancer l'installation, ou sur Précédent pour changer une option.
+ReadyLabel2b=Clique sur Installer pour lancer l'installation.
+ReadyMemoTasks=Options :
+InstallingLabel=Patiente quelques secondes pendant l'installation de NEXUS…
+ExitSetupMessage=NEXUS n'est pas encore installé. Si tu quittes maintenant, il ne le sera pas.%n%nTu pourras relancer cet installeur plus tard.%n%nQuitter quand même ?
 
 [Tasks]
 Name: "desktopicon"; Description: "Créer un raccourci NEXUS sur le Bureau"; GroupDescription: "Raccourcis :"

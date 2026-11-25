@@ -38,7 +38,7 @@ INTERDITS = re.compile(
     r"(^|/)\.env|\.(db|sqlite3?|log|bak|pem|key|pfx|p12|lnk)$",
     re.I,
 )
-HORS_ARCHIVE = (".github/",)  # utile au dépôt seulement
+HORS_ARCHIVE = (".github/", "installeur/")  # utile au dépôt seulement (images de l'installeur Windows)
 
 
 class Arret(Exception):

@@ -8,6 +8,12 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Modifié
+- **Installeur Windows aux couleurs de NEXUS** : fenêtre sombre, page d'accueil et page de fin illustrées (logo
+  hexagonal, dégradé cyan → magenta, petite courbe d'activité), logo en haut des autres pages, fond discret en nids
+  d'abeille ; images nettes à tous les zooms de Windows (`outils/images_installeur.py`) ; textes de l'assistant
+  plus chaleureux et au tutoiement, comme dans NEXUS
+
 ## [1.10.1] - 2026-11-25
 
 ### Ajouté
