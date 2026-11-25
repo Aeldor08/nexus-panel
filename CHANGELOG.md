@@ -8,6 +8,9 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Corrigé
+- Mises à jour : la vérification de la signature de l'installeur (et le script de mise à jour) ne tombe plus en panne quand NEXUS est lancé depuis PowerShell 7 : Windows PowerShell n'hérite plus d'un chemin de modules qu'il ne sait pas charger (c'est ce qui faisait échouer la CI de GitHub depuis le 19/11)
+
 ## [1.9.1] - 2026-11-25
 
 ### Corrigé

@@ -55,6 +55,17 @@ try:
     ok(maj_natif.SHA256_RE.match(attendu) is not None, "format SHA256 accepté")
     ok(maj_natif.SHA256_RE.match("pas-un-hash") is None, "faux SHA256 refusé")
 
+    # PowerShell 7 (pwsh) lègue un PSModulePath que Windows PowerShell 5.1 ne sait pas charger
+    psmodulepath = os.environ.get("PSModulePath")
+    os.environ["PSModulePath"] = r"C:\Program Files\PowerShell\7\Modules"
+    env_ps = maj_natif._env_powershell()
+    ok(not any(k.upper() == "PSMODULEPATH" for k in env_ps), "PSModulePath hérité retiré pour Windows PowerShell")
+    ok(env_ps.get("PATH") or env_ps.get("Path"), "le reste de l'environnement est conservé")
+    if psmodulepath is None:
+        os.environ.pop("PSModulePath", None)
+    else:
+        os.environ["PSModulePath"] = psmodulepath
+
     # --- politique de signature ------------------------------------------
     non_signe = {"statut": "non_signe", "signataire": "", "empreinte": "", "message": "NotSigned"}
     valide = {"statut": "valide", "signataire": "CN=NEXUS", "empreinte": "AA BB CC", "message": "ok"}
@@ -81,7 +92,7 @@ try:
         notepad = Path(os.environ.get("WINDIR", r"C:\Windows")) / "System32" / "notepad.exe"
         if notepad.is_file():
             systeme = maj_natif.verifier_signature(notepad)
-            print(f"      (notepad.exe : {systeme['statut']})")
+            print(f"      (notepad.exe : {systeme['statut']}" + (f", {systeme['message']}" if systeme["statut"] != "valide" else "") + ")")
             ok(systeme["statut"] == "valide", "fichier système signé reconnu par Get-AuthenticodeSignature")
     else:
         print("      (signature Authenticode ignorée : plateforme non Windows)")

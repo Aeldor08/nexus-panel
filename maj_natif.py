@@ -231,6 +231,17 @@ def _powershell() -> str | None:
     return None
 
 
+def _env_powershell() -> dict:
+    """Environnement pour lancer Windows PowerShell sans PSModulePath hérité.
+
+    Lancé depuis PowerShell 7 (pwsh), PSModulePath pointe vers les modules de la
+    version 7 : Windows PowerShell 5.1 essaie alors de les charger, échoue, et
+    Get-AuthenticodeSignature / Get-FileHash deviennent introuvables. Sans la
+    variable, PowerShell reconstruit son chemin de modules par défaut.
+    """
+    return {k: v for k, v in os.environ.items() if k.upper() != "PSMODULEPATH"}
+
+
 def _ps_litteral(valeur: str) -> str:
     return "'" + str(valeur).replace("'", "''") + "'"
 
@@ -259,7 +270,7 @@ def verifier_signature(path: Path, timeout: float = 45.0) -> dict:
     try:
         p = subprocess.run([exe, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script],
                            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout,
-                           creationflags=flags)
+                           creationflags=flags, env=_env_powershell())
     except (OSError, subprocess.TimeoutExpired) as exc:
         return {"statut": "inconnu", "signataire": "", "empreinte": "",
                 "message": f"vérification impossible ({type(exc).__name__})"}
@@ -457,7 +468,7 @@ def lancer_helper(job: dict) -> dict:
     flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     try:
         subprocess.Popen(cmd, cwd=str(paths.MAJ_DIR), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                         stderr=subprocess.DEVNULL, creationflags=flags, close_fds=True)
+                         stderr=subprocess.DEVNULL, creationflags=flags, close_fds=True, env=_env_powershell())
     except OSError as exc:
         try:
             JOB_FILE.unlink(missing_ok=True)
