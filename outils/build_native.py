@@ -39,6 +39,66 @@ class BuildError(Exception):
     pass
 
 
+# --------------------------------------------------------------------------- #
+#  LibreHardwareMonitor (MPL-2.0) : livré avec l'installeur (option cochée) et le portable
+# --------------------------------------------------------------------------- #
+LHM_VERSION = "0.9.6"
+LHM_URL = f"https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases/download/v{LHM_VERSION}/LibreHardwareMonitor.zip"
+# Empreinte publiée par GitHub pour cette version (édition .NET Framework 4.7.2, incluse dans Windows 10/11)
+LHM_SHA256 = "086d9f1b5a99e643edc2cfaaac16051685b551e4c5ac0b32a57c58c0e529c001"
+LHM_LICENCE_URL = f"https://raw.githubusercontent.com/LibreHardwareMonitor/LibreHardwareMonitor/v{LHM_VERSION}/LICENSE"
+LHM_CACHE = BASE / "build" / "tiers"
+
+
+def preparer_lhm() -> Path:
+    """Télécharge (une fois, en cache dans build/tiers/) et vérifie LibreHardwareMonitor ; renvoie son dossier
+    prêt à livrer : programme + configuration de NEXUS (serveur web 8085, démarrage réduit) + licence."""
+    import urllib.request
+
+    dossier = LHM_CACHE / f"LibreHardwareMonitor-{LHM_VERSION}"
+    if (dossier / "LibreHardwareMonitor.exe").is_file():
+        return dossier
+    LHM_CACHE.mkdir(parents=True, exist_ok=True)
+    archive = LHM_CACHE / f"LibreHardwareMonitor-{LHM_VERSION}.zip"
+    if not archive.is_file() or sha256(archive) != LHM_SHA256:
+        print(f"  téléchargement de LibreHardwareMonitor {LHM_VERSION}")
+        tmp = archive.with_suffix(".part")
+        with urllib.request.urlopen(LHM_URL, timeout=120) as rep, open(tmp, "wb") as f:
+            shutil.copyfileobj(rep, f)
+        tmp.replace(archive)
+    if sha256(archive) != LHM_SHA256:
+        archive.unlink(missing_ok=True)
+        raise BuildError("LibreHardwareMonitor : empreinte SHA256 différente de celle attendue (téléchargement refusé)")
+    tmp_dir = dossier.with_name(dossier.name + ".tmp")
+    shutil.rmtree(tmp_dir, ignore_errors=True)
+    with zipfile.ZipFile(archive) as z:
+        for info in z.infolist():
+            nom = Path(info.filename)
+            if nom.is_absolute() or ".." in nom.parts:
+                raise BuildError(f"LibreHardwareMonitor : chemin interdit dans l'archive ({info.filename})")
+        z.extractall(tmp_dir)
+    # Archive avec ou sans dossier racine
+    racine = tmp_dir if (tmp_dir / "LibreHardwareMonitor.exe").is_file() else next(tmp_dir.rglob("LibreHardwareMonitor.exe")).parent
+    shutil.copyfile(BASE / "outils" / "LibreHardwareMonitor.config", racine / "LibreHardwareMonitor.config")
+    try:
+        with urllib.request.urlopen(LHM_LICENCE_URL, timeout=30) as rep:
+            licence = rep.read().decode("utf-8", errors="replace")
+    except OSError:
+        licence = "Mozilla Public License 2.0 : https://mozilla.org/MPL/2.0/\n"
+    (racine / "LICENCE-LibreHardwareMonitor.txt").write_text(
+        f"LibreHardwareMonitor {LHM_VERSION}, livré avec NEXUS sans modification.\n"
+        f"Code source : https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/tree/v{LHM_VERSION}\n\n" + licence,
+        encoding="utf-8",
+    )
+    if racine == tmp_dir:
+        tmp_dir.replace(dossier)
+    else:
+        shutil.move(str(racine), str(dossier))
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+    print(f"  LibreHardwareMonitor {LHM_VERSION} prêt : {dossier}")
+    return dossier
+
+
 def run(cmd: list[str], timeout: int | None = None) -> None:
     print("  >", " ".join(str(c) for c in cmd))
     try:
@@ -113,8 +173,8 @@ def write_hashes(files: list[Path]) -> None:
         (DIST / "SHA256SUMS.txt").write_text("\n".join(lignes) + "\n", encoding="utf-8")
 
 
-def write_portable(ver: str) -> Path:
-    """Archive ZIP portable : exe + _internal + drapeau + lanceur + notice."""
+def write_portable(ver: str, lhm: Path | None = None) -> Path:
+    """Archive ZIP portable : exe + _internal + drapeau + lanceur + notice (+ LibreHardwareMonitor)."""
     source = DIST / "NEXUS"
     if not (source / "NEXUS.exe").is_file():
         raise BuildError(f"exe introuvable pour l'archive portable : {source / 'NEXUS.exe'}")
@@ -157,6 +217,10 @@ Mise à jour manuelle (dossier en lecture seule, ou portable antérieur à 1.9.0
             if fichier.name in exclus or rel.parts[0].lower().startswith("unins"):
                 continue
             z.write(fichier, f"{racine}/{rel.as_posix()}")
+        if lhm is not None:
+            for fichier in sorted(lhm.rglob("*")):
+                if fichier.is_file():
+                    z.write(fichier, f"{racine}/LibreHardwareMonitor/{fichier.relative_to(lhm).as_posix()}")
         z.writestr(f"{racine}/portable.flag", flag)
         z.writestr(f"{racine}/Lancer NEXUS.bat", lanceur)
         z.writestr(f"{racine}/LISEZMOI.txt", notice)
@@ -184,6 +248,7 @@ def main() -> int:
     ap.add_argument("--pfx-password", default="", help="mot de passe du .pfx")
     ap.add_argument("--hashes-only", action="store_true", help="réécrire seulement les fichiers .sha256")
     ap.add_argument("--depot", default="", help="dépôt GitHub surveillé pour les mises à jour (propriétaire/nom) ; par défaut : le remote origin")
+    ap.add_argument("--sans-lhm", action="store_true", help="ne pas livrer LibreHardwareMonitor (installeur et portable)")
     args = ap.parse_args()
 
     ver = version()
@@ -203,6 +268,11 @@ def main() -> int:
     signtool = find_signtool() if signing else None
     if signing and not signtool:
         raise BuildError("signtool introuvable : installe le Windows SDK ou signe avec outils/sign_native.ps1")
+
+    lhm = None
+    if (args.installer or args.portable) and not args.sans_lhm:
+        print("\nLibreHardwareMonitor (températures) pour l'installeur et le portable")
+        lhm = preparer_lhm()
 
     if not args.skip_tests:
         print("\n[1/6] Tests")
@@ -242,7 +312,10 @@ def main() -> int:
         iscc = find_iscc()
         if not iscc:
             raise BuildError("Inno Setup 6 introuvable (ISCC.exe). Installe-le depuis jrsoftware.org, ou construis seulement l'exe sans --installer.")
-        run([iscc, f"/DMyVersion={ver}", str(BASE / "installer.iss")])
+        cmd = [iscc, f"/DMyVersion={ver}"]
+        if lhm is not None:
+            cmd.append(f"/DLhmDir={lhm}")
+        run([*cmd, str(BASE / "installer.iss")])
         if not installer.is_file():
             raise BuildError(f"installeur introuvable après Inno Setup : {installer}")
         print(f"  {installer} ({installer.stat().st_size / 2**20:.1f} Mo)")
@@ -255,7 +328,7 @@ def main() -> int:
     portable_zip = None
     if args.portable:
         print("\n[5/6] Archive portable")
-        portable_zip = write_portable(ver)
+        portable_zip = write_portable(ver, lhm)
         print(f"  {portable_zip} ({portable_zip.stat().st_size / 2**20:.1f} Mo)")
     else:
         print("\n[5/6] Archive portable ignorée (ajoute --portable)")

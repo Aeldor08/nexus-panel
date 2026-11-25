@@ -1,12 +1,15 @@
 name: Build Windows native
 
-# Construit NEXUS.exe, l'installeur Inno Setup et les empreintes SHA256.
-# Aucune release GitHub n'est publiée ici : les fichiers sont disponibles dans
-# les artefacts du workflow. La publication reste une décision manuelle.
+# Sur chaque tag v* : construit NEXUS.exe, l'installeur NEXUS-X.Y.Z-Setup.exe et le portable
+# NEXUS-Portable-X.Y.Z.zip (outils/build.py : lint, tests, audit, PyInstaller, Inno Setup, SHA256),
+# puis les publie s'ils manquent :
+#   - installeur (+ .sha256) dans la release vX.Y.Z (celle que lisent les mises à jour automatiques) ;
+#   - portable (+ .sha256) dans la pré-release portable-X.Y.Z (jamais dans vX.Y.Z : les versions source
+#     prennent le dernier .zip de la release pour se mettre à jour).
+# Si outils/release.py les a déjà envoyés depuis le PC, rien n'est remplacé (un seul fichier par version).
+# Lancement manuel : construction et artefacts seulement, sans publication.
 #
-# Déclenchement : push d'un tag v* (ex. v1.5.0) ou lancement manuel.
-# Signature : ajoute les secrets WINDOWS_CERT_PFX_BASE64 et
-# WINDOWS_CERT_PFX_PASSWORD pour signer l'exe et l'installeur.
+# Signature (désactivée par défaut) : secrets WINDOWS_CERT_PFX_BASE64 et WINDOWS_CERT_PFX_PASSWORD.
 
 on:
   push:
@@ -15,7 +18,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: native-${{ github.ref }}
@@ -24,70 +27,69 @@ concurrency:
 jobs:
   build:
     runs-on: windows-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: utf-8
 
     steps:
       - name: Récupérer le code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
-      - name: Python 3.11
+      - name: Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-          cache: pip
+          python-version: "3.12"
 
-      - name: Dépendances
+      - name: Le tag correspond au fichier VERSION
+        if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements-dev.txt -r requirements-native.txt
+          $v = (Get-Content VERSION -Raw).Trim()
+          if ("v$v" -ne "${{ github.ref_name }}") { throw "tag ${{ github.ref_name }} différent de VERSION ($v)" }
 
-      - name: Lint
-        run: python -m ruff check .
-
-      - name: Tests
-        run: python outils/tests/run_all.py
-
-      - name: Inno Setup
+      - name: Inno Setup 6
         shell: pwsh
         run: |
-          $iscc = Get-Command iscc -ErrorAction SilentlyContinue
-          if (-not $iscc -and -not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
-            Write-Host "Inno Setup absent : installation via Chocolatey"
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
             choco install innosetup --no-progress -y
           }
 
-      - name: Construire l'exe et l'installeur
+      - name: Environnement de build
+        shell: pwsh
+        run: |
+          python -m venv .venv-build
+          .venv-build\Scripts\python.exe -m pip install --disable-pip-version-check -q --upgrade pip
+
+      - name: Construire (lint, tests, audit, exe, installeur, portable, SHA256)
         shell: pwsh
         env:
           PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
-          PFX_PASSWORD: ${{ secrets.WINDOWS_CERT_PFX_PASSWORD }}
+          NEXUS_PFX_PASSWORD: ${{ secrets.WINDOWS_CERT_PFX_PASSWORD }}
         run: |
-          $params = @("outils/build_native.py", "--skip-tests", "--installer", "--portable")
+          $params = @("outils/build.py", "--depot", "${{ github.repository }}")
           if ($env:PFX_BASE64) {
             $pfx = Join-Path $env:RUNNER_TEMP "nexus.pfx"
             [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:PFX_BASE64))
-            $params += @("--pfx", $pfx, "--pfx-password", $env:PFX_PASSWORD)
+            $params += @("--pfx", $pfx)
             Write-Host "Signature Authenticode activée."
           } else {
-            Write-Host "::warning::Aucun certificat configuré : exe et installeur non signés."
+            Write-Host "::warning::Aucun certificat configuré : exe et installeur non signés (SmartScreen)."
           }
-          python @params
+          .venv-build\Scripts\python.exe @params
 
-      - name: Vérifier les empreintes
+      - name: Empreintes
         shell: pwsh
-        run: |
-          Get-ChildItem dist -Filter "NEXUS*" -File | Sort-Object Name |
-            Select-Object Name, Length, @{n = "SHA256"; e = { (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower() } } |
-            Format-Table -AutoSize
-          Get-Content dist/SHA256SUMS.txt
+        run: Get-Content dist/SHA256SUMS.txt
 
       - name: Artefacts
         uses: actions/upload-artifact@v4
         with:
           name: nexus-native-${{ github.ref_name }}
           path: |
-            dist/NEXUS/
             dist/NEXUS-*-Setup.exe
             dist/NEXUS-*-Setup.exe.sha256
             dist/NEXUS-Portable-*.zip
@@ -95,3 +97,32 @@ jobs:
             dist/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publier (seulement les fichiers manquants)
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.ref_name }}"; $ver = $tag.Substring(1); $repo = "${{ github.repository }}"
+          # La release vX.Y.Z est créée par outils/release.py (PC) ou par release.yml : on l'attend (10 min max).
+          for ($i = 0; $i -lt 40; $i++) {
+            gh release view $tag --repo $repo *> $null
+            if ($LASTEXITCODE -eq 0) { break }
+            Start-Sleep 15
+          }
+          gh release view $tag --repo $repo *> $null
+          if ($LASTEXITCODE -ne 0) { throw "release $tag introuvable : publie d'abord avec outils/release.py" }
+          $assets = gh release view $tag --repo $repo --json assets --jq '.assets[].name'
+          $setup = "NEXUS-$ver-Setup.exe"
+          if ($assets -notcontains $setup) {
+            gh release upload $tag "dist/$setup" "dist/$setup.sha256" --repo $repo
+          } else { Write-Host "$setup déjà publié (outils/release.py) : rien à faire." }
+          $ptag = "portable-$ver"; $zip = "NEXUS-Portable-$ver.zip"
+          gh release view $ptag --repo $repo *> $null
+          if ($LASTEXITCODE -ne 0) {
+            $sha = (Get-Content "dist/$zip.sha256" -Raw).Split(" ")[0]
+            $notes = "## Télécharger`n`n**[$zip](https://github.com/$repo/releases/download/$ptag/$zip)** — Windows 10/11 64 bits, aucune installation.`n`nDécompresse le ZIP où tu veux (clé USB comprise), lance NEXUS.exe. Toutes les données restent dans ce dossier.`nPour une installation classique avec raccourcis et mises à jour automatiques : [$setup](https://github.com/$repo/releases/tag/$tag).`n`nSHA256 : ``$sha``"
+            $notes | Out-File notes-portable.md -Encoding utf8
+            gh release create $ptag "dist/$zip" "dist/$zip.sha256" --repo $repo --target $tag --title "NEXUS $ver — version portable Windows" --notes-file notes-portable.md --prerelease --latest=false
+          } else { Write-Host "$ptag déjà publiée (outils/release.py) : rien à faire." }

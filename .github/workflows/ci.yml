@@ -33,6 +33,10 @@ jobs:
         run: python -m pip install --disable-pip-version-check -r requirements.txt -r requirements-dev.txt
       - name: Lint (ruff)
         run: python -m ruff check .
+      - name: Formatage (ruff format)
+        run: python -m ruff format --check .
+      - name: Vulnérabilités des dépendances (pip-audit)
+        run: python -m pip_audit -r requirements.txt -r requirements-native.txt --progress-spinner off
       - name: Profils visuels
         run: python valider_profil.py --tous
       - name: Tests
