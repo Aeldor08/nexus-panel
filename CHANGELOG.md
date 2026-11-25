@@ -8,6 +8,11 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Ajouté
+- Fenêtre **Version** : une ligne **« Type d'installation »** (Application Windows, Portable ou Version source)
+  en tête des mises à jour, pour savoir d'un coup d'œil quelle version de NEXUS est ouverte et comment elle se met
+  à jour
+
 ## [1.10.0] - 2026-11-25
 
 ### Ajouté

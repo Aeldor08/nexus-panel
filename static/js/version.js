@@ -60,6 +60,7 @@
     const travail = maj.travail || {};
     return `
       <div class="maj-etat">
+        <div><small>Type d'installation</small><b>${maj.portable ? "Portable" : maj.natif ? "Application Windows" : "Version source"}</b></div>
         <div><small>Dépôt surveillé</small><b>${r.depot ? esc(r.depot) : "—"}</b></div>
         <div><small>Dernière vérification</small><b>${quand(v.derniere)}</b></div>
         <div><small>Vérification automatique</small><b>${r.actif ? `toutes les ${r.intervalle_heures} h` : "désactivée"}</b></div>
