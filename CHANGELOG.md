@@ -8,6 +8,8 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+## [1.10.0] - 2026-11-25
+
 ### Ajouté
 - **Installeur** : LibreHardwareMonitor livré en option cochée (températures du processeur, des disques et
   ventilateurs ; version 0.9.6 officielle, empreinte vérifiée) ; à la désinstallation, choix de **garder** (par
