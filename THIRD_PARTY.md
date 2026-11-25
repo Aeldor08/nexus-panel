@@ -45,5 +45,14 @@ le code source seront joints à l'installeur. `PyInstaller` n'est utilisé que p
 | LibreHardwareMonitor | températures et ventilateurs (facultatif) | MPL-2.0 |
 | Python 3.12 (paquet `python` de la Python Software Foundation sur nuget.org) | Python privé de NEXUS (`runtime\`), téléchargé par `installer.bat` avec vérification SHA256 | PSF License 2.0 |
 
-LibreHardwareMonitor n'est **pas** inclus dans le dépôt ni dans les releases : chacun le télécharge depuis
-son site officiel (voir README).
+LibreHardwareMonitor n'est **pas** inclus dans le dépôt ni dans l'archive source : pour la version source, chacun
+le télécharge depuis son site officiel (voir README). L'installeur Windows (option cochée) et le ZIP portable
+livrent **LibreHardwareMonitor 0.9.6 sans modification** (archive officielle, empreinte SHA256 vérifiée au build),
+avec le texte de sa licence (`LibreHardwareMonitor\LICENCE-LibreHardwareMonitor.txt`). Code source :
+<https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/tree/v0.9.6> (Mozilla Public License 2.0).
+
+## Exécutable Windows (installeur et portable)
+
+`NEXUS.exe` est fabriqué avec PyInstaller (GPL-2.0 avec exception pour le chargeur : les programmes produits peuvent
+avoir leur propre licence) et embarque l'interpréteur Python (PSF License 2.0) et les bibliothèques ci-dessus.
+L'installeur est fabriqué avec Inno Setup (licence Inno Setup, usage libre).

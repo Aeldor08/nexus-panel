@@ -39,7 +39,10 @@ Les trois versions ont les mêmes fonctions. Windows 10 ou 11 en 64 bits est né
 1. Dans la dernière release, télécharge **`NEXUS-x.y.z-Setup.exe`**.
 2. Double-clique dessus (voir l'avertissement SmartScreen ci-dessus). Aucun droit administrateur n'est demandé :
    NEXUS s'installe pour ton compte Windows seulement, dans `%LOCALAPPDATA%\Programs\NEXUS`.
-3. Coche si tu veux le **raccourci sur le Bureau** et le **lancement au démarrage de Windows**, puis **Installer**.
+3. Choisis le dossier (celui proposé convient), puis les options : **raccourci sur le Bureau**,
+   **LibreHardwareMonitor** (coché : températures du processeur, des disques et ventilateurs ; Windows demandera
+   l'autorisation administrateur au lancement de NEXUS) et **lancement au démarrage de Windows** (décoché).
+   Puis **Installer**, et **Lancer NEXUS** à la fin.
 4. Au premier lancement, une fenêtre de configuration s'ouvre :
    - **Mot de passe du Deck** (obligatoire) : il protège les boutons qui lancent des applis ou mettent le PC en
      veille, et il est demandé pour installer une mise à jour. **Note-le.**
@@ -56,10 +59,21 @@ Ensuite :
 - **Changer le mot de passe ou Discord** : menu Démarrer → **Configurer NEXUS**.
 - **Microsoft Edge WebView2** est nécessaire pour la fenêtre. Il est déjà présent sur Windows 11 et presque tous
   les Windows 10 ; sinon l'installeur te le signale et donne le lien.
-- **Désinstaller** : Paramètres Windows → Applications → NEXUS. Tes données (`%LOCALAPPDATA%\NEXUS`) sont gardées ;
-  supprime ce dossier à la main si tu veux tout effacer.
-- **Températures du processeur** : voir l'[étape 5](#étape-5--facultatif-températures-du-processeur--librehardwaremonitor),
-  avec le dossier `LibreHardwareMonitor` à créer dans `%LOCALAPPDATA%\Programs\NEXUS`.
+- **Désinstaller** : Paramètres Windows → Applications → NEXUS (ou menu Démarrer → Désinstaller NEXUS). Le
+  désinstallateur demande s'il faut **garder tes données** (`%LOCALAPPDATA%\NEXUS` : configuration, statistiques,
+  photos, journal, Philibert, profils ajoutés) : **Non** par défaut, elles sont gardées et reprises si tu
+  réinstalles ; **Oui** les efface définitivement, jeton du bot compris.
+- **Températures du processeur** : LibreHardwareMonitor est installé avec NEXUS (option cochée). Si tu l'as
+  décoché, voir l'[étape 5](#étape-5--facultatif-températures-du-processeur--librehardwaremonitor), avec le dossier
+  `LibreHardwareMonitor` à créer dans `%LOCALAPPDATA%\Programs\NEXUS`. Sans lui, NEXUS fonctionne (températures
+  « indisponibles »).
+- **Tu utilisais la version source** (dossier avec `lancer.bat`) : au premier lancement, NEXUS reprend tes données
+  s'il retrouve l'ancien dossier par le raccourci « NEXUS » du Bureau. Sinon, ferme NEXUS et lance une fois
+  `"%LOCALAPPDATA%\Programs\NEXUS\NEXUS.exe" --importer "C:\chemin\de\l'ancien\NEXUS"`. C'est une **copie** :
+  l'ancien dossier n'est jamais modifié (il reste une sauvegarde), et rien de déjà présent n'est écrasé.
+- **Où sont mes données ?** Programme (lecture seule) : `%LOCALAPPDATA%\Programs\NEXUS`. Données :
+  `%LOCALAPPDATA%\NEXUS` (`config.json`, `data\` avec la base, les photos et Philibert, `logs\`, `profils\` ajoutés,
+  `actions\`, sauvegardes de mise à jour). Jetons (bot Discord, GitHub) : gestionnaire d'identifiants de Windows.
 
 ## Version portable
 
@@ -76,7 +90,7 @@ dossier entier. Il n'y a ni raccourci ni démarrage automatique (crée un raccou
 **Mettre à jour le portable** : comme l'application Windows, il se met à jour **tout seul** (depuis la
 version 1.9.0). Une nouvelle version allume la pastille de version ; **Installer**, mot de passe du panel, puis
 **Valider**. NEXUS télécharge `NEXUS-Portable-x.y.z.zip` (pré-release « version portable »), vérifie son
-empreinte SHA256 et son contenu, sauvegarde `NEXUS.exe` et `_internal\` dans `majollback\`, se ferme,
+empreinte SHA256 et son contenu, sauvegarde `NEXUS.exe` et `_internal\` dans `maj\rollback\`, se ferme,
 remplace seulement les fichiers du programme et se relance. Tes données (`config.json`, `deck.json`, `jeux.json`,
 `data\`, `logs\`, `profils\`, `actions\`) ne sont jamais touchées. Si la nouvelle version ne démarre pas,
 l'ancienne revient toute seule ; **↶ Revenir à la version précédente** marche aussi.
@@ -198,21 +212,49 @@ version source.*
 
 ## Construire l'application Windows et le portable (développeurs)
 
-Prérequis : Python 3.11 ou 3.12, et **Inno Setup 6** pour l'installeur (`winget install JRSoftware.InnoSetup`).
+Prérequis : Python 3.11 ou 3.12, **Inno Setup 6** pour l'installeur (`winget install JRSoftware.InnoSetup`),
+Internet au premier build. Facultatif : gitleaks (`winget install Gitleaks.Gitleaks`).
 
-Le plus simple : double-clic sur **`Creer-NEXUS-Portable.bat`** (ZIP portable) ou
-`Creer-NEXUS-Portable.bat --installer` (ZIP portable + installeur). Il prépare un environnement de build séparé
-(`.venv-build`), installe les dépendances si besoin, lance les tests et produit les fichiers dans `dist\`, avec
-leurs `.sha256` et `SHA256SUMS.txt`. Équivalent à la main :
+Une seule commande (ou double-clic sur **`Creer-NEXUS-Portable.bat`**, qui l'appelle) :
 
 ```bat
-.venv-build\Scripts\python.exe outils\build_native.py --installer --portable
+py -3.12 outils\build.py
 ```
 
+Elle prépare l'environnement de build `.venv-build` (dépendances réinstallées seulement si un `requirements*.txt`
+change), nettoie `dist\`, lance le lint (`ruff check`, `ruff format --check`), les tests, l'audit (`pip-audit`,
+`gitleaks`), puis fabrique `NEXUS.exe` (PyInstaller, mode dossier : démarrage plus rapide qu'un fichier unique),
+le teste au démarrage, construit `NEXUS-X.Y.Z-Setup.exe` (Inno Setup) et `NEXUS-Portable-X.Y.Z.zip`, avec leurs
+`.sha256` et `SHA256SUMS.txt`. Options : `--sans-tests`, `--sans-audit`, `--sans-installeur`, `--sans-portable`,
+`--sans-lhm`. LibreHardwareMonitor (MPL-2.0) est téléchargé une fois dans `build\tiers\` (version et empreinte
+SHA256 fixées dans `outils\build_native.py`) et livré avec l'installeur (option cochée) et le portable.
+
 Le dépôt GitHub à surveiller pour les mises à jour (remote `origin`, ou `--depot proprietaire/nom`) est embarqué
-dans l'exe : une installation sait donc toute seule où chercher ses mises à jour. L'installeur n'est pas signé
-(seule l'empreinte SHA-256 est vérifiée) ; pour signer avec un certificat Authenticode, voir
-`outils\sign_native.ps1` (section « Signature de code » plus bas).
+dans l'exe : une installation sait donc toute seule où chercher ses mises à jour. Sur chaque tag `v*`, la CI
+(`.github/workflows/build-native.yml`) refait tout sous Windows et publie l'installeur et le portable s'ils manquent.
+
+Tests : `python outils\tests\run_all.py` (`--couverture` pour la couverture, `.coveragerc`).
+
+### Signature de code
+
+L'exe et l'installeur ne sont **pas signés** : seule leur empreinte SHA-256 est vérifiée (publiée avec chaque
+release, contrôlée par la mise à jour intégrée). Conséquences : Windows SmartScreen affiche « Windows a protégé
+votre ordinateur » au premier lancement d'un fichier téléchargé (*Informations complémentaires → Exécuter quand
+même*), et certains antivirus peuvent se méfier d'un exe PyInstaller non signé (faux positifs possibles).
+
+L'étape est prête mais désactivée par défaut. Avec un certificat Authenticode (« code signing », payant ; les
+certificats EV suppriment l'avertissement SmartScreen tout de suite, les certificats OV après un temps de
+réputation) :
+
+- en local : `py -3.12 outils\build.py --pfx C:\chemin\certificat.pfx` (mot de passe dans la variable
+  `NEXUS_PFX_PASSWORD`) ou `--thumbprint <empreinte>` pour un certificat du magasin Windows ; il faut `signtool`
+  (Windows SDK). L'exe est signé avant d'être mis dans l'installeur, puis l'installeur est signé ;
+- en CI : secrets GitHub `WINDOWS_CERT_PFX_BASE64` (fichier .pfx en base64) et `WINDOWS_CERT_PFX_PASSWORD` ;
+- pour signer après coup : `outils\sign_native.ps1`.
+
+Une fois les releases signées, `mises_a_jour.signature` peut passer à `requise` (et `mises_a_jour.certificat` à
+l'empreinte SHA1 du certificat) : la mise à jour intégrée refusera alors tout installeur non signé ou signé par
+quelqu'un d'autre.
 
 ## Dépannage
 
@@ -688,7 +730,9 @@ cartes postales, fiches « Le savais-tu ? »).
 
 ### `config.json` (créé par l'assistant)
 
-- `discord` : `enabled`, `token`, `user_id`, `alert_channel_id`.
+- `discord` : `enabled`, `user_id`, `alert_channel_id`. Le jeton du bot est rangé dans le gestionnaire
+  d'identifiants de Windows au démarrage (`token_windows: true` dans `config.json`, `token` vide) ; si le
+  gestionnaire est indisponible, il reste dans `token`.
 - `alerts` : seuils des alertes Discord — `cpu_temp`, `gpu_temp` (°C), `ram_percent`, `disk_percent` (%),
   `cooldown_minutes` (une alerte par type au plus toutes les X minutes), `check_seconds`.
 - `agenda` : `rappels_minutes` (délais des rappels par défaut, en minutes), `heure_reference` (heure des
