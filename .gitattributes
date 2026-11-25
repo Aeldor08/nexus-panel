@@ -1,3 +1,16 @@
-# Les patches de référence doivent rester en LF : un passage en CRLF les rend
-# fragiles à appliquer avec git apply sur une copie de la version upstream.
-*.patch -text
+# Fins de ligne : LF pour le code et les textes, CRLF pour ce que Windows exécute directement
+# (cmd.exe lit mal les étiquettes goto d'un .bat en LF ; PowerShell 5.1 et Inno Setup sont plus sûrs en CRLF).
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.iss text eol=crlf
+
+# Binaires (jamais convertis)
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
+*.ttf binary
+*.jar binary
+*.db binary
