@@ -896,9 +896,10 @@ def api_remote() -> JSONResponse:
 
 
 @app.post("/api/remote/pare-feu")
-def api_remote_pare_feu() -> JSONResponse:
+async def api_remote_pare_feu(request: Request) -> JSONResponse:
     """Crée (ou met à jour) la règle entrante du pare-feu pour le port de NEXUS. Windows affiche la demande
     d'autorisation administrateur (UAC) : rien n'est modifié sans l'accord de l'utilisateur."""
+    await json_body(request)
     if not paths.FROZEN or os.name != "nt":
         raise BadRequest("seulement pour la version exe sous Windows", 409)
     import subprocess
@@ -1086,7 +1087,8 @@ def api_maj() -> JSONResponse:
 
 
 @app.post("/api/maj/verifier")
-async def api_maj_verifier() -> JSONResponse:
+async def api_maj_verifier(request: Request) -> JSONResponse:
+    await json_body(request)                     # (JSON obligatoire : pas de déclenchement depuis un autre site)
     return JSONResponse(await run_in_threadpool(updater.verifier))
 
 
@@ -1125,7 +1127,8 @@ async def api_maj_jeton(request: Request) -> JSONResponse:
 
 
 @app.post("/api/maj/resultat-vu")
-def api_maj_resultat_vu() -> JSONResponse:
+async def api_maj_resultat_vu(request: Request) -> JSONResponse:
+    await json_body(request)
     (maj_mod.MAJ_DIR / "resultat.json").unlink(missing_ok=True)
     return JSONResponse({"ok": True})
 
@@ -1350,8 +1353,9 @@ def api_version() -> JSONResponse:
 
 
 @app.post("/api/activate")
-def api_activate() -> JSONResponse:
+async def api_activate(request: Request) -> JSONResponse:
     """Ramène la fenêtre native au premier plan (utilisé par le deuxième lancement)."""
+    await json_body(request)
     if ACTIVATE_CALLBACK is None:
         return JSONResponse({"ok": False, "error": "aucune fenêtre native"}, status_code=404)
     try:

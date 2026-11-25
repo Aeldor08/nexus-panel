@@ -10,6 +10,7 @@ import time
 
 import psutil
 
+import logs
 import store
 
 CREATE_NO_WINDOW = 0x08000000
@@ -163,8 +164,8 @@ class GameMode:
                 if switch_to:
                     ok = set_power_plan(switch_to)
                     self.last_switch = {"time": now, "plan": switch_to, "ok": ok}
-            except Exception:
-                pass
+            except Exception as exc:
+                logs.signaler("Mode jeu", exc)
             time.sleep(CHECK_INTERVAL)
 
     def state(self) -> dict:

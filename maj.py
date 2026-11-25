@@ -159,8 +159,8 @@ def enregistrer_jeton(depot: str, valeur: str) -> str:
                     pass
             _config_set({"jeton": ""})              # jamais en double dans config.json
             return "windows" if valeur else ""
-        except Exception:
-            pass
+        except Exception as exc:
+            print(f"[MAJ] gestionnaire d'identifiants indisponible ({type(exc).__name__}) : jeton gardé dans config.json")
     _config_set({"jeton": valeur})                  # repli : config.json, exclu de Git
     return "config" if valeur else ""
 

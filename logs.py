@@ -79,3 +79,21 @@ def install() -> Path | None:
     sys.stderr = Tee(sys.stderr, handle)
     _installed = True
     return paths.LOG_FILE
+
+
+_derniers: dict[str, float] = {}
+SIGNALER_INTERVALLE_S = 900          # même erreur de fond : au plus un message par quart d'heure
+
+
+def signaler(contexte: str, exc: BaseException) -> None:
+    """Erreur dans une boucle de fond (mesures, mode jeu…) : écrite dans le journal (et la fenêtre Santé)
+    au lieu d'être avalée en silence, sans inonder le journal si elle se répète à chaque tour."""
+    cle = f"{contexte}|{type(exc).__name__}|{exc}"[:300]
+    now = time.monotonic()
+    if now - _derniers.get(cle, -SIGNALER_INTERVALLE_S) < SIGNALER_INTERVALLE_S:
+        return
+    _derniers[cle] = now
+    try:
+        print(f"[{contexte}] ERREUR : {type(exc).__name__}: {exc}", flush=True)
+    except Exception:
+        pass                                     # (pythonw sans console : jamais d'erreur en écrivant le journal)

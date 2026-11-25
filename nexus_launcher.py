@@ -123,7 +123,8 @@ def _activate_existing() -> bool:
         url += "?token=" + urllib.parse.quote(token, safe="")
     for _ in range(12):
         try:
-            req = urllib.request.Request(url, method="POST")
+            req = urllib.request.Request(url, data=b"{}", method="POST",
+                                         headers={"Content-Type": "application/json"})
             with urllib.request.urlopen(req, timeout=1.5) as rep:
                 if 200 <= rep.status < 300:
                     return True

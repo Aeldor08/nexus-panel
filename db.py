@@ -112,28 +112,34 @@ def migrate() -> int:
     with _init_lock:
         existed = DB_FILE.exists()
         con = _connect()
-        cur = con.execute("PRAGMA user_version").fetchone()[0]
-        todo = [(v, sql) for v, sql in MIGRATIONS if v > cur]
-        if todo and existed and cur > 0:
-            (store.DATA_DIR / "backups").mkdir(parents=True, exist_ok=True)
-            con.execute("PRAGMA wal_checkpoint(FULL)")
-            shutil.copy2(DB_FILE, store.DATA_DIR / "backups" / f"nexus-v{cur}-{time.strftime('%Y%m%d-%H%M%S')}.db")
-        for v, sql in todo:
-            con.execute("BEGIN")
-            try:
-                if sql.startswith("_"):              # étape en Python (ex. calcul de dispositions)
-                    globals()[sql](con)
-                else:
-                    for statement in _split(sql):    # dans la transaction (executescript la validerait)
-                        con.execute(statement)
-                con.execute(f"PRAGMA user_version = {v}")
-                con.execute("COMMIT")
-            except Exception:
-                con.execute("ROLLBACK")
-                raise
-        con.close()
+        try:
+            _migrer(con, existed)
+        finally:
+            con.close()                          # (aussi si une migration échoue)
         _ready = True
         return VERSION
+
+
+def _migrer(con: sqlite3.Connection, existed: bool) -> None:
+    cur = con.execute("PRAGMA user_version").fetchone()[0]
+    todo = [(v, sql) for v, sql in MIGRATIONS if v > cur]
+    if todo and existed and cur > 0:
+        (store.DATA_DIR / "backups").mkdir(parents=True, exist_ok=True)
+        con.execute("PRAGMA wal_checkpoint(FULL)")
+        shutil.copy2(DB_FILE, store.DATA_DIR / "backups" / f"nexus-v{cur}-{time.strftime('%Y%m%d-%H%M%S')}.db")
+    for v, sql in todo:
+        con.execute("BEGIN")
+        try:
+            if sql.startswith("_"):              # étape en Python (ex. calcul de dispositions)
+                globals()[sql](con)
+            else:
+                for statement in _split(sql):    # dans la transaction (executescript la validerait)
+                    con.execute(statement)
+            con.execute(f"PRAGMA user_version = {v}")
+            con.execute("COMMIT")
+        except Exception:
+            con.execute("ROLLBACK")
+            raise
 
 
 def _split(sql: str) -> list[str]:

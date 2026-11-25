@@ -120,12 +120,13 @@ def epic_games() -> list[dict]:
 def _default_apps() -> list[dict]:
     """Applications proposées au premier lancement, si elles sont installées."""
     la, ad = os.environ.get("LOCALAPPDATA", ""), os.environ.get("APPDATA", "")
+    pf = os.environ.get("ProgramFiles", r"C:\Program Files")
     candidates = [
         ("Steam", "steam://open/main", []),
         ("Discord", rf"{la}\Discord\Update.exe", ["--processStart", "Discord.exe"]),
         ("Spotify", rf"{ad}\Spotify\Spotify.exe", []),
         ("Opera GX", rf"{la}\Programs\Opera GX\opera.exe", []),
-        ("OBS Studio", r"C:\Program Files\obs-studio\bin\64bit\obs64.exe", []),
+        ("OBS Studio", rf"{pf}\obs-studio\bin\64bit\obs64.exe", []),
         ("Medal", rf"{la}\Medal\Medal.exe", []),
     ]
     apps = []

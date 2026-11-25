@@ -24,6 +24,7 @@ import urllib.request
 
 import psutil
 
+import logs
 import paths
 import winproc
 
@@ -716,8 +717,8 @@ class ProcessMonitor:
                 try:
                     self._sample()
                     samples += 1
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logs.signaler("Processus", exc)
             time.sleep(PROC_INTERVAL)
 
     def _sample(self) -> None:
