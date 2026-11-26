@@ -8,6 +8,15 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Ajouté
+- **Importer mes données NEXUS** (menu Démarrer, ou `NEXUS.exe --importer`) : une fenêtre trouve les autres NEXUS
+  du PC (portable, version ZIP avec `lancer.bat`, ancienne version, sur les disques et les clés USB), montre ce
+  qu'ils contiennent et quand ils ont servi, puis reprend leurs données dans ce NEXUS : configuration, agenda,
+  journal, statistiques, Philibert, souvenirs, rappels, téléphones appairés, Deck, actions, profils ajoutés. Marche
+  aussi quand l'application a déjà servi : ses données sont remplacées après une copie dans `sauvegardes-import\`,
+  remise en place si la copie échoue. L'autre NEXUS n'est jamais modifié ; les NEXUS ouverts sont détectés et
+  fermés sur demande (base copiée de façon cohérente, journal WAL compris)
+
 ## [1.11.0] - 2026-11-26
 
 ### Ajouté

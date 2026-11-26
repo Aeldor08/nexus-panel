@@ -208,6 +208,8 @@ Mise à jour manuelle (dossier en lecture seule, ou portable antérieur à 1.9.0
 - Microsoft Edge WebView2 est nécessaire (présent sur Windows 11 et la plupart des Windows 10).
 - NEXUS n'est pas signé pour l'instant : Windows SmartScreen peut afficher un avertissement.
 - Pour supprimer NEXUS, ferme-le et supprime simplement ce dossier.
+- Pour reprendre ici les données d'un autre NEXUS de ce PC (agenda, journal, statistiques, Philibert…) :
+  Win+R, puis le chemin de NEXUS.exe entre guillemets suivi de --importer.
 """
     exclus = {"NEXUS.exe.sha256", "SHA256SUMS.txt"}
     with zipfile.ZipFile(cible, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:

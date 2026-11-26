@@ -35,7 +35,7 @@ ignore = [
 
 [lint.isort]
 known-first-party = ["activite", "agenda", "app", "audio", "bot", "config", "configurer", "db", "deck", "focus",
-    "gamemode", "journal", "lan", "launcher", "logs", "maj", "maj_demarrage", "maj_natif", "media", "mur",
+    "gamemode", "identifiants", "importer", "journal", "lan", "launcher", "logs", "maj", "maj_demarrage", "maj_natif", "media", "mur",
     "nexus_launcher", "paths", "philibert", "profiles", "reminders", "remote", "sante", "souvenirs", "statistiques",
     "stats", "store", "superviseur", "valider_profil", "version", "winproc", "build_native", "release"]
 

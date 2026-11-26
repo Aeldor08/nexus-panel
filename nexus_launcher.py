@@ -32,6 +32,7 @@ import secrets
 import socket
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import urllib.parse
@@ -58,7 +59,15 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("--debug", action="store_true", help="outils de développement WebView2")
     p.add_argument("--portable", action="store_true", help="données à côté de l'exécutable")
     p.add_argument("--data-dir", default="", help="dossier de données personnalisé")
-    p.add_argument("--importer", default="", metavar="DOSSIER", help="reprendre les données d'une ancienne version source de NEXUS (dossier avec lancer.bat)")
+    p.add_argument(
+        "--importer",
+        nargs="?",
+        const="*",
+        default="",
+        metavar="DOSSIER",
+        help="sans dossier : fenêtre pour reprendre les données d'un autre NEXUS du PC ; avec un dossier : reprise, au "
+        "premier lancement, d'une ancienne version source (dossier avec lancer.bat), sans rien écraser",
+    )
     p.add_argument("--install-autostart", action="store_true", help="ajouter NEXUS au démarrage Windows")
     p.add_argument("--remove-autostart", action="store_true", help="retirer NEXUS du démarrage Windows")
     p.add_argument("--configure", action="store_true", help="ouvrir la fenêtre de configuration")
@@ -363,6 +372,279 @@ def _run_setup() -> int:
     except Exception as exc:
         _message(f"Impossible d'ouvrir la configuration : {type(exc).__name__}: {exc}")
         return 1
+    return 0
+
+
+# --------------------------------------------------------------------------- #
+#  Reprise des données d'un autre NEXUS du PC (« NEXUS.exe --importer »)
+# --------------------------------------------------------------------------- #
+_IMPORT_WINDOW = None
+
+_IMPORT_HTML = r"""<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Importer mes données NEXUS</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #06060a; color: #e8f6ff; font: 15px "Segoe UI", sans-serif; }
+  main { max-width: 680px; margin: 0 auto; padding: 26px 24px 30px; }
+  h1 { font-size: 28px; letter-spacing: 5px; margin: 0 0 4px; color: #00ff9c; }
+  h1 em { color: #ff2bd6; font-style: normal; }
+  h2 { font-size: 15px; color: #cfe6f5; margin: 20px 0 8px; font-weight: 600; }
+  .sub { color: #8fa3b8; margin: 0 0 6px; line-height: 1.45; }
+  .hint { color: #7e8fa5; font-size: 12.5px; line-height: 1.45; }
+  .carte { display: flex; gap: 12px; align-items: flex-start; padding: 11px 13px; margin: 8px 0;
+           border: 1px solid rgba(0,255,156,.18); border-radius: 4px; cursor: pointer; background: #0b0b12; }
+  .carte:hover { border-color: rgba(0,255,156,.45); }
+  .carte.choisie { border-color: #00ff9c; box-shadow: 0 0 0 2px rgba(0,255,156,.14); }
+  .carte input { margin-top: 4px; accent-color: #00ff9c; }
+  .titre { font-weight: 600; }
+  .chemin { color: #f6e600; font: 12.5px Consolas, monospace; word-break: break-all; margin: 2px 0 4px; }
+  .puces span { display: inline-block; margin: 3px 5px 0 0; padding: 1px 7px; border-radius: 9px;
+                background: rgba(0,255,156,.08); color: #9fe9c9; font-size: 12px; }
+  .ici { padding: 9px 12px; border-left: 3px solid #ff2bd6; background: rgba(255,43,214,.05); margin-top: 6px; }
+  .boutons { display: flex; gap: 10px; margin-top: 20px; }
+  button { flex: 1; padding: 11px; border: 1px solid #00ff9c; background: rgba(0,255,156,.10); color: #00ff9c;
+           font: 600 15px "Segoe UI", sans-serif; border-radius: 4px; cursor: pointer; }
+  button:hover { background: rgba(0,255,156,.20); }
+  button.second { border-color: #4b5a6b; color: #cfe6f5; background: transparent; }
+  button.second:hover { background: rgba(255,255,255,.05); }
+  button:disabled { opacity: .45; cursor: default; }
+  .alerte { margin-top: 18px; padding: 12px 14px; border: 1px solid rgba(246,230,0,.4); border-radius: 4px;
+            background: rgba(246,230,0,.05); line-height: 1.5; }
+  .err { color: #ff6b86; white-space: pre-wrap; margin-top: 12px; min-height: 20px; }
+  .ok { color: #39ff88; }
+  ul { margin: 6px 0; padding-left: 20px; }
+  [hidden] { display: none !important; }
+</style></head>
+<body><main>
+  <h1>NEX<em>/</em>US</h1>
+  <p class="sub">Reprendre les données d'un autre NEXUS de ce PC (portable, version ZIP, ancienne version) :
+    agenda, journal, statistiques, Philibert, souvenirs, configuration…</p>
+
+  <section id="etape-liste">
+    <h2>NEXUS trouvés sur ce PC</h2>
+    <div id="liste"><p class="hint">Recherche sur les disques et les clés USB… (quelques secondes)</p></div>
+    <button class="second" id="choisir" style="margin-top:6px">Choisir un autre dossier…</button>
+    <h2>Ce NEXUS-ci</h2>
+    <div class="ici" id="ici">…</div>
+    <div class="err" id="err" role="alert"></div>
+    <div class="boutons"><button id="go" disabled>Importer les données choisies</button></div>
+  </section>
+
+  <section id="etape-confirmer" hidden>
+    <div class="alerte" id="texte-confirmer"></div>
+    <div class="boutons"><button class="second" id="annuler1">Annuler</button><button id="confirmer">Importer</button></div>
+  </section>
+
+  <section id="etape-ouverts" hidden>
+    <div class="alerte"><b>NEXUS est ouvert.</b> Il doit être fermé pour copier sa base sans risque :
+      <ul id="ouverts"></ul>Les fermer maintenant ? (Relance-les ensuite si besoin.)</div>
+    <div class="boutons"><button class="second" id="annuler2">Annuler</button><button id="fermer-importer">Fermer et importer</button></div>
+  </section>
+
+  <section id="etape-encours" hidden><p class="sub">Copie en cours…</p></section>
+
+  <section id="etape-fin" hidden>
+    <p class="sub ok" style="font-size:17px">Données reprises.</p>
+    <p class="sub" id="texte-fin"></p>
+    <div class="boutons"><button class="second" id="fermer">Fermer</button><button id="lancer">Lancer NEXUS</button></div>
+  </section>
+</main>
+<script>
+  const $ = id => document.getElementById(id);
+  let candidats = [], choisi = null;
+  const etape = nom => document.querySelectorAll("section").forEach(s => s.hidden = s.id !== "etape-" + nom);
+  const echap = t => String(t).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+  function afficher() {
+    const liste = $("liste");
+    if (!candidats.length) {
+      liste.innerHTML = '<p class="hint">Aucun autre NEXUS avec des données trouvé. Utilise « Choisir un autre dossier… » ' +
+        '(le dossier qui contient lancer.bat ou NEXUS.exe, et config.json).</p>';
+    } else {
+      liste.innerHTML = candidats.map((c, i) =>
+        `<label class="carte${choisi === i ? " choisie" : ""}"><input type="radio" name="src" value="${i}"${choisi === i ? " checked" : ""}>` +
+        `<div><div class="titre">${echap(c.libelle)}${c.version ? " " + echap(c.version) : ""}</div>` +
+        `<div class="chemin">${echap(c.chemin)}</div>` +
+        `<div class="hint">Dernière utilisation : ${echap(c.activite_texte)}</div>` +
+        `<div class="puces">${c.contenu.map(x => "<span>" + echap(x) + "</span>").join("")}</div></div></label>`).join("");
+      liste.querySelectorAll("input").forEach(r => r.addEventListener("change", () => { choisi = +r.value; afficher(); }));
+    }
+    $("go").disabled = choisi === null;
+  }
+
+  async function charger() {
+    try {
+      const r = await pywebview.api.lister();
+      $("ici").innerHTML = `<div class="chemin">${echap(r.ici.chemin)}</div>` + (r.ici.donnees
+        ? `<div class="hint">Dernière utilisation : ${echap(r.ici.activite_texte)}. Ses données actuelles seront
+           <b>remplacées</b> (une copie est gardée avant, dans sauvegardes-import).</div>`
+        : '<div class="hint">Pas encore de données.</div>');
+      candidats = r.autres;
+      choisi = candidats.length ? 0 : null;
+      afficher();
+    } catch (ex) { $("err").textContent = "Recherche impossible : " + ex; }
+  }
+
+  $("choisir").addEventListener("click", async () => {
+    $("err").textContent = "";
+    const c = await pywebview.api.choisir();
+    if (!c) return;
+    if (c.erreur) { $("err").textContent = c.erreur; return; }
+    const deja = candidats.findIndex(x => x.chemin.toLowerCase() === c.chemin.toLowerCase());
+    if (deja >= 0) choisi = deja; else { candidats.unshift(c); choisi = 0; }
+    afficher();
+  });
+
+  $("go").addEventListener("click", () => {
+    const c = candidats[choisi];
+    $("texte-confirmer").innerHTML = `Les données de <b>ce NEXUS</b> vont être remplacées par celles de :<br>` +
+      `<span class="chemin">${echap(c.chemin)}</span><br>` +
+      `Une copie des données actuelles est gardée avant. L'autre NEXUS n'est <b>pas modifié</b>.`;
+    etape("confirmer");
+  });
+  $("annuler1").addEventListener("click", () => etape("liste"));
+  $("annuler2").addEventListener("click", () => etape("liste"));
+
+  async function lancerImport(fermer) {
+    etape("encours");
+    let r;
+    try { r = await pywebview.api.importer(candidats[choisi].chemin, fermer); }
+    catch (ex) { r = {etat: "erreur", message: "Import impossible : " + ex}; }
+    if (r.etat === "ouverts") {
+      $("ouverts").innerHTML = r.processus.map(p => `<li class="chemin">${echap(p.chemin || p.nom)}</li>`).join("");
+      etape("ouverts");
+    } else if (r.etat === "ok") {
+      $("texte-fin").innerHTML = `Copié : ${echap(r.copies.join(", "))}.<br><br>` +
+        `Tes données d'avant l'import sont dans <span class="chemin">${echap(r.sauvegarde)}</span><br><br>` +
+        `L'ancien NEXUS n'a pas été modifié : supprime-le quand tu auras vérifié que tout est là.`;
+      etape("fin");
+    } else {
+      etape("liste");
+      $("err").textContent = r.message || "Import impossible.";
+    }
+  }
+  $("confirmer").addEventListener("click", () => lancerImport(false));
+  $("fermer-importer").addEventListener("click", () => lancerImport(true));
+  $("lancer").addEventListener("click", () => pywebview.api.lancer());
+  $("fermer").addEventListener("click", () => pywebview.api.close());
+  window.addEventListener("pywebviewready", charger);
+</script>
+</body></html>
+"""
+
+
+class _ImportApi:
+    """API JS de la fenêtre d'import."""
+
+    def lister(self):
+        import importer
+        import paths
+
+        ici = {"chemin": str(paths.USER_ROOT), "donnees": importer.a_des_donnees(paths.USER_ROOT)}
+        if ici["donnees"]:
+            ici["activite_texte"] = importer.decrire(paths.USER_ROOT)["activite_texte"]
+        return {"ici": ici, "autres": importer.chercher()}
+
+    def choisir(self):
+        import webview
+
+        import importer
+        import paths
+
+        try:
+            r = _IMPORT_WINDOW.create_file_dialog(webview.FileDialog.FOLDER)
+        except Exception as exc:
+            return {"erreur": f"Choix du dossier impossible : {exc}"}
+        if not r:
+            return None
+        dossier = Path(r[0] if isinstance(r, (list, tuple)) else r)
+        if not importer.genre(dossier):
+            return {
+                "erreur": f"{dossier} n'est pas un NEXUS avec des données : choisis le dossier qui contient "
+                "lancer.bat (version ZIP) ou NEXUS.exe, et config.json ou data\\nexus.db."
+            }
+        if importer._meme(dossier, paths.USER_ROOT):
+            return {"erreur": "C'est le dossier de données de ce NEXUS-ci."}
+        return importer.decrire(dossier)
+
+    def importer(self, chemin, fermer=False):
+        import importer
+
+        source = Path(str(chemin))
+        try:
+            ouverts = importer.ouverts_pour(source)
+            if ouverts and not fermer:
+                return {"etat": "ouverts", "processus": ouverts}
+            if ouverts and importer.fermer([p["pid"] for p in ouverts]):
+                return {"etat": "erreur", "message": "Impossible de fermer NEXUS : quitte-le depuis l'icône près de l'horloge, puis réessaie."}
+            r = importer.importer(source)
+        except importer.ImportImpossible as exc:
+            return {"etat": "erreur", "message": str(exc)}
+        except Exception as exc:
+            return {"etat": "erreur", "message": f"Import impossible : {type(exc).__name__}: {exc}"}
+        return {"etat": "ok", **r}
+
+    def lancer(self):
+        gele = getattr(sys, "frozen", False)
+        cmd = [sys.executable] if gele else [sys.executable, str(Path(__file__).resolve())]
+        try:
+            subprocess.Popen(
+                cmd,
+                cwd=str(Path(sys.executable if gele else __file__).resolve().parent),
+                creationflags=0x00000008 | 0x00000200,  # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
+                close_fds=True,
+            )
+        except Exception as exc:
+            _message(f"Impossible de lancer NEXUS : {exc}")
+        return self.close()
+
+    def close(self):
+        if _IMPORT_WINDOW is not None:
+            try:
+                _IMPORT_WINDOW.destroy()
+            except Exception:
+                pass
+        return "ok"
+
+
+def _run_import() -> int:
+    """Ouvre la fenêtre « Importer mes données NEXUS »."""
+    global _IMPORT_WINDOW
+    import paths
+
+    try:
+        import webview
+    except Exception as exc:
+        _message(f"La fenêtre d'import nécessite pywebview.\n\n{type(exc).__name__}: {exc}")
+        return 1
+    _IMPORT_WINDOW = webview.create_window(
+        "Importer mes données NEXUS",
+        html=_IMPORT_HTML,
+        js_api=_ImportApi(),
+        width=740,
+        height=820,
+        min_size=(560, 600),
+        resizable=True,
+        background_color="#06060a",
+        text_select=True,
+    )
+    stockage = Path(tempfile.mkdtemp(prefix="nexus-import-webview-"))  # (pas dans data/ : il est remplacé)
+    try:
+        webview.start(
+            debug=bool(_ARGS and _ARGS.debug),
+            private_mode=True,
+            storage_path=str(stockage),
+            icon=str(paths.APP_DIR / "panel.ico") if (paths.APP_DIR / "panel.ico").is_file() else None,
+        )
+    except Exception as exc:
+        _message(f"Impossible d'ouvrir la fenêtre d'import : {type(exc).__name__}: {exc}")
+        return 1
+    finally:
+        import shutil
+
+        shutil.rmtree(stockage, ignore_errors=True)
     return 0
 
 
@@ -718,6 +1000,8 @@ def main() -> int:
     # Les variables doivent être posées AVANT d'importer paths/app.
     if _ARGS.data_dir:
         os.environ["NEXUS_DATA_DIR"] = _ARGS.data_dir
+    if _ARGS.importer == "*":
+        return _run_import()
     if _ARGS.importer:
         os.environ["NEXUS_IMPORTER"] = _ARGS.importer  # lu par paths.prepare() (copie, jamais d'écrasement)
     if _ARGS.configure:

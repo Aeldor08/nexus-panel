@@ -117,6 +117,7 @@ Source: "{#LhmDir}\*"; DestDir: "{app}\LibreHardwareMonitor"; Flags: recursesubd
 [Icons]
 Name: "{group}\NEXUS"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"
 Name: "{group}\Configurer NEXUS"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--configure"; WorkingDir: "{app}"
+Name: "{group}\Importer mes données NEXUS"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--importer"; WorkingDir: "{app}"; Comment: "Reprendre l'agenda, le journal, les statistiques, Philibert… d'un autre NEXUS de ce PC"
 Name: "{group}\Désinstaller NEXUS"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\NEXUS"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; Tasks: desktopicon
 

@@ -68,10 +68,16 @@ Ensuite :
   décoché, voir l'[étape 5](#étape-5--facultatif-températures-du-processeur--librehardwaremonitor), avec le dossier
   `LibreHardwareMonitor` à créer dans `%LOCALAPPDATA%\Programs\NEXUS`. Sans lui, NEXUS fonctionne (températures
   « indisponibles »).
-- **Tu utilisais la version source** (dossier avec `lancer.bat`) : au premier lancement, NEXUS reprend tes données
-  s'il retrouve l'ancien dossier par le raccourci « NEXUS » du Bureau. Sinon, ferme NEXUS et lance une fois
-  `"%LOCALAPPDATA%\Programs\NEXUS\NEXUS.exe" --importer "C:\chemin\de\l'ancien\NEXUS"`. C'est une **copie** :
-  l'ancien dossier n'est jamais modifié (il reste une sauvegarde), et rien de déjà présent n'est écrasé.
+- **Tu avais déjà NEXUS sur ce PC** (portable, version ZIP avec `lancer.bat`, ancienne version) : menu Démarrer →
+  **Importer mes données NEXUS** (ou `NEXUS.exe --importer`). La fenêtre cherche les autres NEXUS sur les disques et
+  les clés USB (le plus récemment utilisé d'abord, avec ce qu'il contient), ou te laisse choisir le dossier. Elle
+  reprend la configuration (mot de passe du Deck compris), l'agenda, le journal, les statistiques, Philibert, les
+  souvenirs, les rappels, les téléphones appairés, le Deck, les actions et les profils ajoutés. Les deux NEXUS
+  doivent être fermés : la fenêtre propose de le faire. Les données actuelles de l'application sont **remplacées**,
+  après une copie dans `%LOCALAPPDATA%\NEXUS\sauvegardes-import\` ; l'autre NEXUS n'est **jamais modifié**
+  (supprime-le quand tu as vérifié). Pas repris : journaux, caches, copies du code (`versions\`, `maj\`),
+  LibreHardwareMonitor. Au tout premier lancement, une ancienne version source retrouvée par le raccourci « NEXUS »
+  du Bureau est aussi reprise automatiquement (copie, sans rien écraser).
 - **Où sont mes données ?** Programme (lecture seule) : `%LOCALAPPDATA%\Programs\NEXUS`. Données :
   `%LOCALAPPDATA%\NEXUS` (`config.json`, `data\` avec la base, les photos et Philibert, `logs\`, `profils\` ajoutés,
   `actions\`, sauvegardes de mise à jour). Jetons (bot Discord, GitHub) : gestionnaire d'identifiants de Windows.
@@ -87,6 +93,7 @@ Ensuite :
 
 Tout reste dans ce dossier : configuration, `data\`, journaux, profils. Pour l'emporter ailleurs, déplace le
 dossier entier. Il n'y a ni raccourci ni démarrage automatique (crée un raccourci vers `NEXUS.exe` si tu veux).
+Pour y reprendre les données d'un autre NEXUS du PC : `NEXUS.exe --importer` (même fenêtre que l'application).
 
 **Mettre à jour le portable** : comme l'application Windows, il se met à jour **tout seul** (depuis la
 version 1.9.0). Une nouvelle version allume la pastille de version ; **Installer**, mot de passe du panel, puis
