@@ -8,6 +8,8 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+## [1.11.0] - 2026-11-26
+
 ### Ajouté
 - **⚙ Réglages → Démarrage de Windows** (sur le PC) : une case **Lancer NEXUS au démarrage de Windows** (icône près de
   l'horloge, sans fenêtre ni navigateur ; toutes les versions, portable comprise) et une case **Démarrer
