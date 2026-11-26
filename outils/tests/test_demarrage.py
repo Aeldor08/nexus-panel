@@ -4,6 +4,7 @@ Rien de réel n'est touché : la clé Run est testée sous un AUTRE nom de valeu
 les scripts administrateur (tâche planifiée, copie dans Program Files) sont seulement générés et analysés par
 PowerShell, jamais exécutés (ils demanderaient la fenêtre d'autorisation de Windows).
 """
+
 from __future__ import annotations
 
 import os
@@ -33,8 +34,10 @@ ok(D.NOM_RUN.startswith("NEXUS-test-"), "tests : la vraie valeur « NEXUS » de 
 
 # --- commande de démarrage automatique ------------------------------------------------------------------------
 cmd = D.commande_autostart()
-ok("nexus.pyw" in cmd and cmd.endswith("--demarrage") and "pythonw" in cmd.lower(),
-   "version source : pythonw.exe nexus.pyw --demarrage (icône seulement, pas de navigateur)")
+ok(
+    "nexus.pyw" in cmd and cmd.endswith("--demarrage") and "pythonw" in cmd.lower(),
+    "version source : pythonw.exe nexus.pyw --demarrage (icône seulement, pas de navigateur)",
+)
 sys.frozen = True
 try:
     exe = sys.executable
@@ -71,31 +74,42 @@ else:
 
 # --- état de LibreHardwareMonitor --------------------------------------------------------------------------------
 e = D.etat()
-ok(set(e) >= {"lhm_present", "lhm_sans_fenetre", "lhm_en_marche"} and all(isinstance(e[k], bool) for k in e),
-   "état : présence, tâche planifiée et LibreHardwareMonitor en marche (booléens)")
-ok(str(D.dossier_protege()).lower().endswith(r"program files\nexus\librehardwaremonitor"),
-   f"copie protégée dans Program Files ({D.dossier_protege()})")
+ok(
+    set(e) >= {"lhm_present", "lhm_sans_fenetre", "lhm_en_marche"} and all(isinstance(e[k], bool) for k in e),
+    "état : présence, tâche planifiée et LibreHardwareMonitor en marche (booléens)",
+)
+ok(str(D.dossier_protege()).lower().endswith(r"program files\nexus\librehardwaremonitor"), f"copie protégée dans Program Files ({D.dossier_protege()})")
 appels = []
 D.demarrer_lhm(Path(tempfile.mkdtemp()) / "absent", None, appels.append) if not D.tache_existe() else None
 ok(appels == [], "LibreHardwareMonitor absent et pas de tâche : rien n'est lancé, aucune fenêtre")
 
 # --- scripts administrateur : générés et analysés, jamais exécutés -------------------------------------------------
-act = D._script_activer(Path(r"C:\Users\NOM\AppData\Local\Programs\NEXUS\LibreHardwareMonitor"),
-                        Path(r"C:\x\LibreHardwareMonitor.config"), r"PC\Test")
+act = D._script_activer(Path(r"C:\Users\NOM\AppData\Local\Programs\NEXUS\LibreHardwareMonitor"), Path(r"C:\x\LibreHardwareMonitor.config"), r"PC\Test")
 des = D._script_desactiver()
-ok("-RunLevel Highest" in act and "-LogonType Interactive" in act and "-UserId 'PC\\Test'" in act,
-   "activer : tâche pour TON compte, autorisations maximales, seulement session ouverte")
-ok("TaskPath '\\NEXUS\\'" in act and str(D.dossier_protege()) in act and "New-ScheduledTaskTrigger" not in act,
-   "activer : tâche \\NEXUS\\, exe dans la copie protégée, aucun déclencheur (seul NEXUS la lance)")
+ok(
+    "-RunLevel Highest" in act and "-LogonType Interactive" in act and "-UserId 'PC\\Test'" in act,
+    "activer : tâche pour TON compte, autorisations maximales, seulement session ouverte",
+)
+ok(
+    "TaskPath '\\NEXUS\\'" in act and str(D.dossier_protege()) in act and "New-ScheduledTaskTrigger" not in act,
+    "activer : tâche \\NEXUS\\, exe dans la copie protégée, aucun déclencheur (seul NEXUS la lance)",
+)
 ok("Unregister-ScheduledTask" in des and "Remove-Item" in des, "désactiver : tâche et copie supprimées")
 ok("O''Brien" in D._ps("O'Brien"), "chemins et noms protégés (apostrophes doublées pour PowerShell)")
 if os.name == "nt":
     for nom, script in (("activer", act), ("désactiver", des)):
         f = Path(tempfile.mkdtemp()) / "s.ps1"
         f.write_text(script, encoding="utf-8-sig")
-        r = subprocess.run(["powershell", "-NoProfile", "-Command",
-                            f"$e=$null;$null=[System.Management.Automation.Language.Parser]::ParseFile('{f}',[ref]$null,[ref]$e);"
-                            "if($e){$e|%{$_.Message};exit 1}"], capture_output=True, text=True)
+        r = subprocess.run(
+            [
+                "powershell",
+                "-NoProfile",
+                "-Command",
+                f"$e=$null;$null=[System.Management.Automation.Language.Parser]::ParseFile('{f}',[ref]$null,[ref]$e);if($e){{$e|%{{$_.Message}};exit 1}}",
+            ],
+            capture_output=True,
+            text=True,
+        )
         ok(r.returncode == 0, f"script « {nom} » : syntaxe PowerShell valide {r.stdout.strip()[:200]}")
 
 print(f"\n{passed} tests réussis, {failed} échec(s)")

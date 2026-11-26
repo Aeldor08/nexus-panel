@@ -185,8 +185,7 @@ class Superviseur:
         # tâche planifiée sans fenêtre si elle a été activée (⚙ Réglages), sinon fenêtre d'autorisation de Windows
         import demarrage
 
-        demarrage.demarrer_lhm(self.base / "LibreHardwareMonitor", self.base / "outils" / "LibreHardwareMonitor.config",
-                               self.noter)
+        demarrage.demarrer_lhm(self.base / "LibreHardwareMonitor", self.base / "outils" / "LibreHardwareMonitor.config", self.noter)
 
     def appliquer_maj(self) -> None:
         if not (self.base / "maj" / "en_cours.json").exists():

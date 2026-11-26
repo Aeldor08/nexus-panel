@@ -617,9 +617,11 @@ def _demarrer_lhm() -> None:
         import demarrage  # tâche planifiée sans fenêtre si activée (⚙ Réglages), sinon autorisation
         import paths
 
-        demarrage.demarrer_lhm(paths.INSTALL_DIR / "LibreHardwareMonitor",
-                               paths.APP_DIR / "outils" / "LibreHardwareMonitor.config",  # serveur web 8085, réduit
-                               lambda m: print(f"[Matériel] {m}"))
+        demarrage.demarrer_lhm(
+            paths.INSTALL_DIR / "LibreHardwareMonitor",
+            paths.APP_DIR / "outils" / "LibreHardwareMonitor.config",  # serveur web 8085, réduit
+            lambda m: print(f"[Matériel] {m}"),
+        )
     except Exception as exc:
         print(f"[Matériel] LibreHardwareMonitor : démarrage impossible ({type(exc).__name__}: {exc})")
 

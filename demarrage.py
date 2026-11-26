@@ -12,6 +12,7 @@
      maximales », sans déclencheur) le lance ; NEXUS la démarre (schtasks /run) : plus de fenêtre.
    Désactiver supprime la tâche et la copie (une autorisation aussi). Sans tâche : comportement d'origine (fenêtre).
 """
+
 from __future__ import annotations
 
 import base64
@@ -21,7 +22,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-NOM_RUN = os.environ.get("NEXUS_TEST_RUN_NOM") or "NEXUS"          # tests : autre nom, jamais le vrai
+NOM_RUN = os.environ.get("NEXUS_TEST_RUN_NOM") or "NEXUS"  # tests : autre nom, jamais le vrai
 CLE_RUN = r"Software\Microsoft\Windows\CurrentVersion\Run"
 TACHE = r"\NEXUS\LibreHardwareMonitor"
 SANS_FENETRE = getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -45,7 +46,7 @@ def commande_autostart() -> str:
     import paths
 
     py = Path(sys.executable).resolve()
-    pyw = py.with_name("pythonw.exe")                      # sans console (runtime\ ou .venv\Scripts\)
+    pyw = py.with_name("pythonw.exe")  # sans console (runtime\ ou .venv\Scripts\)
     return f'"{pyw if pyw.is_file() else py}" "{paths.INSTALL_DIR / "nexus.pyw"}" --demarrage'
 
 
@@ -94,8 +95,7 @@ def dossier_protege() -> Path:
 
 def _schtasks(*args: str, timeout: float = 15) -> subprocess.CompletedProcess:
     exe = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32" / "schtasks.exe"
-    return subprocess.run([str(exe), *args], capture_output=True, text=True, encoding="utf-8", errors="replace",
-                          timeout=timeout, creationflags=SANS_FENETRE)
+    return subprocess.run([str(exe), *args], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout, creationflags=SANS_FENETRE)
 
 
 def tache_existe() -> bool:
@@ -155,7 +155,7 @@ def _script_activer(source: Path, modele: Path | None, utilisateur: str) -> str:
     dst = dossier_protege()
     return f"""
 $ErrorActionPreference = 'Stop'
-$src = {_ps(source)}; $dst = {_ps(dst)}; $modele = {_ps(modele or '')}
+$src = {_ps(source)}; $dst = {_ps(dst)}; $modele = {_ps(modele or "")}
 Get-Process LibreHardwareMonitor -ErrorAction SilentlyContinue | Where-Object {{ $_.Path -and $_.Path.StartsWith($dst, [StringComparison]::OrdinalIgnoreCase) }} | Stop-Process -Force
 Start-Sleep -Milliseconds 500
 New-Item -ItemType Directory -Force -Path $dst | Out-Null
@@ -190,12 +190,21 @@ def _executer_admin(script: str, timeout: float = 180) -> None:
     """Exécute le script PowerShell avec les droits administrateur : Windows affiche UNE fenêtre d'autorisation."""
     code = base64.b64encode(script.encode("utf-16-le")).decode("ascii")
     ps = Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32" / "WindowsPowerShell" / "v1.0" / "powershell.exe"
-    lanceur = (f"try {{ $p = Start-Process -FilePath {_ps(ps)} -Verb RunAs -WindowStyle Hidden -Wait -PassThru "
-               f"-ArgumentList '-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-EncodedCommand','{code}'; "
-               "exit $p.ExitCode } catch { exit 1223 }")
+    lanceur = (
+        f"try {{ $p = Start-Process -FilePath {_ps(ps)} -Verb RunAs -WindowStyle Hidden -Wait -PassThru "
+        f"-ArgumentList '-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-EncodedCommand','{code}'; "
+        "exit $p.ExitCode } catch { exit 1223 }"
+    )
     try:
-        r = subprocess.run([str(ps), "-NoProfile", "-NonInteractive", "-Command", lanceur], capture_output=True,
-                           text=True, encoding="utf-8", errors="replace", timeout=timeout, creationflags=SANS_FENETRE)
+        r = subprocess.run(
+            [str(ps), "-NoProfile", "-NonInteractive", "-Command", lanceur],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+            creationflags=SANS_FENETRE,
+        )
     except subprocess.TimeoutExpired as exc:
         raise DemarrageErreur("pas de réponse à la fenêtre d'autorisation de Windows") from exc
     if r.returncode == 1223:

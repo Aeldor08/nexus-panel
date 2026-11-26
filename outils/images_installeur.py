@@ -9,6 +9,7 @@ exactes conseillées par Inno Setup (il choisit la plus proche) :
 
 Usage : python outils/images_installeur.py   →   installeur/*.png (suivis par Git, lus par installer.iss)
 """
+
 from __future__ import annotations
 
 import math
@@ -19,7 +20,7 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
 BASE = Path(__file__).resolve().parents[1]
 SORTIE = BASE / "installeur"
-SS = 4                                                   # suréchantillonnage
+SS = 4  # suréchantillonnage
 
 CYAN = (0, 240, 255)
 MAGENTA = (255, 43, 214)
@@ -115,7 +116,7 @@ NOEUDS = [(116, 28), (4, 92)]
 def logo(taille):
     """Logo NEXUS (RGBA, fond transparent) de `taille` px de côté, avec sa lueur."""
     s = taille * SS
-    k = s / 128                                          # viewBox 120 + marge pour la lueur
+    k = s / 128  # viewBox 120 + marge pour la lueur
     off = 4 * k
 
     def P(pts):
@@ -124,14 +125,13 @@ def logo(taille):
     trait = Image.new("L", (s, s), 0)
     d = ImageDraw.Draw(trait)
     d.line(P(EXT + EXT[:1]), fill=255, width=max(1, round(4 * k)), joint="curve")
-    pts = P(INT + INT[:1])                               # hexagone intérieur en pointillés
+    pts = P(INT + INT[:1])  # hexagone intérieur en pointillés
     for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
         lg = math.hypot(x1 - x0, y1 - y0)
         n = max(1, int(lg / (9 * k)))
         for i in range(n):
             a, b = i / n, min(1, (i + 4 / 9) / n)
-            d.line((x0 + (x1 - x0) * a, y0 + (y1 - y0) * a, x0 + (x1 - x0) * b, y0 + (y1 - y0) * b),
-                   fill=180, width=max(1, round(1.5 * k)))
+            d.line((x0 + (x1 - x0) * a, y0 + (y1 - y0) * a, x0 + (x1 - x0) * b, y0 + (y1 - y0) * b), fill=180, width=max(1, round(1.5 * k)))
     d.line(P(N), fill=255, width=max(1, round(8 * k)), joint="curve")
 
     img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
@@ -164,20 +164,18 @@ def grille_hex(w, h, pas, alpha, graine=7):
     centres = []
     y = -pas
     while y < h + pas:
-        x = (-pas if lig % 2 == 0 else -pas + pas / 2)
+        x = -pas if lig % 2 == 0 else -pas + pas / 2
         while x < w + pas:
-            pts = [(x + r * math.cos(math.radians(60 * i + 30)), y + r * math.sin(math.radians(60 * i + 30)))
-                   for i in range(6)]
+            pts = [(x + r * math.cos(math.radians(60 * i + 30)), y + r * math.sin(math.radians(60 * i + 30))) for i in range(6)]
             d.line(pts + pts[:1], fill=alpha, width=max(1, SS))
             centres.append((x, y))
             x += pas
         y += 1.5 * r
         lig += 1
-    rnd = random.Random(graine)                          # quelques cellules de la trame allumées
+    rnd = random.Random(graine)  # quelques cellules de la trame allumées
     for cx, cy in rnd.sample(centres, max(1, len(centres) // 9)):
         rr = r * 0.82
-        pts = [(cx + rr * math.cos(math.radians(60 * i + 30)), cy + rr * math.sin(math.radians(60 * i + 30)))
-               for i in range(6)]
+        pts = [(cx + rr * math.cos(math.radians(60 * i + 30)), cy + rr * math.sin(math.radians(60 * i + 30))) for i in range(6)]
         d.line(pts + pts[:1], fill=min(255, int(alpha * 2.2)), width=max(1, SS))
     return m
 
@@ -199,8 +197,7 @@ def image_gauche(w0, h0):
     w, h = w0 * SS, h0 * SS
     img = degrade_vertical(w, h, [(0, FOND_HAUT), (0.55, FOND_MILIEU), (1, FOND_BAS)]).convert("RGBA")
     trame = grille_hex(w, h, w / 5.2, 11)
-    fondu = degrade_vertical(1, h, [(0, (40, 40, 40)), (0.32, (255, 255, 255)), (0.7, (150, 150, 150)),
-                                    (1, (30, 30, 30))]).convert("L").resize((w, h))
+    fondu = degrade_vertical(1, h, [(0, (40, 40, 40)), (0.32, (255, 255, 255)), (0.7, (150, 150, 150)), (1, (30, 30, 30))]).convert("L").resize((w, h))
     trame = ImageChops.multiply(trame, fondu)
     t = Image.new("RGBA", (w, h), CYAN + (0,))
     t.putalpha(trame)
@@ -214,7 +211,7 @@ def image_gauche(w0, h0):
     img.alpha_composite(lg, (int((w - lt) / 2), int(h * 0.30 - lt / 2)))
 
     # « NEXUS »
-    d = ImageDraw.Draw(img, "RGBA")          # mode RGBA : les couleurs semi-transparentes se mélangent
+    d = ImageDraw.Draw(img, "RGBA")  # mode RGBA : les couleurs semi-transparentes se mélangent
     f = police(w * 0.2)
     esp = w * 0.035
     lw = largeur_espace(f, "NEXUS", esp)
@@ -223,8 +220,7 @@ def image_gauche(w0, h0):
     texte_espace(ImageDraw.Draw(masque), ((w - lw) / 2, y_mot), "NEXUS", f, 255, esp)
     img.alpha_composite(lueur(masque, CYAN, w * 0.03, 0.55))
     horiz = Image.linear_gradient("L").rotate(90, expand=True).resize((w, h))
-    coul = Image.composite(Image.new("RGBA", (w, h), MAGENTA + (255,)), Image.new("RGBA", (w, h), CYAN + (255,)),
-                           horiz)
+    coul = Image.composite(Image.new("RGBA", (w, h), MAGENTA + (255,)), Image.new("RGBA", (w, h), CYAN + (255,)), horiz)
     coul.putalpha(masque)
     img.alpha_composite(coul)
 
@@ -239,14 +235,13 @@ def image_gauche(w0, h0):
 
     # courbe d'activité en bas
     x0, x1, y0, y1 = w * 0.1, w * 0.9, h * 0.74, h * 0.88
-    for i in range(5):                                   # repères
+    for i in range(5):  # repères
         yy = y0 + (y1 - y0) * i / 4
         d.line((x0, yy, x1, yy), fill=(120, 140, 190, 14), width=max(1, SS // 2))
     pts = courbe(w, h, x0, y0, x1, y1)
     aire = Image.new("L", (w, h), 0)
     ImageDraw.Draw(aire).polygon(pts + [(x1, y1), (x0, y1)], fill=60)
-    aire = ImageChops.multiply(aire, degrade_vertical(1, h, [(0, (255,) * 3), (0.74, (255,) * 3),
-                                                             (0.88, (0,) * 3), (1, (0,) * 3)]).convert("L").resize((w, h)))
+    aire = ImageChops.multiply(aire, degrade_vertical(1, h, [(0, (255,) * 3), (0.74, (255,) * 3), (0.88, (0,) * 3), (1, (0,) * 3)]).convert("L").resize((w, h)))
     a = Image.new("RGBA", (w, h), CYAN + (0,))
     a.putalpha(aire)
     img.alpha_composite(a)
@@ -268,7 +263,7 @@ def image_gauche(w0, h0):
 
 
 def image_fond(w0, h0):
-    w, h = w0 * SS // 2, h0 * SS // 2                    # fond flou : ×2 suffit
+    w, h = w0 * SS // 2, h0 * SS // 2  # fond flou : ×2 suffit
     img = degrade_vertical(w, h, [(0, (11, 15, 28)), (1, (13, 11, 26))]).convert("RGBA")
     trame = grille_hex(w, h, h / 6.5, 9, graine=11)
     t = Image.new("RGBA", (w, h), CYAN + (0,))

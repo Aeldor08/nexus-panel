@@ -1188,14 +1188,17 @@ async def api_demarrage_regler(request: Request) -> JSONResponse:
     try:
         if "autostart" in body:
             demarrage_mod.regler_autostart(bool(body["autostart"]))
-            activite.noter("systeme", "démarrage avec Windows " + ("activé" if body["autostart"] else "désactivé"),
-                           "ok", "", _ip(request))
+            activite.noter("systeme", "démarrage avec Windows " + ("activé" if body["autostart"] else "désactivé"), "ok", "", _ip(request))
         if "lhm_sans_fenetre" in body:
             # fenêtre d'autorisation de Windows UNE fois : on attend la réponse sans bloquer le serveur
             await run_in_threadpool(demarrage_mod.regler_lhm_sans_fenetre, bool(body["lhm_sans_fenetre"]))
-            activite.noter("systeme", "LibreHardwareMonitor sans fenêtre d'autorisation "
-                           + ("activé" if body["lhm_sans_fenetre"] else "désactivé"), "ok",
-                           "tâche planifiée " + demarrage_mod.TACHE, _ip(request))
+            activite.noter(
+                "systeme",
+                "LibreHardwareMonitor sans fenêtre d'autorisation " + ("activé" if body["lhm_sans_fenetre"] else "désactivé"),
+                "ok",
+                "tâche planifiée " + demarrage_mod.TACHE,
+                _ip(request),
+            )
     except demarrage_mod.DemarrageErreur as exc:
         activite.noter("systeme", "réglage du démarrage de Windows", "erreur", str(exc), _ip(request))
         raise BadRequest(str(exc))
