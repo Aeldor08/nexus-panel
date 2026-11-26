@@ -197,6 +197,32 @@ def nettoyer_dist(ver: str) -> None:
             f.unlink(missing_ok=True)
 
 
+def verifier_defender(fichiers: list[Path]) -> None:
+    """Analyse Microsoft Defender des fichiers à publier (rapport seulement, rien n'est supprimé). En 1.12.0, l'exe
+    PyInstaller non signé a été classé « Trojan:Win32/Bearfoos.A!ml » (fausse alerte) et mis en quarantaine chez les
+    utilisateurs : rien n'est publié si un fichier est détecté. Sans Defender (CI, autre antivirus) : étape sautée."""
+    mp = Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Windows Defender" / "MpCmdRun.exe"
+    if not mp.is_file():
+        print("  Microsoft Defender introuvable : analyse sautée")
+        return
+    for f in fichiers:
+        r = subprocess.run(
+            [str(mp), "-Scan", "-ScanType", "3", "-File", str(f), "-DisableRemediation"],
+            capture_output=True,
+            text=True,
+            errors="replace",
+            timeout=900,
+        )
+        if r.returncode == 2:
+            menace = next((ligne.split(":", 1)[1].strip() for ligne in r.stdout.splitlines() if ligne.strip().startswith("Threat ")), "?")
+            raise Arret(
+                f"Microsoft Defender détecte {f.name} ({menace}). Rien n'est publié : reconstruis (nouvelle empreinte) et signale la fausse alerte à Microsoft."
+            )
+        if r.returncode != 0:
+            raise Arret(f"analyse Microsoft Defender impossible pour {f.name} (code {r.returncode}) :\n{r.stdout[-1500:]}")
+        print(f"  {f.name} : aucune menace")
+
+
 def verifier_archive(archive: Path, ver: str) -> None:
     with zipfile.ZipFile(archive) as z:
         noms = z.namelist()
@@ -353,6 +379,8 @@ def main() -> int:
             for f in (setup, setup_sha, portable, portable_sha):
                 if not f.is_file():
                     raise Arret(f"fichier natif manquant : {f.name}")
+            etape("Analyse Microsoft Defender")
+            verifier_defender([DIST / "NEXUS" / "NEXUS.exe", setup, portable])
     except Arret:
         _cmd(git, "tag", "-d", tag, check=False)  # pas de tag local orphelin
         raise

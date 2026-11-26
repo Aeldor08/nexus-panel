@@ -8,6 +8,14 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Corrigé
+- **Microsoft Defender mettait NEXUS 1.12.0 en quarantaine** (« Trojan:Win32/Bearfoos.A!ml », fausse alerte par
+  apprentissage automatique sur ce fichier précis) : NEXUS se fermait d'un coup, puis ne s'ouvrait plus, raccourcis
+  supprimés. Même code, exe reconstruit et vérifié par Defender. Si NEXUS ne s'ouvre plus chez toi : lance
+  `NEXUS-1.12.1-Setup.exe`, tes données sont gardées (exe, raccourcis et entrée de désinstallation reviennent)
+- Publication : Microsoft Defender analyse l'exe, l'installeur et le portable avant l'envoi ; rien n'est publié si
+  l'un d'eux est détecté
+
 ## [1.12.0] - 2026-11-26
 
 ### Ajouté
