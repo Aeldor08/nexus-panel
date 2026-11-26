@@ -189,7 +189,8 @@ def write_portable(ver: str, lhm: Path | None = None) -> Path:
 2. Lance « Lancer NEXUS.bat » (ou NEXUS.exe : le fichier portable.flag est détecté automatiquement).
 3. Au premier lancement, la fenêtre de configuration demande le mot de passe du deck.
 4. Tes données restent dans ce dossier : config.json, data\\, logs\\, profils\\, actions\\.
-   Aucune installation, aucun raccourci et aucune entrée de démarrage automatique ne sont créés.
+   Aucune installation, aucun raccourci et aucune entrée de démarrage automatique ne sont créés (sauf si tu
+   coches ⚙ Réglages → Démarrage de Windows).
 
 Mise à jour automatique (depuis la version 1.9.0) :
 - quand une nouvelle version existe, NEXUS propose de l'installer (pastille de version) ; il télécharge la

@@ -17,7 +17,8 @@ import store
 
 FICHIER = store.DATA_DIR / "activite.jsonl"
 MAX_LIGNES, GARDER = 3000, 2000  # au-delà de 3000 lignes, on garde les 2000 plus récentes
-CATEGORIES = {"deck": "Deck", "maj": "Mises à jour", "appareil": "Appareils", "processus": "Processus", "focus": "Focus", "philibert": "Philibert"}
+CATEGORIES = {"deck": "Deck", "maj": "Mises à jour", "appareil": "Appareils", "processus": "Processus", "focus": "Focus", "philibert": "Philibert",
+              "systeme": "Démarrage de Windows"}
 _lock = threading.Lock()
 _n = None  # nombre de lignes (compté à la première écriture)
 _vus: dict[str, float] = {}  # anti-répétition (ex. un appareil non appairé qui réessaie en boucle)

@@ -8,6 +8,14 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Ajouté
+- **⚙ Réglages → Démarrage de Windows** (sur le PC) : une case **Lancer NEXUS au démarrage de Windows** (icône près de
+  l'horloge, sans fenêtre ni navigateur ; toutes les versions, portable comprise) et une case **Démarrer
+  LibreHardwareMonitor sans la fenêtre d'autorisation** : Windows demande ton accord une seule fois, puis
+  LibreHardwareMonitor est copié dans `Program Files` (modifiable seulement par un administrateur) et lancé par une
+  tâche planifiée pour ton compte, sans plus aucune fenêtre ; décocher retire tout. Réglages notés dans le journal
+  d'activité (catégorie « Démarrage de Windows »)
+
 ## [1.10.2] - 2026-11-25
 
 ### Modifié

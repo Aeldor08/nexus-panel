@@ -614,25 +614,12 @@ def _demarrer_lhm() -> None:
     if os.name != "nt":
         return
     try:
+        import demarrage  # tâche planifiée sans fenêtre si activée (⚙ Réglages), sinon autorisation
         import paths
 
-        exe = paths.INSTALL_DIR / "LibreHardwareMonitor" / "LibreHardwareMonitor.exe"
-        if not exe.is_file():
-            return
-        cfg = exe.with_name("LibreHardwareMonitor.config")
-        modele = paths.APP_DIR / "outils" / "LibreHardwareMonitor.config"  # serveur web 8085 activé, réduit
-        if not cfg.exists() and modele.is_file():
-            import shutil
-
-            shutil.copyfile(modele, cfg)
-        import psutil
-
-        if any((p.info.get("name") or "").lower() == "librehardwaremonitor.exe" for p in psutil.process_iter(["name"])):
-            return
-        print("[Matériel] démarrage de LibreHardwareMonitor (fenêtre administrateur de Windows)")
-        r = ctypes.windll.shell32.ShellExecuteW(None, "runas", str(exe), None, str(exe.parent), 7)  # 7 : réduit
-        if r <= 32:
-            print("[Matériel] LibreHardwareMonitor non démarré (autorisation refusée ?) : températures CPU indisponibles")
+        demarrage.demarrer_lhm(paths.INSTALL_DIR / "LibreHardwareMonitor",
+                               paths.APP_DIR / "outils" / "LibreHardwareMonitor.config",  # serveur web 8085, réduit
+                               lambda m: print(f"[Matériel] {m}"))
     except Exception as exc:
         print(f"[Matériel] LibreHardwareMonitor : démarrage impossible ({type(exc).__name__}: {exc})")
 

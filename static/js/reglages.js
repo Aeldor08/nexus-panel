@@ -68,6 +68,7 @@
       <label class="rg-row rg-chk"><input type="checkbox" data-act="philibert-visible" ${window.nxPhilibert.visible() ? "checked" : ""}>
         <span>Le voir se promener sous la barre du haut</span></label>
       <button class="btn" data-act="philibert">🦎 Ouvrir son île</button>` : ""}
+      <div id="rg-demarrage"></div>
       <div class="rg-group">Version et mises à jour</div>
       <div id="rg-maj"><small class="muted rg-note">Chargement…</small></div>
       <div class="rg-group">Rappels de l'agenda</div>
@@ -102,6 +103,38 @@
       <small class="muted rg-note">Jeton en lecture seule, limité à ce dépôt (voir docs\\JETON_GITHUB.md) ; rangé dans le gestionnaire
         d'identifiants de Windows, envoyé uniquement à api.github.com.</small>`;
   }
+  // ---- Démarrage de Windows (PC seulement : le serveur refuse ces réglages depuis le téléphone) ----
+  async function renderDemarrage() {
+    const box = document.getElementById("rg-demarrage");
+    if (!box) return;
+    let d;
+    try { d = await api("/api/demarrage"); } catch (e) { box.innerHTML = ""; return; }   // téléphone, autre système
+    if (!d.windows) { box.innerHTML = ""; return; }
+    box.innerHTML = `
+      <div class="rg-group">Démarrage de Windows</div>
+      <label class="rg-row rg-chk"><input type="checkbox" data-dem="autostart" ${d.autostart ? "checked" : ""}>
+        <span>Lancer NEXUS au démarrage de Windows (icône près de l'horloge, sans ouvrir de fenêtre)</span></label>
+      ${d.autostart_ailleurs ? `<small class="muted rg-note">Une autre copie de NEXUS se lance déjà au démarrage : cocher la case la remplace
+        par celle-ci.</small>` : ""}
+      ${d.lhm_present || d.lhm_sans_fenetre ? `<label class="rg-row rg-chk"><input type="checkbox" data-dem="lhm_sans_fenetre" ${d.lhm_sans_fenetre ? "checked" : ""}>
+        <span>Démarrer LibreHardwareMonitor sans la fenêtre d'autorisation de Windows</span></label>
+      <small class="muted rg-note">Températures du processeur : Windows demande une seule fois ton accord pour l'activer (ou le
+        désactiver). LibreHardwareMonitor est alors copié dans Program Files, que seul un administrateur peut modifier, et une
+        tâche planifiée le lance pour ton compte, sans plus rien demander.${d.lhm_en_marche ? " · En marche" : ""}</small>` : ""}`;
+  }
+  menu.addEventListener("change", async e => {
+    const k = e.target.dataset && e.target.dataset.dem;
+    if (!k) return;
+    const c = e.target, voulu = c.checked;
+    c.disabled = true;
+    if (k === "lhm_sans_fenetre") toast("Accepte la fenêtre d'autorisation de Windows (une seule fois)…");
+    try {
+      await api("/api/demarrage", { [k]: voulu });
+      toast(k === "autostart" ? (voulu ? "NEXUS se lancera au démarrage de Windows." : "NEXUS ne se lancera plus au démarrage.")
+        : (voulu ? "LibreHardwareMonitor démarrera sans fenêtre d'autorisation." : "LibreHardwareMonitor redemandera l'autorisation à chaque démarrage."));
+    } catch (x) { toast("Démarrage de Windows : " + x.message, true); }
+    renderDemarrage();
+  });
   menu.addEventListener("change", async e => {
     const k = e.target.dataset && e.target.dataset.maj;
     if (!k) return;
@@ -153,7 +186,7 @@
   });
   btn.addEventListener("click", e => {
     e.stopPropagation();
-    if (menu.hidden) { render(); renderMaj(); menu.hidden = false; btn.setAttribute("aria-expanded", "true"); }
+    if (menu.hidden) { render(); renderDemarrage(); renderMaj(); menu.hidden = false; btn.setAttribute("aria-expanded", "true"); }
     else { menu.hidden = true; btn.setAttribute("aria-expanded", "false"); }
   });
   document.addEventListener("click", e => { if (!menu.hidden && !wrap.contains(e.target)) { menu.hidden = true; btn.setAttribute("aria-expanded", "false"); } });

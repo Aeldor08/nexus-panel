@@ -37,6 +37,7 @@ TESTS = [
     ("test_philibert.py", [str(BASE)]),
     ("test_release_titre.py", []),
     ("test_superviseur.py", []),
+    ("test_demarrage.py", []),
 ]
 
 

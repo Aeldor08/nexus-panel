@@ -41,7 +41,8 @@ Les trois versions ont les mêmes fonctions. Windows 10 ou 11 en 64 bits est né
    NEXUS s'installe pour ton compte Windows seulement, dans `%LOCALAPPDATA%\Programs\NEXUS`.
 3. Choisis le dossier (celui proposé convient), puis les options : **raccourci sur le Bureau**,
    **LibreHardwareMonitor** (coché : températures du processeur, des disques et ventilateurs ; Windows demandera
-   l'autorisation administrateur au lancement de NEXUS) et **lancement au démarrage de Windows** (décoché).
+   l'autorisation administrateur au lancement de NEXUS) et **lancement au démarrage de Windows** (décoché). Ces
+   deux réglages se changent aussi plus tard dans **⚙ Réglages → Démarrage de Windows**.
    Puis **Installer**, et **Lancer NEXUS** à la fin.
 4. Au premier lancement, une fenêtre de configuration s'ouvre :
    - **Mot de passe du Deck** (obligatoire) : il protège les boutons qui lancent des applis ou mettent le PC en
@@ -163,6 +164,12 @@ Windows ne donne pas la température du processeur aux programmes ordinaires. Le
 4. C'est tout : au prochain lancement, NEXUS le configure et le démarre tout seul.
    - Windows demande l'**autorisation administrateur** : clique sur **Oui** (sans cela, pas de
      température processeur).
+   - Pour ne plus voir cette fenêtre à chaque lancement : **⚙ Réglages → Démarrage de Windows → Démarrer
+     LibreHardwareMonitor sans la fenêtre d'autorisation**. Windows demande ton accord **une seule fois** ;
+     LibreHardwareMonitor est alors copié dans `C:\Program Files\NEXUS\LibreHardwareMonitor` (que seul un
+     administrateur peut modifier : aucun programme ne peut se glisser à sa place pour obtenir les droits) et une
+     tâche planifiée `\NEXUS\LibreHardwareMonitor` le lance pour ton compte. Décocher retire la tâche et la copie
+     (une autorisation aussi). Il faut un compte administrateur Windows.
    - La toute première fois, LibreHardwareMonitor propose d'installer le pilote **PawnIO** :
      accepte, c'est lui qui lit les capteurs.
 

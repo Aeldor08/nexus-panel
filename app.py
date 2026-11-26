@@ -37,6 +37,7 @@ import bot as bot_mod
 import config
 import db as db_mod
 import deck as deck_mod
+import demarrage as demarrage_mod
 import focus as focus_mod
 import gamemode as gamemode_mod
 import journal as journal_mod
@@ -207,7 +208,7 @@ async def _guard(request: Request, call_next):
         return PlainTextResponse("Accès refusé", status_code=403)
     path = request.url.path
     # (mises à jour, appairage, fermeture de processus, Philibert : seulement depuis le PC)
-    if path.startswith(("/api/remote", "/api/maj", "/api/processus/fermer", "/api/philibert")):
+    if path.startswith(("/api/remote", "/api/maj", "/api/processus/fermer", "/api/philibert", "/api/demarrage")):
         return JSONResponse({"error": "réservé au PC"}, status_code=403)
     if path in PUBLIC_REMOTE_PATHS:
         return await call_next(request)
@@ -1171,6 +1172,34 @@ async def api_maj_plus_tard(request: Request) -> JSONResponse:
     body = await json_body(request)
     h = body.get("heures")
     return JSONResponse(updater.plus_tard(float(h) if isinstance(h, (int, float)) and 1 <= h <= 24 * 30 else 24))
+
+
+# --------------------------------------------------------------------------- #
+#  Démarrage de Windows : lancer NEXUS à l'ouverture de session, LibreHardwareMonitor sans fenêtre (PC seulement)
+# --------------------------------------------------------------------------- #
+@app.get("/api/demarrage")
+def api_demarrage() -> JSONResponse:
+    return JSONResponse(demarrage_mod.etat())
+
+
+@app.post("/api/demarrage")
+async def api_demarrage_regler(request: Request) -> JSONResponse:
+    body = await json_body(request)
+    try:
+        if "autostart" in body:
+            demarrage_mod.regler_autostart(bool(body["autostart"]))
+            activite.noter("systeme", "démarrage avec Windows " + ("activé" if body["autostart"] else "désactivé"),
+                           "ok", "", _ip(request))
+        if "lhm_sans_fenetre" in body:
+            # fenêtre d'autorisation de Windows UNE fois : on attend la réponse sans bloquer le serveur
+            await run_in_threadpool(demarrage_mod.regler_lhm_sans_fenetre, bool(body["lhm_sans_fenetre"]))
+            activite.noter("systeme", "LibreHardwareMonitor sans fenêtre d'autorisation "
+                           + ("activé" if body["lhm_sans_fenetre"] else "désactivé"), "ok",
+                           "tâche planifiée " + demarrage_mod.TACHE, _ip(request))
+    except demarrage_mod.DemarrageErreur as exc:
+        activite.noter("systeme", "réglage du démarrage de Windows", "erreur", str(exc), _ip(request))
+        raise BadRequest(str(exc))
+    return JSONResponse(await run_in_threadpool(demarrage_mod.etat))
 
 
 @app.post("/api/maj/reglages")

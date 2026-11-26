@@ -182,24 +182,11 @@ class Superviseur:
         return True
 
     def demarrer_lhm(self) -> None:
-        exe = self.base / "LibreHardwareMonitor" / "LibreHardwareMonitor.exe"
-        if not exe.exists():
-            return
-        cfg = exe.with_name("LibreHardwareMonitor.config")
-        modele = self.base / "outils" / "LibreHardwareMonitor.config"
-        if not cfg.exists() and modele.exists():
-            shutil.copyfile(modele, cfg)
-        try:
-            import psutil
+        # tâche planifiée sans fenêtre si elle a été activée (⚙ Réglages), sinon fenêtre d'autorisation de Windows
+        import demarrage
 
-            if any((p.info.get("name") or "").lower() == "librehardwaremonitor.exe" for p in psutil.process_iter(["name"])):
-                return
-        except Exception:
-            pass
-        self.noter("démarrage de LibreHardwareMonitor (fenêtre administrateur de Windows)")
-        r = ctypes.windll.shell32.ShellExecuteW(None, "runas", str(exe), None, str(exe.parent), 7)  # 7 : réduit
-        if r <= 32:
-            self.noter("LibreHardwareMonitor non démarré : températures CPU indisponibles")
+        demarrage.demarrer_lhm(self.base / "LibreHardwareMonitor", self.base / "outils" / "LibreHardwareMonitor.config",
+                               self.noter)
 
     def appliquer_maj(self) -> None:
         if not (self.base / "maj" / "en_cours.json").exists():
@@ -331,7 +318,9 @@ def main() -> int:
                 pass
 
     # NEXUS_OPEN_BROWSER=0 : ne pas ouvrir le navigateur au démarrage (copies de test, démarrage discret)
-    sup = Superviseur(notifier=notifier, etat=maj_titre, ouvrir_navigateur=os.environ.get("NEXUS_OPEN_BROWSER") != "0")
+    # --demarrage : lancé par Windows à l'ouverture de session (⚙ Réglages → Démarrage de Windows) : icône seulement
+    discret = os.environ.get("NEXUS_OPEN_BROWSER") == "0" or "--demarrage" in sys.argv
+    sup = Superviseur(notifier=notifier, etat=maj_titre, ouvrir_navigateur=not discret)
 
     def ouvrir(_i=None, _m=None):
         webbrowser.open(adresse())
