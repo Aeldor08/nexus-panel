@@ -8,6 +8,8 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+## [1.12.1] - 2026-11-26
+
 ### Corrigé
 - **Microsoft Defender mettait NEXUS 1.12.0 en quarantaine** (« Trojan:Win32/Bearfoos.A!ml », fausse alerte par
   apprentissage automatique sur ce fichier précis) : NEXUS se fermait d'un coup, puis ne s'ouvrait plus, raccourcis
