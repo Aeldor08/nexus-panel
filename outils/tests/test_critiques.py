@@ -208,6 +208,43 @@ try:
     for d in list(app.remote_svc.devices):
         app.remote_svc.revoke(d["id"])
     ok(tel.get("/api/version", cookies={app.remote_mod.COOKIE: jeton}).status_code == 401, "appareil révoqué : plus d'accès")
+
+    # Alerte sur le PC à chaque appairage
+    alertes = []
+    vrai_notify = app._notify_all
+    app._notify_all = lambda titre, texte: alertes.append((titre, texte)) or True
+    try:
+        p = app.remote_svc.start_pairing()
+        r = tel.post("/api/pair/claim", json={"code": p["code"], "name": "Pixel de test"})
+        jeton = r.cookies.get(app.remote_mod.COOKIE)
+        for _ in range(50):
+            if alertes:
+                break
+            time.sleep(0.02)
+        ok(len(alertes) == 1 and "nouvel appareil" in alertes[0][0] and "Pixel de test" in alertes[0][1], f"appairage : alerte sur le PC ({alertes})")
+    finally:
+        app._notify_all = vrai_notify
+
+    # Appareil inactif depuis plus de 90 jours : oublié, même avec son ancien jeton
+    oublis = []
+    vrai_oubli = app.remote_svc.on_oubli
+    app.remote_svc.on_oubli = lambda d: oublis.append(d["name"])
+    try:
+        jour = 86400
+        app.remote_svc.devices[-1]["last_seen"] = time.time() - 89 * jour
+        ok(tel.get("/api/version", cookies={app.remote_mod.COOKIE: jeton}).status_code == 200, "inactif 89 jours : encore accepté")
+        app.remote_svc.devices[-1]["last_seen"] = time.time() - 91 * jour
+        ok(tel.get("/api/version", cookies={app.remote_mod.COOKIE: jeton}).status_code == 401, "inactif 91 jours : refusé")
+        ok(not app.remote_svc.devices and oublis == ["Pixel de test"], f"inactif 91 jours : oublié et noté ({oublis})")
+        p = app.remote_svc.start_pairing()
+        tel.post("/api/pair/claim", json={"code": p["code"], "name": "Vieux"})
+        app.remote_svc.devices[-1]["last_seen"] = time.time() - 120 * jour
+        ok(app.remote_svc.state()["devices"] == [] and oublis[-1] == "Vieux", "la liste du PC n'affiche plus un appareil oublié")
+        ok(app.remote_svc.state()["inactif_jours"] == 90, "durée affichée dans le panneau Téléphone")
+    finally:
+        app.remote_svc.on_oubli = vrai_oubli
+        for d in list(app.remote_svc.devices):
+            app.remote_svc.revoke(d["id"])
 finally:
     app.remote_svc.enabled = avant
 

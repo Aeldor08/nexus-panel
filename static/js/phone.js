@@ -40,6 +40,8 @@
           : `<div class="empty">Aucun appareil pour l'instant.</div>`}</div>
         <p class="hint">
           • Seuls les appareils appairés ici peuvent ouvrir NEXUS ; les adresses Internet sont toujours refusées.<br>
+          • Chaque nouvel appairage s'affiche en notification sur le PC ; un appareil qui ne s'est pas connecté
+            depuis ${esc(String(i.inactif_jours || 90))} jours est oublié tout seul (à appairer à nouveau).<br>
           ${i.pare_feu == null ? `• Au premier démarrage avec l'accès activé, <b>Windows demande d'autoriser Python</b> : coche « Réseaux privés » puis Autoriser.
             Si tu as refusé : Pare-feu Windows → « Autoriser une application » → Python → Privé.<br>`
           : `• Le pare-feu doit laisser passer le port <code>${esc(String(i.port))}</code> (bouton ci-dessus s'il est bloqué).<br>`}

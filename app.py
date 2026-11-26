@@ -150,6 +150,9 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # ---- Accès téléphone : garde réseau --------------------------------------
 remote_svc = remote_mod.Remote()
+remote_svc.on_oubli = lambda d: activite.noter(
+    "appareil", "appareil oublié (inactif)", "ok", f"{d.get('name', '?')} : aucune connexion depuis {remote_mod.INACTIF_MAX // 86400} jours", ""
+)
 RESTART_CODE = 3  # code de sortie qui demande au lanceur (icône ou lancer.bat) de relancer le serveur
 # Accessibles sans appairage depuis le réseau : la page d'appairage et ce qu'elle affiche
 PUBLIC_REMOTE_PATHS = {
@@ -895,13 +898,14 @@ async def api_pair_claim(request: Request) -> JSONResponse:
     if not token:
         activite.noter("appareil", "appairage refusé", "refusé", "code invalide ou expiré", ip, unique_s=30)
         raise BadRequest("code invalide ou expiré : relance l'appairage sur le PC", 403)
-    activite.noter(
-        "appareil",
-        "nouvel appareil appairé",
-        "ok",
-        text_field(body, "name", 40, required=False) or remote_mod.device_label(request.headers.get("user-agent", "")),
-        ip,
-    )
+    nom = text_field(body, "name", 40, required=False) or remote_mod.device_label(request.headers.get("user-agent", ""))
+    activite.noter("appareil", "nouvel appareil appairé", "ok", nom, ip)
+    # Alerte sur le PC (et Discord) : un appairage qui n'est pas le sien se voit tout de suite et se révoque d'un clic
+    threading.Thread(
+        target=_notify_all,
+        args=("NEXUS : nouvel appareil appairé", f"{nom} ({ip}) peut maintenant ouvrir NEXUS. Si ce n'est pas toi : 📱 Téléphone → Révoquer."),
+        daemon=True,
+    ).start()
     resp = JSONResponse({"ok": True})
     resp.set_cookie(remote_mod.COOKIE, token, max_age=remote_mod.COOKIE_MAX_AGE, httponly=True, samesite="strict", path="/")
     return resp

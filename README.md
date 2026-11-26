@@ -789,7 +789,10 @@ téléphone (même Wi-Fi).
 - **Appli Android** (sans navigateur, plein écran) : `android\` construit `NEXUS-Android-x.y.z.apk` (≈ 50 Ko,
   seule permission : Internet). Installation et construction : `android\LISEZMOI.md`.
 
-Seuls les appareils appairés passent ; les adresses Internet sont toujours refusées.
+Seuls les appareils appairés passent ; les adresses Internet sont toujours refusées. Chaque nouvel appairage
+s'affiche en **notification sur le PC** (et sur Discord si le bot est configuré) : si ce n'est pas toi,
+📱 Téléphone → **Révoquer**. Un appareil qui ne s'est **pas connecté depuis 90 jours est oublié tout seul** (vieux
+téléphone vendu ou perdu) : il suffit de l'appairer à nouveau. Les deux sont notés dans le journal d'activité.
 
 ### Autres réglages
 

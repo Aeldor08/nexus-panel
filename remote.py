@@ -8,7 +8,10 @@ Sécurité :
 - l'appairage se fait par QR code ou code à 6 chiffres, affichés sur le PC, valables 2 minutes,
   à usage unique, 5 essais maximum ;
 - les jetons sont stockés hachés (SHA-256) : le fichier data/remote.json ne permet pas de se connecter ;
-- seul le PC peut activer/désactiver l'accès, appairer ou révoquer un appareil.
+- seul le PC peut activer/désactiver l'accès, appairer ou révoquer un appareil ;
+- un appareil qui ne s'est pas connecté depuis INACTIF_MAX (90 jours) est oublié tout seul (vieux téléphone
+  vendu ou perdu) : il devra être appairé à nouveau ;
+- chaque nouvel appairage est signalé sur le PC (notification Windows, Discord si configuré) : app.py.
 """
 
 from __future__ import annotations
@@ -27,6 +30,7 @@ COOKIE_MAX_AGE = 365 * 24 * 3600
 PAIR_TTL = 120  # s de validité d'un code d'appairage
 PAIR_MAX_TRIES = 5
 CLAIM_RATE = 10  # essais d'appairage max par minute et par adresse IP
+INACTIF_MAX = 90 * 24 * 3600  # s sans connexion avant qu'un appareil soit oublié
 
 
 def _hash(token: str) -> str:
@@ -93,6 +97,24 @@ class Remote:
         self._pairing = None  # {"secret", "code", "expires", "tries"}
         self._claims: dict[str, list[float]] = {}
         self._dirty_seen = 0.0
+        self.on_oubli = None  # appelé avec chaque appareil oublié pour inactivité (journal d'activité : app.py)
+
+    def _purger(self, now: float) -> list[dict]:
+        """Retire les appareils inactifs depuis INACTIF_MAX (sous verrou). Renvoie ceux qui ont été retirés."""
+        limite = now - INACTIF_MAX
+        oublies = [d for d in self.devices if float(d.get("last_seen") or d.get("created") or now) < limite]
+        if oublies:
+            self.devices = [d for d in self.devices if d not in oublies]
+            self._save()
+        return oublies
+
+    def _signaler(self, oublies: list[dict]) -> None:
+        if self.on_oubli:
+            for d in oublies:
+                try:
+                    self.on_oubli(d)
+                except Exception:
+                    pass
 
     def _save(self) -> None:
         store.save("remote", {"enabled": self.enabled, "devices": self.devices})
@@ -179,22 +201,30 @@ class Remote:
         if not token:
             return None
         h = _hash(token)
+        now = time.time()
+        trouve = None
         with self._lock:
+            oublies = self._purger(now)  # (un appareil oublié est refusé, même avec son ancien jeton)
             for d in self.devices:
                 if hmac.compare_digest(d["token_hash"], h):
-                    now = time.time()
                     d["last_seen"], d["last_ip"] = now, ip
                     if now - self._dirty_seen > 300:  # on n'écrit « vu à » que toutes les 5 min
                         self._dirty_seen = now
                         self._save()
-                    return d
-        return None
+                    trouve = d
+                    break
+        self._signaler(oublies)
+        return trouve
 
     def state(self) -> dict:
         with self._lock:
-            return {
+            oublies = self._purger(time.time())
+            etat = {
                 "enabled": self.enabled,
                 "active": self.active,
                 "restart_needed": self.enabled != self.active,
                 "devices": [{k: v for k, v in d.items() if k != "token_hash"} for d in self.devices],
+                "inactif_jours": INACTIF_MAX // 86400,
             }
+        self._signaler(oublies)
+        return etat

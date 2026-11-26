@@ -8,6 +8,12 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Ajouté
+- **Accès téléphone** : chaque nouvel appairage est signalé par une notification sur le PC (et sur Discord si le
+  bot est configuré), avec le nom et l'adresse de l'appareil, pour le révoquer tout de suite si ce n'est pas toi.
+  Un appareil qui ne s'est pas connecté depuis 90 jours est oublié tout seul (son ancien jeton est refusé) ; les
+  deux sont notés dans le journal d'activité
+
 ## [1.12.1] - 2026-11-26
 
 ### Corrigé
