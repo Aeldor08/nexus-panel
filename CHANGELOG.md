@@ -8,6 +8,8 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+## [1.13.0] - 2026-11-26
+
 ### Ajouté
 - **Accès téléphone** : chaque nouvel appairage est signalé par une notification sur le PC (et sur Discord si le
   bot est configuré), avec le nom et l'adresse de l'appareil, pour le révoquer tout de suite si ce n'est pas toi.
