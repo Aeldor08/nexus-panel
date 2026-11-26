@@ -722,7 +722,9 @@ def main() -> int:
         os.environ["NEXUS_IMPORTER"] = _ARGS.importer  # lu par paths.prepare() (copie, jamais d'écrasement)
     if _ARGS.configure:
         return _run_setup()
-    if not _single_instance():
+    # Test de démarrage du build : dossier de données et port à lui, il ne doit pas buter sur un NEXUS déjà ouvert
+    # (sinon « NEXUS tourne déjà » dans une boîte de dialogue que personne ne ferme, et le build attend 3 min)
+    if not _ARGS.smoke_test and not _single_instance():
         if not _activate_existing():
             _message("NEXUS tourne déjà dans cette session.")
         return 0

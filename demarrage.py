@@ -68,14 +68,15 @@ def regler_autostart(actif: bool) -> None:
     import winreg
 
     try:
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, CLE_RUN, 0, winreg.KEY_SET_VALUE) as k:
-            if actif:
+        if actif:  # la clé Run peut ne pas exister encore (compte neuf, machines de la CI) : on la crée
+            with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, CLE_RUN, 0, winreg.KEY_SET_VALUE) as k:
                 winreg.SetValueEx(k, NOM_RUN, 0, winreg.REG_SZ, commande_autostart())
-            else:
-                try:
+        else:
+            try:
+                with winreg.OpenKey(winreg.HKEY_CURRENT_USER, CLE_RUN, 0, winreg.KEY_SET_VALUE) as k:
                     winreg.DeleteValue(k, NOM_RUN)
-                except FileNotFoundError:
-                    pass
+            except FileNotFoundError:  # pas de clé ou pas de valeur : rien à retirer
+                pass
     except OSError as exc:
         raise DemarrageErreur(f"registre de Windows inaccessible ({exc})") from exc
 

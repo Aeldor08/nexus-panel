@@ -69,6 +69,20 @@ if os.name == "nt":
             D.regler_autostart(False)
         except D.DemarrageErreur:
             pass
+    # clé Run absente (compte neuf, machines de la CI) : cocher la crée, décocher ne plante pas
+    vraie_cle, D.CLE_RUN = D.CLE_RUN, rf"Software\NEXUS-tests-{os.getpid()}\Run"
+    try:
+        D.regler_autostart(False)
+        ok(True, "clé Run absente : décocher ne plante pas")
+        D.regler_autostart(True)
+        ok(D._lire_run() == D.commande_autostart(), "clé Run absente : cocher la crée")
+    finally:
+        for sous in (D.CLE_RUN, rf"Software\NEXUS-tests-{os.getpid()}"):
+            try:
+                winreg.DeleteKey(winreg.HKEY_CURRENT_USER, sous)
+            except OSError:
+                pass
+        D.CLE_RUN = vraie_cle
 else:
     print("      (clé Run : Windows seulement)")
 
