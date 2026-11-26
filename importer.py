@@ -281,9 +281,9 @@ def chercher(racines: list[Path] | None = None, *, destination: Path | None = No
     if racines is None:
         for d in _indices():
             _parcourir(d, 0, trouves, fin)
-        _parcourir(Path.home(), 4, trouves, fin)
+        _parcourir(Path.home(), 5, trouves, fin)
         for lecteur in _lecteurs():
-            _parcourir(lecteur, 3, trouves, fin)
+            _parcourir(lecteur, 4, trouves, fin)  # (ex. D:\Jeux\Outils\NEXUS-1.8.0\NEXUS-1.8.0 : 2 s ici)
     else:
         for r in racines:
             _parcourir(r, 4, trouves, fin)
