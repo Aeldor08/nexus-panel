@@ -8,6 +8,8 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+## [1.12.0] - 2026-11-26
+
 ### Ajouté
 - **Importer mes données NEXUS** (menu Démarrer, ou `NEXUS.exe --importer`) : une fenêtre trouve les autres NEXUS
   du PC (portable, version ZIP avec `lancer.bat`, ancienne version, sur les disques et les clés USB), montre ce
