@@ -2,7 +2,8 @@
 
 Catégories : deck (boutons, connexions, édition), maj (installation, retour, jeton, réglages), appareil
 (appairage du téléphone, appareil refusé ou retiré), processus (fermeture), focus (sessions Pomodoro),
-philibert (éclosion, évolutions, vétérinaire, vacances de l'iguane).
+philibert (éclosion, évolutions, vétérinaire, vacances de l'iguane), agenda (liaison Google Agenda, évènements
+Google créés ou supprimés depuis NEXUS).
 Une ligne JSON par évènement dans data/activite.jsonl (données personnelles : hors Git, jamais partagé).
 Jamais de secret dans le journal : ni mot de passe, ni jeton, ni contenu privé.
 """
@@ -25,6 +26,7 @@ CATEGORIES = {
     "focus": "Focus",
     "philibert": "Philibert",
     "systeme": "Démarrage de Windows",
+    "agenda": "Agenda",
 }
 _lock = threading.Lock()
 _n = None  # nombre de lignes (compté à la première écriture)

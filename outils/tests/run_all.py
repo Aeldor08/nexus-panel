@@ -39,6 +39,7 @@ TESTS = [
     ("test_release_titre.py", []),
     ("test_superviseur.py", []),
     ("test_demarrage.py", []),
+    ("test_agenda_google.py", [str(BASE)]),
 ]
 
 

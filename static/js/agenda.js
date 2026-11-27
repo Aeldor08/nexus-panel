@@ -3,6 +3,8 @@
 // Les évènements, leurs répétitions et leurs rappels sont gérés par le serveur (agenda.py, reminders.py) :
 // le navigateur demande les occurrences d'une période et envoie les créations / modifications / suppressions.
 // To-do et notes sont enregistrés à part (PUT /api/agenda/carnet). Fenêtres déplaçables : js/layout.js.
+// Google Agenda (agenda_google.py, si relié dans ⚙ Réglages) : ses occurrences arrivent avec les autres
+// (source « google », identifiants « g:… ») ; les créer / modifier / supprimer ici les change dans Google Agenda.
 (() => {
   const root = $("tab-agenda");
   root.innerHTML = `
@@ -20,6 +22,7 @@
             <option value="aucune">Sans les fêtes</option></select></span>
         </div>
         <div class="cal" id="a-cal"></div>
+        <div class="ag-gsync" id="a-gsync" hidden></div>
       </div>
       <div class="card c-agenda ag-panel" data-panel="jour">
         <h2 data-drag><span id="a-day-title">Jour</span></h2>
@@ -79,6 +82,8 @@
   let occ = [], events = {}, todos = [], notes = [], defaults = { rappels_minutes: [60, 30], heure_reference: "09:00" };
   let range = null, loaded = false, view = new Date(), selDay = ymd(new Date()), noteId = null;
   let editing = null;          // { event, occurrence } quand on modifie
+  let google = { connecte: false };   // liaison Google Agenda (résumé envoyé par /api/agenda)
+  const isG = o => o && o.source === "google";
   view.setDate(1);
 
   const eventsOn = key => occ.filter(o => o.date === key);
@@ -118,6 +123,10 @@
       if (!saveTimer && !saveEnCours) { todos = data.todos; notes = data.notes; }
       events = Object.fromEntries(data.evenements.map(e => [e.id, e]));
       defaults = data.reglages; REPEAT = data.repetitions || REPEAT;
+      const avant = google;
+      google = data.google || { connecte: false };
+      // liaison faite ou retirée (⚙ Réglages) : le formulaire vide est refait (choix de l'agenda)
+      if (!editing && (avant.connecte !== google.connecte || avant.lecture_seule !== google.lecture_seule)) $("a-form").dataset.formDay = "";
       range = r; loaded = true;
     } catch (e) { toast("Agenda : " + e.message, true); if (Tabs.current === "agenda") renderCal(); return; }
     if (Tabs.current === "agenda") renderAll();
@@ -155,7 +164,7 @@
       const d = addDays(start, i), key = ymd(d);
       const fetes = fetesOn(key);
       const chips = [...fetes.map(f => `<span class="ev fete${f.ferie ? " ferie" : ""}" title="${esc(f.nom)}${f.ferie ? " (jour férié)" : ""}">${f.icone} ${esc(f.nom)}</span>`),
-                     ...eventsOn(key).map(o => `<span class="ev${o.birthday ? " bday" : ""}">${o.time ? o.time + " " : ""}${esc(evLabel(o))}</span>`),
+                     ...eventsOn(key).map(o => `<span class="ev${o.birthday ? " bday" : ""}${isG(o) ? " g" : ""}"${isG(o) ? ` title="Google Agenda"` : ""}>${o.time ? o.time + " " : ""}${esc(evLabel(o))}</span>`),
                      ...todos.filter(t => t.due === key && !t.done).map(t => `<span class="ev todo">☐ ${esc(t.text)}</span>`)];
       html += `<button class="day${d.getMonth() !== view.getMonth() ? " other" : ""}${key === today ? " today" : ""}${key === selDay ? " sel" : ""}${fetes.some(f => f.ferie) ? " ferie" : ""}" data-day="${key}"
         aria-label="${fmtDay(key)}${chips.length ? ", " + chips.length + " élément(s)" : ""}">
@@ -163,7 +172,19 @@
       if (i === 34 && addDays(d, 1).getMonth() !== view.getMonth()) break;   // 5 semaines suffisent
     }
     $("a-cal").innerHTML = html;
+    renderSync();
     renderDay();
+  }
+
+  // ---- Google Agenda : état de la liaison sous le calendrier ----
+  function renderSync() {
+    const box = $("a-gsync");
+    box.hidden = !google.connecte;
+    if (!google.connecte) return;
+    const quand = google.derniere_synchro ? `relu ${fmtAgo(google.derniere_synchro)}` : "pas encore relu";
+    box.innerHTML = `<span class="ag-gdot">G</span><span class="x"><b>${esc(google.agenda_nom || "Google Agenda")}</b>
+      ${google.erreur ? `<span class="ag-gerr">⚠ ${esc(google.erreur)}</span>` : `<small class="muted">· ${esc(quand)}${google.lecture_seule ? " · lecture seule" : ""}</small>`}</span>
+      <button class="btn" data-gsync title="Relire Google Agenda maintenant">⟳ Relire</button>`;
   }
 
   function renderDay() {
@@ -174,13 +195,15 @@
     $("a-day").innerHTML = `
       ${fts.map(f => `<div class="item ag-fete${f.ferie ? " ferie" : ""}"><span class="t">${f.icone}</span>
         <span class="x">${esc(f.nom)}</span><span class="due">${f.ferie ? "jour férié" : "fête"}</span></div>`).join("")}
-      ${evs.map(o => `<div class="item ag-ev${editing && editing.occurrence === o.id ? " editing" : ""}">
+      ${evs.map(o => `<div class="item ag-ev${editing && editing.occurrence === o.id ? " editing" : ""}${isG(o) ? " g" : ""}">
         <span class="t">${o.time || (o.birthday ? "🎂" : "journée")}</span>
         <span class="x">${esc(evLabel(o).replace(/^🎂 /, ""))}${o.duration ? ` <small class="muted">· ${fmtDur(o.duration)}</small>` : ""}
           ${o.description ? `<small class="ag-desc">${esc(o.description)}</small>` : ""}</span>${rep(o)}
         ${o.exception ? `<span class="due" title="Cette occurrence a été modifiée seule">modifié</span>` : ""}
-        <button class="del" data-edit="${esc(o.id)}" title="Modifier" aria-label="Modifier ${esc(o.title)}">✎</button>
-        <button class="del" data-del="${esc(o.id)}" title="Supprimer" aria-label="Supprimer ${esc(o.title)}">✕</button></div>`).join("")}
+        ${isG(o) ? `<span class="due ag-gtag" title="Évènement de Google Agenda${o.lecture_seule ? " (lecture seule ici)" : ""}">G${o.lecture_seule ? " · lecture seule" : ""}</span>` : ""}
+        ${isG(o) && o.lien ? `<a class="del" href="${esc(o.lien)}" target="_blank" rel="noopener noreferrer" title="Ouvrir dans Google Agenda" aria-label="Ouvrir ${esc(o.title)} dans Google Agenda">↗</a>` : ""}
+        ${o.lecture_seule ? "" : `<button class="del" data-edit="${esc(o.id)}" title="Modifier" aria-label="Modifier ${esc(o.title)}">✎</button>
+        <button class="del" data-del="${esc(o.id)}" title="Supprimer" aria-label="Supprimer ${esc(o.title)}">✕</button>`}</div>`).join("")}
       ${tds.map(t => `<div class="item${t.done ? " done" : ""}"><input type="checkbox" data-todo="${t.id}" ${t.done ? "checked" : ""} aria-label="Terminée">
         <span class="x">${esc(t.text)}</span><span class="due">to-do</span></div>`).join("")}
       ${!evs.length && !tds.length && !fts.length ? `<div class="muted" style="font-size:15px;padding:4px 0">Rien de prévu.</div>` : ""}`;
@@ -194,7 +217,7 @@
 
   // ---- Formulaire : nouvel évènement ou modification ----
   function renderForm(o = null) {
-    const e = o ? events[o.event_id] : null;
+    const e = o ? (events[o.event_id] || { id: o.event_id }) : null;
     editing = o ? { event: e, occurrence: o.id, original: o.original_date, occ: o } : null;
     const v = o ? { title: o.title, date: o.date, time: o.time || "", duration: o.duration || "", description: o.description || "",
                     repeat: o.repeat, until: o.until || "", birthday: o.birthday, birth_year: o.birth_year || "",
@@ -202,10 +225,18 @@
                   { title: "", date: selDay, time: "", duration: "", description: "", repeat: "none", until: "", birthday: false,
                     birth_year: "", reminders: null };
     const custom = v.reminders != null;
+    const gNom = esc(google.agenda_nom || "Google Agenda");
+    const choixAgenda = !o && google.connecte && !google.lecture_seule;
+    const repeats = Object.entries(REPEAT).filter(([k]) => k !== "custom" || v.repeat === "custom");
     $("a-form").dataset.formDay = o ? "edition" : selDay;
     $("a-form").innerHTML = `
       <h3>${o ? (o.birthday ? "Modifier l'anniversaire" : "Modifier l'évènement") : "Nouvel évènement"}</h3>
+      ${isG(o) ? `<p class="muted ag-note"><span class="ag-gdot">G</span> Évènement de Google Agenda (${gNom}) : les changements y sont envoyés.</p>` : ""}
+      ${o && o.repeat === "custom" ? `<p class="muted ag-note">↻ Répétition réglée dans Google Agenda : elle est gardée telle quelle (modifie-la là-bas si besoin).</p>` : ""}
       ${o && o.repeat !== "none" ? `<p class="muted ag-note">↻ Fait partie d'une série (${esc(REPEAT[o.repeat].toLowerCase())}). À l'enregistrement, tu choisiras : cette occurrence, les suivantes, ou toute la série.</p>` : ""}
+      ${choixAgenda ? `<label class="ag-f"><span>Agenda</span><select class="in" name="agenda">
+        <option value="google" ${google.cible !== "nexus" ? "selected" : ""}>Google Agenda (${gNom})</option>
+        <option value="nexus" ${google.cible === "nexus" ? "selected" : ""}>NEXUS (sur ce PC seulement)</option></select></label>` : ""}
       <label class="ag-f"><span>Titre ${v.birthday ? "(prénom)" : ""}</span><input class="in" name="title" maxlength="120" value="${esc(v.title)}" required><em data-err="title"></em></label>
       <label class="ag-chk"><input type="checkbox" name="birthday" ${v.birthday ? "checked" : ""}> 🎂 C'est un anniversaire (chaque année, toute la journée)</label>
       <div class="ag-row">
@@ -215,13 +246,14 @@
       </div>
       <small class="muted ag-time">Sans heure = toute la journée (rappels calculés depuis ${esc(defaults.heure_reference)}).</small>
       <div class="ag-row ag-norep">
-        <label class="ag-f"><span>Répétition</span><select class="in" name="repeat">${Object.entries(REPEAT).map(([k, t]) => `<option value="${k}" ${k === v.repeat ? "selected" : ""}>${esc(t)}</option>`).join("")}</select><em data-err="repeat"></em></label>
+        <label class="ag-f"><span>Répétition</span><select class="in" name="repeat">${repeats.map(([k, t]) => `<option value="${k}" ${k === v.repeat ? "selected" : ""}>${esc(t)}</option>`).join("")}</select><em data-err="repeat"></em></label>
         <label class="ag-f ag-until"><span>Jusqu'au (facultatif)</span><input class="in" type="date" name="until" value="${esc(v.until)}"><em data-err="until"></em></label>
       </div>
       <label class="ag-f ag-byear"><span>Année de naissance (pour l'âge, facultatif)</span><input class="in" type="number" name="birth_year" min="1900" max="${new Date().getFullYear()}" value="${esc(v.birth_year)}"><em data-err="birth_year"></em></label>
       <label class="ag-f"><span>Description (facultatif)</span><textarea class="in" name="description" rows="2" maxlength="2000">${esc(v.description)}</textarea><em data-err="description"></em></label>
       <fieldset class="ag-rem"><legend>Rappels</legend>
-        <label class="ag-chk"><input type="radio" name="rem_mode" value="defaut" ${custom ? "" : "checked"}> Par défaut : ${esc(fmtRem(defaults.rappels_minutes) || "aucun")} avant</label>
+        <label class="ag-chk"><input type="radio" name="rem_mode" value="defaut" ${custom ? "" : "checked"}> <span class="ag-rem-nx">Par défaut : ${esc(fmtRem(defaults.rappels_minutes) || "aucun")} avant</span>
+          <span class="ag-rem-g">Par défaut de Google Agenda${isG(o) ? ` : ${esc(fmtRem(o.defaut_rappels || []) || "aucun")} avant` : ""}</span></label>
         <label class="ag-chk"><input type="radio" name="rem_mode" value="perso" ${custom ? "checked" : ""}> Personnalisés (minutes avant, séparées par des virgules) :</label>
         <input class="in" name="reminders" value="${custom ? esc(v.reminders.join(", ")) : esc(defaults.rappels_minutes.join(", "))}" placeholder="ex. 1440, 60, 10 — vide = aucun rappel" ${custom ? "" : "disabled"}>
         <em data-err="reminders"></em>
@@ -241,8 +273,13 @@
     f.querySelectorAll(".ag-time").forEach(el => { el.hidden = bday; });
     f.querySelector(".ag-norep").hidden = bday;
     f.querySelector(".ag-byear").hidden = !bday;
-    f.querySelector(".ag-until").hidden = f.elements.repeat.value === "none";
+    f.querySelector(".ag-until").hidden = ["none", "custom"].includes(f.elements.repeat.value);
     f.elements.reminders.disabled = f.elements.rem_mode.value !== "perso";
+    const versG = editing ? isG(editing.occ) : !!(f.elements.agenda && f.elements.agenda.value === "google");
+    f.querySelector(".ag-rem-nx").hidden = versG;
+    f.querySelector(".ag-rem-g").hidden = !versG;
+    const sub = f.querySelector("button[type=submit]");
+    if (!editing) sub.textContent = versG ? "Ajouter dans Google Agenda" : "Ajouter";
     f.elements.title.placeholder = bday ? "Prénom (ex. Léa)" : "Titre de l'évènement";
   }
 
@@ -254,7 +291,7 @@
       v.time = f.time.value || null;
       v.duration = f.duration.value === "" ? null : Number(f.duration.value);
       v.repeat = f.repeat.value;
-      v.until = v.repeat !== "none" && f.until.value ? f.until.value : null;
+      v.until = !["none", "custom"].includes(v.repeat) && f.until.value ? f.until.value : null;
     }
     v.reminders = f.rem_mode.value === "perso"
       ? f.reminders.value.split(/[,; ]+/).filter(Boolean).map(Number) : null;
@@ -300,15 +337,20 @@
     });
   }
 
+  let envoi = false;
   async function submitForm() {
+    if (envoi) return;                             // (Google : l'envoi prend une seconde, pas de double clic)
     const v = formValues();
     const err = check(v);
     showErrors(err);
     if (Object.keys(err).length) return;
+    const fa = $("a-form").elements.agenda, cible = fa ? fa.value : "nexus";
+    const sub = $("a-form").querySelector("button[type=submit]");
+    envoi = true; if (sub) sub.disabled = true;
     try {
       if (!editing) {
-        await api("/api/agenda/evenements", { champs: v });
-        toast(v.birthday ? "Anniversaire ajouté." : "Évènement ajouté.");
+        await api("/api/agenda/evenements", { champs: v, agenda: cible });
+        toast((v.birthday ? "Anniversaire ajouté" : "Évènement ajouté") + (cible === "google" ? " dans Google Agenda." : "."));
       } else {
         const o = editing.occ, e = editing.event;
         let scope = "all", champs = v;
@@ -336,7 +378,7 @@
     } catch (ex) {
       if (ex.data && ex.data.champs) showErrors(ex.data.champs);
       toast(ex.message, true);
-    }
+    } finally { envoi = false; if (sub && sub.isConnected) sub.disabled = false; }
   }
 
   async function removeOcc(id) {
@@ -356,7 +398,7 @@
   function renderUpcoming() {
     const now = new Date(), today = ymd(now), hm = `${pad(now.getHours())}:${pad(now.getMinutes())}`, end = ymd(addDays(now, 6));
     const list = occ.filter(o => o.date >= today && o.date <= end && !(o.date === today && o.time && o.time < hm))
-      .map(o => ({ date: o.date, time: o.time || "", label: esc(evLabel(o)), cls: "" }));
+      .map(o => ({ date: o.date, time: o.time || "", label: esc(evLabel(o)), cls: isG(o) ? " g" : "" }));
     for (let d = 0; d < 7; d++) {                      // fêtes de la semaine, en tête de leur journée
       const key = ymd(addDays(now, d));
       for (const f of fetesOn(key)) list.push({ date: key, time: "", label: `${f.icone} ${esc(f.nom)}`, cls: " fete", fete: true });
@@ -442,7 +484,15 @@
     if (ed) { const o = occ.find(x => x.id === ed.dataset.edit); if (o) { renderForm(o); renderDay(); $("a-form").elements.title.focus(); } return; }
     const del = ev.target.closest("[data-del]");
     if (del) { removeOcc(del.dataset.del); return; }
-    if (ev.target.closest("[data-cancel]")) { editing = null; renderForm(); renderDay(); return; }    const dt = ev.target.closest("[data-del-todo]");
+    if (ev.target.closest("[data-cancel]")) { editing = null; renderForm(); renderDay(); return; }
+    const gs = ev.target.closest("[data-gsync]");
+    if (gs) {
+      gs.disabled = true; gs.textContent = "⟳ Lecture…";
+      api("/api/agenda/synchroniser", {}).then(r => { google = r.google || google; return refresh(); })
+        .catch(x => toast("Google Agenda : " + x.message, true)).finally(() => { if (gs.isConnected) gs.disabled = false; renderSync(); });
+      return;
+    }
+    const dt = ev.target.closest("[data-del-todo]");
     if (dt) { todos = todos.filter(t => t.id !== dt.dataset.delTodo); saveNotebook(true); renderTodos(); renderCal(); return; }
     const nb = ev.target.closest("[data-note]");
     if (nb) { if (saveTimer) saveNotebook(true); noteId = nb.dataset.note; renderNotes(); }

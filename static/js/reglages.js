@@ -71,6 +71,7 @@
       <div id="rg-demarrage"></div>
       <div class="rg-group">Version et mises à jour</div>
       <div id="rg-maj"><small class="muted rg-note">Chargement…</small></div>
+      <div id="rg-google"></div>
       <div class="rg-group">Rappels de l'agenda</div>
       <label class="rg-row rg-chk"><input type="checkbox" data-act="sound" ${window.reminderSound && window.reminderSound.on ? "checked" : ""}>
         <span>Jouer un son à chaque rappel</span></label>
@@ -103,6 +104,110 @@
       <small class="muted rg-note">Jeton en lecture seule, limité à ce dépôt (voir docs\\JETON_GITHUB.md) ; rangé dans le gestionnaire
         d'identifiants de Windows, envoyé uniquement à api.github.com.</small>`;
   }
+  // ---- Google Agenda (PC seulement) : identifiant client, connexion, agenda relié. Aucun secret n'est réaffiché ----
+  let gTimer = null, gClient = false;
+  async function renderGoogle() {
+    clearTimeout(gTimer);
+    const box = document.getElementById("rg-google");
+    if (!box || menu.hidden) return;
+    let g;
+    try { g = await api("/api/agenda/google"); } catch (e) { box.innerHTML = ""; return; }   // téléphone : réglé depuis le PC
+    const head = `<div class="rg-group">Google Agenda</div>`;
+    const cx = g.connexion, msg = cx && cx.message ? `<small class="rg-note ${cx.etat === "erreur" ? "rg-err" : "muted"}">${esc(cx.message)}</small>` : "";
+    if (!g.configure || gClient) {
+      box.innerHTML = head + `
+        <small class="muted rg-note">Relie l'Agenda de NEXUS à Google Agenda, dans les deux sens. À faire une fois (10 minutes environ) :
+          crée ton identifiant client sur Google Cloud en suivant docs\\GOOGLE_AGENDA.md, puis colle-le ici.</small>
+        <label class="rg-row rg-sel"><span>Identifiant client</span>
+          <input class="in" data-g-champ="client_id" value="${esc(g.client_id)}" placeholder="….apps.googleusercontent.com" spellcheck="false" autocomplete="off" aria-label="Identifiant client OAuth de Google"></label>
+        <label class="rg-row rg-sel"><span>Code secret du client</span>
+          <input class="in" type="password" data-g-champ="client_secret" autocomplete="off" placeholder="${g.secret_range ? "•••••• enregistré" : "GOCSPX-…"}" aria-label="Code secret du client OAuth"></label>
+        <div class="form-row"><button class="btn" data-g-act="client">Enregistrer</button>
+          ${gClient ? `<button class="btn" data-g-act="client-annuler">Annuler</button>` : ""}</div>
+        <small class="muted rg-note">Le code secret est rangé dans le gestionnaire d'identifiants de Windows et n'est envoyé qu'à Google.</small>`;
+      return;
+    }
+    if (!g.connecte) {
+      box.innerHTML = head + `
+        <button class="btn" data-g-act="connexion" ${cx && cx.etat === "attente" ? "disabled" : ""}>🔗 Se connecter à Google</button>
+        ${msg}
+        ${cx && cx.etat === "attente" && cx.url ? `<small class="rg-note"><a href="${esc(cx.url)}" target="_blank" rel="noopener">Ouvrir la page de Google</a></small>` : ""}
+        <small class="muted rg-note">Google ouvre une page dans ton navigateur : choisis ton compte et accepte l'accès à ton agenda. Si Google
+          affiche « Google n'a pas validé cette application », clique sur « Continuer » : c'est ton propre projet.</small>
+        <div class="form-row"><button class="btn" data-g-act="client-changer">Changer d'identifiant client</button>
+          <button class="btn danger" data-g-act="client-effacer">Effacer</button></div>`;
+      if (cx && cx.etat === "attente") gTimer = setTimeout(renderGoogle, 2000);
+      return;
+    }
+    const quand = g.derniere_synchro ? fmtAgo(g.derniere_synchro) : "jamais";
+    box.innerHTML = head + `
+      <small class="rg-note">✔ Relié${g.agenda_nom ? ` à <b>${esc(g.agenda_nom)}</b>` : ""} · ${g.nb_evenements} évènement(s) en copie · relu ${esc(quand)}
+        ${g.lecture_seule ? "<br>⚠ Cet agenda est en lecture seule : choisis-en un autre pour y écrire." : ""}</small>
+      ${g.erreur ? `<small class="rg-note rg-err">⚠ ${esc(g.erreur)}</small>` : ""}
+      <label class="rg-row rg-sel"><span>Agenda relié</span>
+        <select class="in" data-g="agenda" aria-label="Agenda Google relié"><option value="${esc(g.agenda)}">${esc(g.agenda_nom || g.agenda)}</option></select></label>
+      <label class="rg-row rg-sel"><span>Nouveaux évènements</span>
+        <select class="in" data-g="cible" aria-label="Agenda proposé pour les nouveaux évènements">
+          <option value="google"${g.cible === "google" ? " selected" : ""}>dans Google Agenda</option>
+          <option value="nexus"${g.cible === "nexus" ? " selected" : ""}>dans NEXUS seulement</option></select></label>
+      <label class="rg-row rg-sel"><span>Relire Google Agenda toutes les</span>
+        <select class="in" data-g="intervalle_minutes" aria-label="Intervalle de relecture">
+          ${[5, 10, 15, 30, 60].map(m => `<option value="${m}"${Number(g.intervalle_minutes) === m ? " selected" : ""}>${m} min</option>`).join("")}</select></label>
+      <label class="rg-row rg-chk"><input type="checkbox" data-g="rappels" ${g.rappels ? "checked" : ""}>
+        <span>Rappels de NEXUS aussi pour les évènements Google (panel, Discord)</span></label>
+      <div class="form-row"><button class="btn" data-g-act="relire">⟳ Relire maintenant</button>
+        <button class="btn danger" data-g-act="deconnexion">Se déconnecter</button></div>
+      <small class="muted rg-note">Les évènements Google restent dans Google Agenda : NEXUS en garde une copie pour les afficher et les
+        rappels. Les créer, modifier ou supprimer dans l'Agenda les change aussi dans Google.</small>`;
+    try {
+      const r = await api("/api/agenda/google/agendas"), sel = box.querySelector('[data-g="agenda"]');
+      if (sel && r.agendas.length) sel.innerHTML = r.agendas.map(a => `<option value="${esc(a.id)}"${a.id === g.agenda || (g.agenda === "primary" && a.principal) ? " selected" : ""}>${esc(a.nom)}${a.principal ? " (principal)" : ""}</option>`).join("");
+    } catch (e) { /* hors connexion : on garde l'agenda actuel */ }
+  }
+  menu.addEventListener("change", async e => {
+    const k = e.target.dataset && e.target.dataset.g;
+    if (!k) return;
+    const v = e.target.type === "checkbox" ? e.target.checked : k === "intervalle_minutes" ? Number(e.target.value) : e.target.value;
+    try {
+      await api("/api/agenda/google/reglages", { [k]: v });
+      toast(k === "agenda" ? "Agenda relié changé : relecture en cours…" : "Réglage enregistré.");
+      if (k === "agenda") { await api("/api/agenda/synchroniser", {}).catch(() => {}); renderGoogle(); }
+      if (window.agendaRefresh) window.agendaRefresh();
+    } catch (x) { toast("Google Agenda : " + x.message, true); }
+  });
+  menu.addEventListener("click", async e => {
+    const b = e.target.closest("[data-g-act]");
+    if (!b) return;
+    const act = b.dataset.gAct;
+    if (act === "client-changer") { gClient = true; renderGoogle(); return; }
+    if (act === "client-annuler") { gClient = false; renderGoogle(); return; }
+    b.disabled = true;
+    try {
+      if (act === "client") {
+        const val = c => menu.querySelector(`[data-g-champ="${c}"]`).value.trim();
+        await api("/api/agenda/google/client", { client_id: val("client_id"), client_secret: val("client_secret") });
+        gClient = false; toast("Identifiant client enregistré. Connecte-toi maintenant à Google.");
+      } else if (act === "client-effacer") {
+        if (!confirm("Effacer l'identifiant client de Google Agenda ?")) { b.disabled = false; return; }
+        await api("/api/agenda/google/client", { client_id: "", client_secret: "" }); toast("Identifiant client effacé.");
+      } else if (act === "connexion") {
+        // la page de Google : onglet ouvert tout de suite (sinon bloqué), ou navigateur de Windows depuis la fenêtre native
+        const w = window.pywebview ? null : window.open("about:blank", "_blank");
+        const r = await api("/api/agenda/google/connexion", { ouvrir: w ? "page" : "serveur" });
+        if (w) { try { w.opener = null; } catch (x) {} w.location.href = r.url; }
+        else if (!r.ouvert) window.open(r.url, "_blank", "noopener");
+      } else if (act === "relire") {
+        const r = await api("/api/agenda/synchroniser", {});
+        toast(r.google && r.google.erreur ? "Google Agenda : " + r.google.erreur : "Google Agenda relu ✔", !!(r.google && r.google.erreur));
+        if (window.agendaRefresh) window.agendaRefresh();
+      } else if (act === "deconnexion") {
+        if (!confirm("Se déconnecter de Google Agenda ? Les évènements Google ne s'afficheront plus dans NEXUS (ils restent dans Google Agenda).")) { b.disabled = false; return; }
+        await api("/api/agenda/google/deconnexion", {}); toast("Google Agenda déconnecté.");
+        if (window.agendaRefresh) window.agendaRefresh();
+      }
+    } catch (x) { toast("Google Agenda : " + x.message, true); }
+    renderGoogle();
+  });
   // ---- Démarrage de Windows (PC seulement : le serveur refuse ces réglages depuis le téléphone) ----
   async function renderDemarrage() {
     const box = document.getElementById("rg-demarrage");
@@ -186,7 +291,7 @@
   });
   btn.addEventListener("click", e => {
     e.stopPropagation();
-    if (menu.hidden) { render(); renderDemarrage(); renderMaj(); menu.hidden = false; btn.setAttribute("aria-expanded", "true"); }
+    if (menu.hidden) { render(); menu.hidden = false; renderDemarrage(); renderMaj(); renderGoogle(); btn.setAttribute("aria-expanded", "true"); }
     else { menu.hidden = true; btn.setAttribute("aria-expanded", "false"); }
   });
   document.addEventListener("click", e => { if (!menu.hidden && !wrap.contains(e.target)) { menu.hidden = true; btn.setAttribute("aria-expanded", "false"); } });

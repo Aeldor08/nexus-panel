@@ -29,6 +29,8 @@
 .rg-row.rg-chk input { width: 18px; height: 18px; accent-color: var(--cyan); }
 .rg-menu .btn { margin: 4px 6px 4px 0; }
 .rg-note { display: block; margin-top: 10px; font-size: 12px; line-height: 1.5; }
+.rg-note.rg-err { color: var(--hot); }
+.rg-row.rg-sel input.in { font-size: 13px; width: 200px; max-width: 100%; box-sizing: border-box; }
 @media (max-width: 760px) {
   .rg-wrap { position: static; }
   .rg-menu { position: fixed; left: 16px; right: 16px; top: 70px; width: auto; }

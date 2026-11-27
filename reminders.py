@@ -11,6 +11,8 @@ r"""Rappels de l'agenda, calculés par le serveur (même quand aucune page n'est
   (« seulement les rappels encore possibles »).
 - NEXUS éteint au moment d'un rappel : au redémarrage, seul le plus récent rappel manqué est envoyé,
   et seulement si l'évènement n'a pas encore commencé.
+- Évènements de Google Agenda (agenda_google.py, si relié et si « rappels » est activé) : leurs propres rappels
+  (ceux de l'évènement, sinon ceux par défaut de l'agenda Google), lus dans la copie locale.
 - Envoi : dans le panel (liste lue par les navigateurs) et sur Discord si le bot est configuré
   (nouvel essai tant que l'évènement n'a pas commencé si le bot est momentanément hors ligne).
 """
@@ -24,6 +26,7 @@ import time
 from collections.abc import Callable
 
 import agenda
+import agenda_google
 import config
 import store
 
@@ -110,7 +113,10 @@ class ReminderService:
         defaults, ref, use_discord = settings()
         db = agenda.load()
         max_off = max([*defaults, *[max(e.get("reminders") or [0]) for e in db["events"]], 0])
-        occs = agenda.occurrences(db, (now - dt.timedelta(days=1)).date(), (now + dt.timedelta(minutes=max_off, days=2)).date())
+        debut = (now - dt.timedelta(days=1)).date()
+        occs = agenda.occurrences(db, debut, (now + dt.timedelta(minutes=max_off, days=2)).date())
+        # copie locale de Google Agenda (jamais de réseau ici), jusqu'au plus long rappel possible (4 semaines)
+        occs += agenda_google.occurrences_rappels(debut, (now + dt.timedelta(minutes=agenda.MAX_REMINDER_MIN, days=2)).date())
         fired = []
         with self._lock:
             seen, sent = self.state["seen"], self.state["sent"]

@@ -32,6 +32,7 @@ paths.prepare()
 
 import activite
 import agenda as agenda_mod
+import agenda_google as google_mod
 import audio as audio_mod
 import bot as bot_mod
 import config
@@ -211,7 +212,7 @@ async def _guard(request: Request, call_next):
         return PlainTextResponse("Accès refusé", status_code=403)
     path = request.url.path
     # (mises à jour, appairage, fermeture de processus, Philibert : seulement depuis le PC)
-    if path.startswith(("/api/remote", "/api/maj", "/api/processus/fermer", "/api/philibert", "/api/demarrage")):
+    if path.startswith(("/api/remote", "/api/maj", "/api/processus/fermer", "/api/philibert", "/api/demarrage", "/api/agenda/google")):
         return JSONResponse({"error": "réservé au PC"}, status_code=403)
     if path in PUBLIC_REMOTE_PATHS:
         return await call_next(request)
@@ -347,23 +348,33 @@ def api_agenda(debut: str | None = None, fin: str | None = None) -> JSONResponse
         raise BadRequest("plage de dates invalide (400 jours maximum)")
     db = agenda_mod.load()
     mins, ref, _ = reminders_mod.settings()
+    occs = agenda_mod.occurrences(db, start, end)
+    google = google_mod.court()
+    if google["connecte"]:  # évènements de Google Agenda (copie locale, relue toutes les N minutes)
+        occs = sorted(occs + google_mod.occurrences(start, end), key=lambda o: (o["date"], 0 if o["time"] is None else 1, o["time"] or "", o["title"].lower()))
     return JSONResponse(
         {
             "evenements": db["events"],
-            "occurrences": agenda_mod.occurrences(db, start, end),
+            "occurrences": occs,
             "todos": db["todos"],
             "notes": db["notes"],
             "reglages": {"rappels_minutes": mins, "heure_reference": ref},
-            "repetitions": agenda_mod.REPEAT_LABELS,
+            "repetitions": {**agenda_mod.REPEAT_LABELS, google_mod.REPEAT_CUSTOM: google_mod.REPEAT_CUSTOM_LABEL},
+            "google": google,
         },
         headers={"Cache-Control": "no-store"},
     )
 
 
+# Évènements : NEXUS (agenda.py) ou Google Agenda (agenda_google.py, identifiants « g:… », appels réseau hors de la boucle)
 @app.post("/api/agenda/evenements")
 async def api_agenda_create(request: Request) -> JSONResponse:
     body = await json_body(request)
     try:
+        if body.get("agenda") == "google":
+            e = await run_in_threadpool(google_mod.creer, body.get("champs") or {})
+            activite.noter("agenda", "évènement créé dans Google Agenda", "ok", "", _ip(request))
+            return JSONResponse({"ok": True, "evenement": e})
         return JSONResponse({"ok": True, "evenement": agenda_mod.create(body.get("champs") or {})})
     except agenda_mod.AgendaError as exc:
         return _agenda_error(exc)
@@ -372,8 +383,9 @@ async def api_agenda_create(request: Request) -> JSONResponse:
 @app.post("/api/agenda/evenements/{eid}/modifier")
 async def api_agenda_update(eid: str, request: Request) -> JSONResponse:
     body = await json_body(request)
+    args = (eid, body.get("champs") or {}, body.get("occurrence"), body.get("portee") or "all")
     try:
-        e = agenda_mod.update(eid, body.get("champs") or {}, body.get("occurrence"), body.get("portee") or "all")
+        e = await run_in_threadpool(google_mod.modifier, *args) if google_mod.est_google(eid) else agenda_mod.update(*args)
     except agenda_mod.AgendaError as exc:
         return _agenda_error(exc)
     return JSONResponse({"ok": True, "evenement": e})
@@ -382,11 +394,86 @@ async def api_agenda_update(eid: str, request: Request) -> JSONResponse:
 @app.post("/api/agenda/evenements/{eid}/supprimer")
 async def api_agenda_delete(eid: str, request: Request) -> JSONResponse:
     body = await json_body(request)
+    args = (eid, body.get("occurrence"), body.get("portee") or "all")
     try:
-        agenda_mod.delete(eid, body.get("occurrence"), body.get("portee") or "all")
+        if google_mod.est_google(eid):
+            await run_in_threadpool(google_mod.supprimer, *args)
+            activite.noter("agenda", "évènement supprimé dans Google Agenda", "ok", f"portée : {args[2]}", _ip(request))
+        else:
+            agenda_mod.delete(*args)
     except agenda_mod.AgendaError as exc:
         return _agenda_error(exc)
     return JSONResponse({"ok": True})
+
+
+@app.post("/api/agenda/synchroniser")
+async def api_agenda_synchroniser(request: Request) -> JSONResponse:
+    await json_body(request)  # (JSON obligatoire : pas de déclenchement depuis un autre site)
+    await run_in_threadpool(google_mod.synchroniser)
+    return JSONResponse({"ok": True, "google": google_mod.court()})
+
+
+# ---- Liaison Google Agenda (réglages : depuis le PC seulement, voir _guard) ----
+# Les secrets (code secret du client, jeton de Google) ne sont jamais renvoyés : seulement « enregistré » et où.
+@app.get("/api/agenda/google")
+def api_google_etat() -> JSONResponse:
+    return JSONResponse(google_mod.etat(), headers={"Cache-Control": "no-store"})
+
+
+@app.post("/api/agenda/google/client")
+async def api_google_client(request: Request) -> JSONResponse:
+    body = await json_body(request)
+    try:
+        e = await run_in_threadpool(google_mod.enregistrer_client, str(body.get("client_id") or ""), str(body.get("client_secret") or ""))
+    except agenda_mod.AgendaError as exc:
+        return _agenda_error(exc)
+    except ValueError as exc:
+        raise BadRequest(str(exc))
+    activite.noter("agenda", "Google Agenda : identifiant client " + ("enregistré" if e["configure"] else "effacé"), "ok", "", _ip(request))
+    return JSONResponse(e)
+
+
+@app.post("/api/agenda/google/reglages")
+async def api_google_reglages(request: Request) -> JSONResponse:
+    body = await json_body(request)
+    try:
+        return JSONResponse(google_mod.modifier_reglages({k: body[k] for k in ("agenda", "cible", "rappels", "intervalle_minutes") if k in body}))
+    except agenda_mod.AgendaError as exc:
+        return _agenda_error(exc)
+    except ValueError as exc:
+        raise BadRequest(str(exc))
+
+
+@app.get("/api/agenda/google/agendas")
+async def api_google_agendas() -> JSONResponse:
+    try:
+        return JSONResponse({"agendas": await run_in_threadpool(google_mod.agendas)}, headers={"Cache-Control": "no-store"})
+    except agenda_mod.AgendaError as exc:
+        return _agenda_error(exc)
+
+
+@app.post("/api/agenda/google/connexion")
+async def api_google_connexion(request: Request) -> JSONResponse:
+    body = await json_body(request)
+    try:
+        url = google_mod.demarrer_connexion()
+    except agenda_mod.AgendaError as exc:
+        return _agenda_error(exc)
+    ouvert = False
+    if body.get("ouvrir") == "serveur":  # fenêtre native : la page de Google s'ouvre dans le navigateur de Windows
+        import webbrowser
+
+        ouvert = bool(webbrowser.open(url))
+    activite.noter("agenda", "Google Agenda : connexion demandée", "ok", "", _ip(request))
+    return JSONResponse({"ok": True, "url": url, "ouvert": ouvert})
+
+
+@app.post("/api/agenda/google/deconnexion")
+async def api_google_deconnexion(request: Request) -> JSONResponse:
+    await json_body(request)
+    await run_in_threadpool(google_mod.deconnecter)
+    activite.noter("agenda", "Google Agenda : déconnecté", "ok", "", _ip(request))
+    return JSONResponse(google_mod.etat())
 
 
 @app.put("/api/agenda/carnet")
@@ -1724,6 +1811,7 @@ def start_services() -> None:
     except Exception as exc:
         print(f"[Agenda] AVERTISSEMENT : {exc}")
     reminder_svc.start()
+    google_mod.demarrer()  # relecture de Google Agenda (si relié) : 15 s après le démarrage, puis toutes les N minutes
     updater.demarrer()  # vérification des mises à jour : 20 s après le démarrage, puis toutes les N heures
     try:
         db_mod.migrate()  # base locale des souvenirs, statistiques et journal (créée vide sur une installation neuve)
@@ -1746,7 +1834,7 @@ def start_services() -> None:
 def stop_services() -> None:
     """Arrêt propre des services qui ont une boucle (les autres sont des threads daemon)."""
     _native_alert_stop.set()
-    for arret in (reminder_svc.stop, updater.arreter, tracker.stop, discord_bot.stop):
+    for arret in (reminder_svc.stop, google_mod.arreter, updater.arreter, tracker.stop, discord_bot.stop):
         try:
             arret()
         except Exception:

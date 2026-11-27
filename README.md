@@ -340,6 +340,16 @@ si le bot est configuré. Ils sont calculés par NEXUS même si aucune page n'es
   Un évènement créé 45 min avant son début ne reçoit que le rappel de 30 min. Si tu changes l'heure d'un
   évènement, ses rappels sont recalculés.
 
+**Google Agenda (dans les deux sens) :** ⚙ Réglages → **Google Agenda**. Une fois relié, l'Agenda affiche
+aussi les évènements de ton Google Agenda (bord bleu, pastille **G**, lien **↗** vers Google) et le formulaire
+propose **Agenda : Google Agenda / NEXUS**. Créer, modifier (une occurrence, les suivantes, toute la série) ou
+supprimer un évènement Google depuis NEXUS le change dans Google Agenda ; les changements faits dans Google
+arrivent toutes les 10 minutes (réglable) ou tout de suite avec **⟳ Relire**, sous le calendrier. Les invitations
+et les anniversaires de tes contacts sont en lecture seule. Les rappels de NEXUS (bannière, Discord) marchent
+aussi pour les évènements Google. Mise en place unique (10 minutes, ton propre identifiant client sur Google
+Cloud, gratuit) : [docs/GOOGLE_AGENDA.md](docs/GOOGLE_AGENDA.md). Le code secret et l'accès donné par Google
+sont rangés dans le gestionnaire d'identifiants de Windows ; les réglages ne se changent que depuis le PC.
+
 **Déplacer et redimensionner les fenêtres :** comme dans toutes les catégories, voir
 [Réorganiser l'interface](#réorganiser-linterface-toutes-les-catégories).
 
@@ -732,6 +742,7 @@ cartes postales, fiches « Le savais-tu ? »).
 | `jeux.example.json` | Modèle de `jeux.json` (association processus → nom et catégorie) |
 | `agenda.py` | Agenda : évènements, répétitions et exceptions, modification par portée, validation, migration |
 | `reminders.py` | Rappels de l'agenda (calcul, envoi panel + Discord, mémoire des rappels envoyés : `data\rappels.json`) |
+| `agenda_google.py` | Liaison avec Google Agenda : connexion OAuth (PKCE), copie locale `data\agenda_google.json`, conversions et écriture dans Google (guide : `docs\GOOGLE_AGENDA.md`) |
 | `static\js\layout.js`, `static\js\blocs.js` | Blocs déplaçables et redimensionnables : le moteur unique (`layout.js`) et son application à toutes les catégories (`blocs.js`) |
 | `static\js\rappels.js`, `static\js\reglages.js`, `static\ui.css` | Bannières de rappel, menu ⚙ Réglages (tailles), styles des blocs et de l'agenda |
 | `philibert.py` | Philibert, l'iguane : temps qui passe, jauges, santé, vétérinaire, évolution, boutique, mini-jeux (règles : `docs\PHILIBERT.md`) |
@@ -753,6 +764,10 @@ cartes postales, fiches « Le savais-tu ? »).
   rappels pour les évènements sans heure et les anniversaires), `rappels_discord` (`true` / `false`).
 - `deck` : `password_hash` (empreinte PBKDF2 du mot de passe : le mot de passe lui-même n'est jamais
   enregistré), `rate_limit_per_minute`.
+- `google_agenda` (réglé dans ⚙ Réglages → Google Agenda) : `client_id`, `agenda` (`primary` = agenda
+  principal), `cible` (`google` / `nexus` : où vont les nouveaux évènements), `rappels`, `intervalle_minutes`.
+  Le code secret du client et le jeton de Google sont dans le gestionnaire d'identifiants de Windows
+  (`client_secret` / `jeton` seulement s'il est indisponible).
 
 Sans `config.json`, NEXUS démarre quand même (deck et bot désactivés) et l'indique dans la fenêtre noire.
 

@@ -166,6 +166,19 @@
   background: rgba(var(--neon-rgb),.12); border-left: 2px solid var(--cyan); }
 .day .ev.bday { background: rgba(246,230,0,.12); border-left-color: var(--yellow); }
 .day .ev.todo { background: rgba(var(--mag-rgb),.12); border-left-color: var(--magenta); }
+/* Évènements de Google Agenda (agenda_google.py) : bord bleu « Google », pastille G */
+.day .ev.g { border-left-color: #4c8bf5; background: rgba(76,139,245,.13); }
+.ag-gdot { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: #4c8bf5;
+  color: #fff; font: 700 11px/1 system-ui, sans-serif; flex: none; }
+.ag-gsync { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; flex-wrap: wrap; }
+.ag-gsync .x { flex: 1; min-width: 0; }
+.ag-gsync .ag-gerr { color: var(--hot); }
+.ag-gsync[hidden] { display: none; }
+.ag-ev.g { box-shadow: inset 2px 0 0 #4c8bf5; padding-left: 6px; }
+.ag-gtag { color: #8fb4ff; white-space: nowrap; }
+.ag-ev a.del { text-decoration: none; }
+.ag-up.g .x::before { content: "G"; display: inline-grid; place-items: center; width: 15px; height: 15px; margin-right: 6px; border-radius: 50%;
+  background: #4c8bf5; color: #fff; font: 700 9px/1 system-ui, sans-serif; vertical-align: 1px; }
 /* Fêtes (js/fetes.js) : vert discret ; jour férié : numéro et bandeau en couleur « chaude », comme un calendrier papier */
 .day .ev.fete { background: rgba(var(--ok-rgb, 61,255,162),.10); border-left-color: var(--green); color: var(--muted); }
 .day .ev.fete.ferie { background: rgba(255,42,85,.12); border-left-color: var(--hot); color: var(--text); }

@@ -8,6 +8,16 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Ajouté
+- **Agenda relié à Google Agenda, dans les deux sens** (⚙ Réglages → Google Agenda) : les évènements de ton
+  Google Agenda s'affichent dans l'Agenda (pastille **G**, lien vers Google), et tu peux en créer, modifier (cette
+  occurrence, les suivantes, toute la série) et supprimer depuis NEXUS ; seuls les champs changés sont envoyés
+  (invités, lieu, visio gardés). Relecture toutes les 10 minutes (réglable) ou avec **⟳ Relire** ; copie locale
+  pour l'affichage hors connexion et les rappels de NEXUS (bannière, Discord). Invitations et anniversaires des
+  contacts en lecture seule ; répétitions plus riches de Google gardées telles quelles. Connexion OAuth avec ton
+  propre identifiant client (guide : `docs/GOOGLE_AGENDA.md`) ; code secret et jeton dans le gestionnaire
+  d'identifiants de Windows, réglages modifiables depuis le PC seulement
+
 ## [1.13.0] - 2026-11-26
 
 ### Ajouté

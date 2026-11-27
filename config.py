@@ -65,6 +65,16 @@ DEFAULTS = {
         "signature": "auto",  # auto : vérifie si signé, accepte sinon ; requise : refuse un exe non signé
         "certificat": "",  # empreinte SHA1 du certificat attendu (vide = n'importe quel signataire valide)
     },
+    "google_agenda": {
+        # liaison avec Google Agenda (agenda_google.py, docs/GOOGLE_AGENDA.md) : réglée dans ⚙ Réglages
+        "client_id": "",  # identifiant client OAuth « Application de bureau » de TON projet Google Cloud
+        "client_secret": "",  # repli SEULEMENT si le gestionnaire d'identifiants de Windows est indisponible
+        "jeton": "",  # idem (jeton de rafraîchissement donné par Google à la connexion)
+        "agenda": "primary",  # agenda Google synchronisé (primary = l'agenda principal du compte)
+        "cible": "google",  # où vont les nouveaux évènements par défaut : google | nexus
+        "rappels": True,  # rappels de NEXUS (panel, Discord) aussi pour les évènements Google
+        "intervalle_minutes": 10,  # relecture de Google Agenda
+    },
 }
 
 # Schéma de config.json : numéro + migrations (une sauvegarde de config.json est faite avant chacune)
@@ -169,6 +179,30 @@ def ranger_secrets() -> None:
 
 def get(section: str) -> dict:
     return load()[section]
+
+
+def modifier_section(section: str, changes: dict, vides_retires: tuple[str, ...] = ()) -> None:
+    """Modifie une section de config.json sans toucher au reste du fichier (les clés de vides_retires
+    sont supprimées quand elles sont vides : un secret effacé ne laisse pas de trace)."""
+    data = {}
+    if CONFIG_FILE.exists():
+        try:
+            data = json.loads(CONFIG_FILE.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError):
+            raise ValueError("config.json illisible : corrige-le ou relance configurer.bat")
+        if not isinstance(data, dict):
+            raise ValueError("config.json illisible : corrige-le ou relance configurer.bat")
+    sec = dict(data.get(section) or {}) if isinstance(data.get(section), dict) else {}
+    sec.update(changes)
+    for k in vides_retires:
+        if not sec.get(k):
+            sec.pop(k, None)
+    data[section] = sec
+    CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = CONFIG_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.replace(CONFIG_FILE)
+    load(force=True)
 
 
 def migrer() -> int:
