@@ -307,6 +307,8 @@ def main() -> int:
     )
     a = ap.parse_args()
     titre = verifier_titre(a.titre)
+    if not titre and not a.construire_seulement:
+        raise Arret('--titre obligatoire : chaque version a un titre (ex. --titre "Du nouveau pour Philibert")')
     git = outil("git")
     if not git:
         raise Arret("git introuvable")
