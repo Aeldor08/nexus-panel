@@ -128,6 +128,25 @@ try:
     (vieil_exe / "NEXUS.exe").write_bytes(b"MZ")
     (vieil_exe / "data" / "nexus.db").write_bytes(b"")
     ok(importer.genre(vieil_exe) == "exe", "ancien exe avec ses données à côté reconnu")
+    # data/ et actions/ déplacés seuls dans un dossier (sans config.json ni programme)
+    deplaces = TMP / "Bureau" / "Sauvegarde NEXUS"
+    ouvertes.append(base_wal(deplaces, ["note gardée"], 2))
+    (deplaces / "data" / "philibert.json").write_text('{"stade": "ado"}', encoding="utf-8")
+    (deplaces / "actions").mkdir()
+    (deplaces / "actions" / "ma-macro.bat").write_text("@echo off", encoding="utf-8")
+    ok(importer.genre(deplaces) == "dossiers", "data et actions déplacés seuls : reconnus")
+    ok(importer.dossier_source(deplaces / "data") == deplaces, "dossier data choisi lui-même : son dossier parent")
+    ok(importer.dossier_source(deplaces / "actions") == deplaces, "dossier actions choisi lui-même : son dossier parent")
+    ok(importer.dossier_source(portable) == portable, "dossier NEXUS choisi : inchangé")
+    seul_philibert = TMP / "vieux-data"
+    (seul_philibert / "data").mkdir(parents=True)
+    (seul_philibert / "data" / "philibert.json").write_text("{}", encoding="utf-8")
+    ok(importer.genre(seul_philibert) == "dossiers", "data sans base mais avec Philibert : reconnu")
+    (TMP / "autre" / "data").mkdir(parents=True)
+    (TMP / "autre" / "data" / "photo.jpg").write_bytes(b"x")
+    ok(importer.genre(TMP / "autre") is None, "dossier data quelconque : ignoré")
+    d = importer.decrire(deplaces)
+    ok("actions (1)" in d["contenu"] and any("sans configuration" in x for x in d["contenu"]), f"description : actions, sans configuration ({d['contenu']})")
 
     # --- 2. Recherche
     DEST.mkdir(parents=True)
@@ -144,6 +163,21 @@ try:
         "description : stats, Philibert, souvenirs",
     )
     ok(trouves[1]["version"] == "1.8.0", "version lue dans VERSION")
+    ok([Path(c["chemin"]) for c in importer.chercher([TMP / "Bureau"])] == [deplaces], "recherche : data et actions déplacés seuls trouvés")
+    # application installée : data/ posé à la main à côté de NEXUS.exe (elle lit %LOCALAPPDATA%\NEXUS) → proposé
+    (paths.INSTALL_DIR / "data").mkdir(parents=True)
+    (paths.INSTALL_DIR / "NEXUS.exe").write_bytes(b"MZ")
+    (paths.INSTALL_DIR / "data" / "philibert.json").write_text("{}", encoding="utf-8")
+    ok(importer.chercher([paths.INSTALL_DIR.parent]) == [], "version source : son propre dossier jamais proposé")
+    paths.FROZEN = True
+    try:
+        ok(
+            [Path(c["chemin"]) for c in importer.chercher([paths.INSTALL_DIR.parent])] == [paths.INSTALL_DIR],
+            "appli installée : data posé à côté de l'exe proposé",
+        )
+    finally:
+        paths.FROZEN = False
+    shutil.rmtree(paths.INSTALL_DIR)
 
     # --- 3. Import dans un NEXUS déjà utilisé
     (DEST / "data").mkdir()
@@ -211,6 +245,18 @@ try:
     ok(all(p.read_bytes() == b for p, b in avant_dest.items()), "copie interrompue : configuration et Philibert remis")
     ok(not (DEST / "data" / "souvenirs").exists(), "copie interrompue : dossier à moitié copié retiré")
     ok(lire_journal(DEST / "data" / "nexus.db") == ["lundi", "mardi", "mercredi"], "copie interrompue : base remise")
+
+    # --- 5 bis. Import de data et actions déplacés seuls (dossier data choisi lui-même) : configuration gardée
+    (DEST / "config.json").write_text(json.dumps({"deck": {"password_hash": "neuf$hash"}}), encoding="utf-8")
+    r = importer.importer(deplaces / "data", verifier_ouverts=False)
+    ok(lire_journal(DEST / "data" / "nexus.db") == ["note gardée"], "dossiers déplacés : base reprise")
+    ok(json.loads((DEST / "data" / "philibert.json").read_text(encoding="utf-8"))["stade"] == "ado", "dossiers déplacés : Philibert repris")
+    ok((DEST / "actions" / "ma-macro.bat").is_file(), "dossiers déplacés : actions reprises")
+    ok(
+        json.loads((DEST / "config.json").read_text(encoding="utf-8"))["deck"]["password_hash"] == "neuf$hash",
+        "dossiers déplacés : mot de passe de ce NEXUS gardé",
+    )
+    ok(json.loads((Path(r["sauvegarde"]) / "IMPORT.txt").read_text(encoding="utf-8"))["source"] == str(deplaces), "IMPORT.txt : le dossier qui contient data")
 
     # --- 6. NEXUS ouvert : détecté (version source lancée depuis son dossier), puis fermé
     p = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"], cwd=str(source_zip))

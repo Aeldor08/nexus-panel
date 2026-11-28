@@ -411,7 +411,10 @@ ile_js = (BASE / "static" / "js" / "philibert-ile.js").read_text(encoding="utf-8
 acc = {k: o["emplacement"] for k, o in P.OBJETS.items() if o["type"] == "accessoire"}
 ok(all(f'p.{e} === "{k}"' in dessin_js for k, e in acc.items()), "chaque accessoire est dessiné sur Philibert")
 ok(all(f"      {k}: () =>" in ile_js for k in acc), "chaque accessoire a son icône dans la boutique")
-ok(all(k in acc for k in ("melon", "haut_de_forme", "frangipanier", "couronne_corail", "lunettes_rondes", "lunettes_or", "dent_requin", "jade")), "chapeau melon, haut-de-forme et les petits accessoires sont en boutique")
+ok(
+    all(k in acc for k in ("melon", "haut_de_forme", "frangipanier", "couronne_corail", "lunettes_rondes", "lunettes_or", "dent_requin", "jade")),
+    "chapeau melon, haut-de-forme et les petits accessoires sont en boutique",
+)
 p = nouveau()
 p.s["coquillages"] = 100
 ok(erreur(p.action, "acheter", {"article": "cape"}) is not None and p.s["coquillages"] == 100, "trop cher : refusé, aucun coquillage perdu")

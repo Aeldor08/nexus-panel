@@ -8,6 +8,15 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Corrigé
+- **Importer mes données NEXUS ne reconnaissait pas les dossiers `data` et `actions` déplacés seuls.** Il
+  fallait `config.json` ou `NEXUS.exe` à côté : un dossier de sauvegarde avec juste `data` (et `actions`) était
+  ignoré par la recherche et refusé par « Choisir un autre dossier… ». Il est maintenant trouvé et proposé
+  (« Dossiers data et actions copiés à la main ») dès que `data` contient des données de NEXUS (base, Philibert,
+  agenda, rappels…) ; le mot de passe et les réglages de ce NEXUS sont alors gardés. Choisir le dossier `data`
+  ou `actions` lui-même prend le dossier qui le contient. Application installée : `data` posé à la main à côté
+  de `NEXUS.exe` (elle lit `%LOCALAPPDATA%\NEXUS`) est aussi proposé.
+
 ## [1.14.3] - 2026-11-28 - Du nouveau pour Philibert
 
 ### Ajouté

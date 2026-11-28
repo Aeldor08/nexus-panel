@@ -461,7 +461,7 @@ _IMPORT_HTML = r"""<!doctype html>
     const liste = $("liste");
     if (!candidats.length) {
       liste.innerHTML = '<p class="hint">Aucun autre NEXUS avec des données trouvé. Utilise « Choisir un autre dossier… » ' +
-        '(le dossier qui contient lancer.bat ou NEXUS.exe, et config.json).</p>';
+        '(le dossier qui contient le dossier data, par exemple là où tu as déplacé data et actions).</p>';
     } else {
       liste.innerHTML = candidats.map((c, i) =>
         `<label class="carte${choisi === i ? " choisie" : ""}"><input type="radio" name="src" value="${i}"${choisi === i ? " checked" : ""}>` +
@@ -559,12 +559,9 @@ class _ImportApi:
             return {"erreur": f"Choix du dossier impossible : {exc}"}
         if not r:
             return None
-        dossier = Path(r[0] if isinstance(r, (list, tuple)) else r)
+        dossier = importer.dossier_source(Path(r[0] if isinstance(r, (list, tuple)) else r))
         if not importer.genre(dossier):
-            return {
-                "erreur": f"{dossier} n'est pas un NEXUS avec des données : choisis le dossier qui contient "
-                "lancer.bat (version ZIP) ou NEXUS.exe, et config.json ou data\\nexus.db."
-            }
+            return {"erreur": f"{dossier} n'est pas un NEXUS avec des données : {importer.PAS_NEXUS}."}
         if importer._meme(dossier, paths.USER_ROOT):
             return {"erreur": "C'est le dossier de données de ce NEXUS-ci."}
         return importer.decrire(dossier)

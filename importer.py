@@ -71,7 +71,13 @@ _GENRES = {
     "source": "NEXUS version source (lancer.bat)",
     "exe": "Ancien NEXUS (exe, données à côté)",
     "donnees": "Données d'une application NEXUS installée",
+    "dossiers": "Dossiers data et actions copiés à la main",
 }
+# Fichiers qui montrent qu'un dossier data/ vient de NEXUS (même sans config.json ni programme à côté)
+DATA_CONNUS = ("nexus.db", "philibert.json", "agenda.json", "rappels.json", "activite.jsonl", "remote.json")
+
+
+PAS_NEXUS = "choisis le dossier qui contient le dossier data (avec nexus.db, philibert.json…), ou config.json"
 
 
 class ImportImpossible(Exception):
@@ -81,12 +87,19 @@ class ImportImpossible(Exception):
 # --------------------------------------------------------------------------- #
 #  Reconnaître un NEXUS
 # --------------------------------------------------------------------------- #
+def _data_nexus(dossier: Path) -> bool:
+    """dossier/data contient des données de NEXUS (base, Philibert, agenda…)."""
+    data = dossier / "data"
+    return any((data / nom).is_file() for nom in DATA_CONNUS)
+
+
 def a_des_donnees(dossier: Path) -> bool:
-    return (dossier / "config.json").is_file() or (dossier / "data" / "nexus.db").is_file()
+    return (dossier / "config.json").is_file() or _data_nexus(dossier)
 
 
 def genre(dossier: Path) -> str | None:
-    """portable / source / exe / donnees, ou None si le dossier n'est pas un NEXUS avec des données."""
+    """portable / source / exe / donnees / dossiers, ou None si le dossier n'est pas un NEXUS avec des données.
+    « dossiers » : data/ (et souvent actions/) déplacés seuls, sans config.json ni programme à côté."""
     try:
         if not dossier.is_dir() or not a_des_donnees(dossier):
             return None
@@ -94,11 +107,19 @@ def genre(dossier: Path) -> str | None:
             return "portable" if (dossier / "portable.flag").is_file() else "exe"
         if (dossier / "app.py").is_file() and (dossier / "nexus.pyw").is_file():
             return "source"
-        if (dossier / "data" / "nexus.db").is_file() and (dossier / "config.json").is_file():
-            return "donnees"
+        if _data_nexus(dossier):
+            return "donnees" if (dossier / "config.json").is_file() else "dossiers"
     except OSError:
         pass
     return None
+
+
+def dossier_source(dossier: Path) -> Path:
+    """Dossier à importer quand on a choisi data/ ou actions/ eux-mêmes : celui qui les contient."""
+    dossier = Path(dossier)
+    if not genre(dossier) and dossier.name.lower() in {"data", "actions"} and genre(dossier.parent):
+        return dossier.parent
+    return dossier
 
 
 def _meme(a: Path, b: Path) -> bool:
@@ -183,6 +204,12 @@ def decrire(dossier: Path) -> dict:
                 contenu.append(f"souvenirs ({n} photos)")
     if (data / "remote.json").is_file():
         contenu.append("téléphones appairés")
+    with contextlib.suppress(OSError):
+        n = sum(1 for f in (dossier / "actions").iterdir() if f.is_file() and f.name.lower() != "exemple.bat")
+        if n:
+            contenu.append(f"actions ({n})")
+    if g == "dossiers":
+        contenu.append("sans configuration : mot de passe et réglages de ce NEXUS gardés")
     activite = derniere_activite(dossier)
     return {
         "chemin": str(dossier),
@@ -287,7 +314,9 @@ def chercher(racines: list[Path] | None = None, *, destination: Path | None = No
     else:
         for r in racines:
             _parcourir(r, 4, trouves, fin)
-    exclus = [destination, paths.INSTALL_DIR]
+    # (version source : son dossier est le projet lui-même. Application installée : data/ et actions/ posés à la main
+    # à côté de NEXUS.exe ne sont pas lus — elle lit %LOCALAPPDATA%\NEXUS — donc on les propose)
+    exclus = [destination] if paths.FROZEN else [destination, paths.INSTALL_DIR]
     liste = [decrire(d) for d in trouves.values() if not any(_meme(d, x) for x in exclus)]
     return sorted(liste, key=lambda c: c["activite"], reverse=True)
 
@@ -482,11 +511,11 @@ def _restaurer(sauvegarde: Path, destination: Path, touches: list[str]) -> None:
 def importer(source: Path, destination: Path | None = None, *, verifier_ouverts: bool = True) -> dict:
     """Copie les données de `source` dans `destination` (ce NEXUS par défaut), en remplaçant les siennes.
     Renvoie {"copies": [...], "sauvegarde": chemin}. Lève ImportImpossible avec un message lisible."""
-    source = Path(source)
+    source = dossier_source(Path(source))
     destination = Path(destination or paths.USER_ROOT)
     g = genre(source)
     if not g:
-        raise ImportImpossible(f"{source} n'est pas un dossier NEXUS avec des données (config.json ou data\\nexus.db).")
+        raise ImportImpossible(f"{source} n'est pas un dossier NEXUS avec des données ({PAS_NEXUS}).")
     if _meme(source, destination):
         raise ImportImpossible("C'est le dossier de données de ce NEXUS-ci.")
     if verifier_ouverts and ouverts_pour(source, destination):
