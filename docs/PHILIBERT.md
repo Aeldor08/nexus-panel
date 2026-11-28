@@ -245,15 +245,15 @@ gagnés aux jeux.
 
 - On commence avec 20 coquillages. On en gagne aux mini-jeux, en **ramassant** sur la plage (1 à 3, toutes les
   3 h), avec certains évènements et les succès.
-- **Boutique** : aliments, remède (8), lampe chauffante (40, une fois), 15 accessoires et 9 décorations. Chaque objet
+- **Boutique** : aliments, remède (8), lampe chauffante (40, une fois), 23 accessoires et 9 décorations. Chaque objet
   a une **rareté** (`RARETES`) : *commun*, *rare*, *très rare*, *légendaire*. Les pièces rares sont faites à la main
   par les artisans de l'île voisine, en un seul exemplaire : c'est ce qui justifie leur prix.
 
   | Emplacement | Communs | Rares et plus |
   |---|---|---|
-  | Tête | chapeau de paille 25, couronne d'hibiscus 30, bob de pêcheur 35 | tricorne de pirate 180 (rare), couronne d'or 450 (très rare), diadème de nacre 800 (légendaire) |
-  | Yeux | lunettes de soleil 20, lunettes en cœur 45 | monocle doré 150 (rare) |
-  | Cou | foulard 15, collier de fleurs 18, nœud papillon 30 | collier de perles 220 (rare), médaille d'or 400 (très rare), cape royale 900 (légendaire, posée sur le dos) |
+  | Tête | fleur de frangipanier 12, chapeau de paille 25, couronne d'hibiscus 30, bob de pêcheur 35, chapeau melon 40 | tricorne de pirate 180 et haut-de-forme 200 (rares), couronne d'or 450 (très rare), diadème de nacre 800 et couronne de corail 850 (légendaires) |
+  | Yeux | lunettes de soleil 20, lunettes rondes 28, lunettes en cœur 45 | monocle doré 150 (rare), lunettes d'or 380 (très rare) |
+  | Cou | foulard 15, collier de fleurs 18, nœud papillon 30 | dent de requin 140 et collier de perles 220 (rares), médaille d'or 400 et collier de jade 420 (très rares), cape royale 900 (légendaire, posée sur le dos) |
   | Île | château de sable 12, coquillages 10, bouée 15, parasol 20, hamac 30 | statue tiki 120 et petit phare 260 (rares), coffre au trésor 500 (très rare), bénitier et sa perle 750 (légendaire) |
 
   **Gains et dépenses** (ordres de grandeur) :

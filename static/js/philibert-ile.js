@@ -339,6 +339,41 @@
         <path d="M3 19.6 C6 15 26 15 29 19.6 C27.6 22.4 4.4 22.4 3 19.6 Z" fill="${f("b")}" stroke="#7a7048" stroke-width=".6"/>
         <path d="M5.4 19.2 C9 17.2 23 17.2 26.6 19.2" stroke="#857b50" stroke-width=".5" fill="none" stroke-dasharray="1 .7"/>
         <path d="M9.4 21.4 C10 25 12 27.4 14 28.4" stroke="#6b5a3a" stroke-width=".7" fill="none"/><circle cx="20.4" cy="9" r=".7" fill="#6b6440"/>`),
+      melon: () => S(G("m", [[0, "#6a5444"], [.5, "#3a2c22"], [1, "#1a120d"]]),
+        `${ombre(12)}<path d="M8 19 C7.4 9.4 11.4 5.4 16 5.4 C20.6 5.4 24.6 9.4 24 19 Z" fill="${f("m")}" stroke="#120c08" stroke-width=".6"/>
+        <path d="M8.1 15.4 C13 14.2 19 14.2 23.9 15.4 L24 18.6 C19 17.4 13 17.4 8 18.6 Z" fill="#1c1410"/>
+        <path d="M2.6 18.4 C4.4 21.4 10 22.2 16 22.2 C22 22.2 27.6 21.4 29.4 18.4 C29.4 21.8 23.6 24.2 16 24.2 C8.4 24.2 2.6 21.8 2.6 18.4 Z" fill="${f("m")}" stroke="#120c08" stroke-width=".6"/>
+        <path d="M11 9.6 q3.6 -2.8 8.2 -2.2" stroke="#fff" stroke-width=".9" fill="none" opacity=".3"/>`),
+      haut_de_forme: () => S(G("h", [[0, "#0c0c10"], [.3, "#40404c"], [.55, "#1a1a20"], [1, "#050507"]], 1, 0) + G("s", [[0, "#a8344a"], [.5, "#6e1424"], [1, "#3e0812"]]),
+        `${ombre(12)}<path d="M9.6 22 L8.8 4.4 C13.6 3.4 18.4 3.4 23.2 4.4 L22.4 22 Z" fill="${f("h")}" stroke="#000" stroke-width=".6"/>
+        <ellipse cx="16" cy="4.3" rx="7.4" ry="1.5" fill="#2c2c34" stroke="#000" stroke-width=".5"/>
+        <path d="M9.4 16.8 C13.6 16.2 18.4 16.2 22.6 16.8 L22.4 20.6 C18.4 20 13.6 20 9.6 20.6 Z" fill="${f("s")}"/>
+        <path d="M2.4 20.6 C4.2 23.6 10 24.4 16 24.4 C22 24.4 27.8 23.6 29.6 20.6 C29.6 24 23.6 26.4 16 26.4 C8.4 26.4 2.4 24 2.4 20.6 Z" fill="#141418" stroke="#000" stroke-width=".6"/>
+        <path d="M12 6 L12.4 15.4" stroke="#fff" stroke-width="1.1" opacity=".16" stroke-linecap="round"/>`),
+      frangipanier: () => S(`<radialGradient id="${u}p" gradientUnits="userSpaceOnUse" cx="16" cy="16" r="12"><stop offset="0" stop-color="#ffc21e"/><stop offset=".4" stop-color="#ffe7a0"/><stop offset=".75" stop-color="#fffaf0"/><stop offset="1" stop-color="#fffdf8"/></radialGradient>`,
+        `${ombre(10)}<path d="M15 18 C10 22 4 22.4 2.4 19.6 C5.4 17.4 10.4 16.6 15 18 Z" fill="#4f8a38" stroke="#2f5c22" stroke-width=".5"/>
+        ${[0, 72, 144, 216, 288].map(a => `<path d="M16 16 C11.6 13.6 10.2 6.8 14 4.4 C18 3.2 20.8 8.4 16 16 Z" transform="rotate(${a} 16 16)" fill="${f("p")}" stroke="#d9c8a4" stroke-width=".5"/>`).join("")}
+        <circle cx="16" cy="16" r="1.4" fill="#f0a800"/>`),
+      couronne_corail: () => S(G("c", [[0, "#8e1c14"], [.45, "#d8402a"], [1, "#ff9a78"]], 0, 0, 0, 1) + R("p", [[0, "#ffffff"], [.55, "#f6eef0"], [1, "#c8b4c4"]]),
+        `${ombre(12)}${[["M8 22 C7.6 18 5 15.6 4 12", "M6 17 C4 16.4 3 15 2.6 13.4"], ["M12 21 C11.6 16 9.6 12 10.4 8", "M10.8 14.6 C13 13 13.8 11.2 13.8 9.4"],
+          ["M16 20.6 C16.4 15 15.2 10.4 16 4.6", "M15.8 12.4 C18.4 11 19.2 9 19.6 7"], ["M20 21 C20.4 16 22.4 12 21.6 8", "M21.2 14.6 C19 13 18.2 11.2 18.2 9.4"],
+          ["M24 22 C24.4 18 27 15.6 28 12", "M26 17 C28 16.4 29 15 29.4 13.4"]].map(br => br.map((d, i) => `<path d="${d}" stroke="${f("c")}" stroke-width="${i ? 1.1 : 1.8}" fill="none" stroke-linecap="round"/>`).join("")).join("")}
+        <path d="M4 23 C8 20 24 20 28 23 C24 26 8 26 4 23 Z" fill="${f("c")}" stroke="#6e140e" stroke-width=".5"/>
+        ${[[8, 22.6], [12, 21.8], [16, 21.6], [20, 21.8], [24, 22.6], [4, 11.6], [10.4, 7.6], [16, 4.2], [21.6, 7.6], [28, 11.6]].map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${i < 5 ? 1.2 : 1.05}" fill="${f("p")}"/>`).join("")}`),
+      lunettes_rondes: () => S(G("e", [[0, "#c58a4a"], [.35, "#6e3e1a"], [.6, "#a8682e"], [1, "#3e2008"]], 1, 1),
+        `${ombre(12, 26)}<path d="M13.6 15.4 q2.4 -2 4.8 0" stroke="${f("e")}" stroke-width="1.2" fill="none"/>
+        ${[8.6, 23.4].map(x => `<circle cx="${x}" cy="16" r="5.4" fill="#e8f4ff" fill-opacity=".25" stroke="${f("e")}" stroke-width="1.5"/><path d="M${x - 3} 13.6 q1.8 -1.8 4.2 -1.2" stroke="#fff" stroke-width=".8" fill="none" opacity=".8"/>`).join("")}`),
+      lunettes_or: () => S(G("o", [[0, "#fff4b8"], [.35, "#f1c84a"], [.7, "#c8901f"], [1, "#8a5a12"]]) + R("a", [[0, "#ffe2a0"], [.6, "#e8a040"], [1, "#a85e14"]], .4, .35, .75),
+        `${ombre(12, 26)}<path d="M13.4 15 q2.6 -2 5.2 0" stroke="${f("o")}" stroke-width="1.2" fill="none"/>
+        ${[8.4, 23.6].map(x => `<ellipse cx="${x}" cy="16" rx="6" ry="5" fill="${f("a")}" fill-opacity=".7" stroke="${f("o")}" stroke-width="1.6"/><path d="M${x - 3.4} 13.4 q2 -1.8 4.6 -1.2" stroke="#fff" stroke-width=".8" fill="none" opacity=".8"/>`).join("")}`),
+      dent_requin: () => S(G("d", [[0, "#fffdf4"], [.6, "#ece2c8"], [1, "#b8a882"]], 1, 1),
+        `${ombre(9)}<path d="M4 4 C4 11 9.6 15 16 15.4 C22.4 15 28 11 28 4" stroke="#6b4a2a" stroke-width="1.2" fill="none"/>
+        <ellipse cx="16" cy="16.2" rx="2.4" ry="1" fill="#5a3c20"/>
+        <path d="M12.4 16.6 C13.8 16 18.2 16 19.6 16.6 C18.8 20 17.4 24 16 28 C14.6 24 13.2 20 12.4 16.6 Z" fill="${f("d")}" stroke="#a09070" stroke-width=".5"/>
+        <path d="M13.4 19 l.7 .2 M14.1 21.2 l.7 .2 M14.8 23.4 l.7 .2 M18.6 19 l-.7 .2 M17.9 21.2 l-.7 .2 M17.2 23.4 l-.7 .2" stroke="#a09070" stroke-width=".4"/>`),
+      jade: () => S(R("j", [[0, "#d8ffe6"], [.45, "#3fbf78"], [.85, "#16804a"], [1, "#0a4a2a"]]),
+        `${ombre(10)}${Array.from({ length: 11 }, (_, i) => { const a = Math.PI * (.08 + .84 * i / 10); return `<circle cx="${(16 - Math.cos(a) * 11.6).toFixed(1)}" cy="${(4 + Math.sin(a) * 11).toFixed(1)}" r="1.7" fill="${f("j")}"/>`; }).join("")}
+        <path d="M10.6 22 a5.4 5.2 0 1 0 10.8 0 a5.4 5.2 0 1 0 -10.8 0 Z M14.4 22 a1.6 1.6 0 1 1 3.2 0 a1.6 1.6 0 1 1 -3.2 0 Z" fill="${f("j")}" fill-rule="evenodd" stroke="#0e5a32" stroke-width=".5"/>`),
       tricorne: () => S(G("t", [[0, "#4a4a55"], [.55, "#22222a"], [1, "#0e0e12"]]) + G("o", [[0, "#fff4b8"], [.4, "#f1c84a"], [1, "#a8741a"]]),
         `${ombre(13)}<path d="M9 12 C6.4 6.4 2.6 5.2 1 6 C3.6 7 6 9.4 7.2 13 Z" fill="#c4283a" stroke="#7d1220" stroke-width=".4"/>
         <path d="M11 17 C10.6 9.6 13.4 7.6 16 7.6 C18.6 7.6 21.4 9.6 21 17 Z" fill="${f("t")}"/>

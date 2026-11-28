@@ -406,6 +406,12 @@ ok(len(leg) >= 3 and min(P.OBJETS[k]["prix"] for k in leg) >= 700, "au moins 3 p
 ok(all(P.OBJETS[k]["prix"] >= 120 for k, o in P.OBJETS.items() if o["rarete"] != "commun"), "les pièces rares coûtent cher (120 coquillages ou plus)")
 ok(P.OBJETS["remede"]["prix"] <= 10 and max(a["prix"] for a in P.ALIMENTS.values()) <= 10, "remède et nourriture restent bon marché")
 ok(all(o["emplacement"] in P.EMPLACEMENTS for o in P.OBJETS.values() if o["type"] == "accessoire"), "chaque accessoire a son emplacement")
+dessin_js = (BASE / "static" / "js" / "philibert-dessin.js").read_text(encoding="utf-8")
+ile_js = (BASE / "static" / "js" / "philibert-ile.js").read_text(encoding="utf-8")
+acc = {k: o["emplacement"] for k, o in P.OBJETS.items() if o["type"] == "accessoire"}
+ok(all(f'p.{e} === "{k}"' in dessin_js for k, e in acc.items()), "chaque accessoire est dessiné sur Philibert")
+ok(all(f"      {k}: () =>" in ile_js for k in acc), "chaque accessoire a son icône dans la boutique")
+ok(all(k in acc for k in ("melon", "haut_de_forme", "frangipanier", "couronne_corail", "lunettes_rondes", "lunettes_or", "dent_requin", "jade")), "chapeau melon, haut-de-forme et les petits accessoires sont en boutique")
 p = nouveau()
 p.s["coquillages"] = 100
 ok(erreur(p.action, "acheter", {"article": "cape"}) is not None and p.s["coquillages"] == 100, "trop cher : refusé, aucun coquillage perdu")
