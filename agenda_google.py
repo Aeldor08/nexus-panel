@@ -799,6 +799,25 @@ def _modifiable(ev: dict, acces: str) -> bool:
     return bool(org.get("self") or ev.get("guestsCanModify"))  # Google n'écrit « self » que pour toi
 
 
+def _dernier_jour(ev: dict, debut: dt.date, anniversaire: bool) -> dt.date:
+    """Dernier jour (inclus) d'un évènement Google, d'après sa vraie fin (pas la durée plafonnée du formulaire).
+    Journée entière : end.date est EXCLUSIVE chez Google (du 1er au 3 inclus : end = le 4).
+    Avec heure : le jour de la fin (fin à minuit pile = la veille)."""
+    if anniversaire:
+        return debut
+    s, e = ev.get("start") or {}, ev.get("end") or {}
+    try:
+        if s.get("date") and e.get("date"):
+            fin = dt.date.fromisoformat(e["date"]) - dt.timedelta(days=1)
+        elif s.get("dateTime") and e.get("dateTime"):
+            fin = (_local(e["dateTime"]) - dt.timedelta(minutes=1)).date()
+        else:
+            return debut
+    except ValueError:
+        return debut
+    return max(debut, fin)
+
+
 def occurrence(ev: dict, cache: dict, maitres: dict, exceptions: set) -> dict | None:
     """Instance Google (singleEvents=true) -> occurrence au format de agenda.occurrences()."""
     if ev.get("status") == "cancelled" or not ev.get("start"):
@@ -822,12 +841,15 @@ def occurrence(ev: dict, cache: dict, maitres: dict, exceptions: set) -> dict | 
         maj = 0.0
     jour = agenda.parse_date(f["date"])
     age = jour.year - f["birth_year"] if f["birthday"] and f["birth_year"] else None
+    fin = _dernier_jour(ev, jour, f["birthday"])
     return {
         "id": PREFIXE + ev["id"],
         "event_id": PREFIXE + (serie_id or ev["id"]),
         "google_id": ev["id"],
         "original_date": orig.isoformat(),
         "date": f["date"],
+        "fin": fin.isoformat(),
+        "jours": (fin - jour).days + 1,
         "time": f["time"],
         "duration": f["duration"],
         "title": f["title"],
@@ -918,7 +940,7 @@ def _lire_plage(debut: dt.date, fin: dt.date, infos: dict) -> list[dict]:
     out = []
     for ev in _lister(dict(q, singleEvents="true", orderBy="startTime")):
         o = occurrence(ev, infos, maitres, exceptions)
-        if o and debut.isoformat() <= o["date"] <= fin.isoformat():
+        if o and _touche(o, debut.isoformat(), fin.isoformat()):
             out.append(o)
     return out
 
@@ -1088,7 +1110,7 @@ def occurrences(debut: dt.date, fin: dt.date, reseau: bool = True) -> list[dict]
     occs = c.get("occurrences") or []
     a, b = debut.isoformat(), fin.isoformat()
     if c.get("debut") and c["debut"] <= a and b <= c["fin"]:
-        return [o for o in occs if a <= o["date"] <= b]
+        return [o for o in occs if _touche(o, a, b)]
     if reseau and c.get("maj"):
         cle = (a, b)
         with _lock:
@@ -1104,7 +1126,12 @@ def occurrences(debut: dt.date, fin: dt.date, reseau: bool = True) -> list[dict]
             return lu
         except GoogleErreur as exc:
             _etat["erreur"] = str(exc)
-    return [o for o in occs if a <= o["date"] <= b]
+    return [o for o in occs if _touche(o, a, b)]
+
+
+def _touche(o: dict, a: str, b: str) -> bool:
+    """L'occurrence a-t-elle au moins un jour entre a et b ? (plusieurs jours : « fin »)"""
+    return o["date"] <= b and (o.get("fin") or o["date"]) >= a
 
 
 def occurrences_rappels(debut: dt.date, fin: dt.date) -> list[dict]:

@@ -8,6 +8,16 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Corrigé
+- **Agenda : un évènement sur plusieurs jours n'apparaissait que le premier jour.** Il s'affiche maintenant sur
+  chacun de ses jours (calendrier, fenêtre du jour, « À venir », sommaire), avec « 2/3 », un « ↳ » les jours
+  suivants et l'heure seulement au début et à la fin (ex. « 20:00 » le vendredi, « →18:00 » le dimanche).
+  Évènements de NEXUS comme de Google Agenda (fin « exclusive » de Google prise en compte : du 1er au 3 inclus),
+  séries sur plusieurs jours (un week-end chaque mois) et évènements commencés avant le mois affiché compris.
+  Un seul rappel, au début ; ✎ et ✕ depuis n'importe quel jour agissent sur l'évènement entier (ou proposent le
+  choix habituel pour une série). Fenêtre du jour étroite : les étiquettes passent à la ligne au lieu d'écraser
+  le titre
+
 ## [1.14.1] - 2026-11-28
 
 ### Ajouté

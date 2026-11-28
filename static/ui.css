@@ -90,7 +90,8 @@ main.nx-free.nx-ajuste .nx-panel::-webkit-scrollbar { display: none; }
 @media (pointer: coarse) { .nx-grip { height: 28px; line-height: 28px; font-size: 20px; } }
 
 /* ---- Agenda : liste du jour + formulaire ---- */
-.ag-ev .x { display: flex; flex-direction: column; }
+.ag-ev .x { display: flex; flex-direction: column; flex: 1 1 150px; min-width: 120px; }
+.item.ag-ev { flex-wrap: wrap; row-gap: 2px; }   /* fenêtre étroite : les étiquettes passent à la ligne, le titre garde sa place */
 .ag-ev.editing { outline: 1px solid var(--yellow); }
 .ag-desc { color: var(--muted); font-size: 13px; white-space: pre-wrap; }
 .ag-up { width: 100%; font: inherit; color: inherit; background: none; border: 0; text-align: left; cursor: pointer; }

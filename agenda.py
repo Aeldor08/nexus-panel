@@ -30,6 +30,7 @@ from __future__ import annotations
 import copy
 import datetime as dt
 import json
+import math
 import re
 import secrets
 import shutil
@@ -103,18 +104,34 @@ def _age(e: dict, d: dt.date) -> int | None:
     return None
 
 
+def fin_occurrence(date: str, heure: str | None, duree: int | None, anniversaire: bool = False) -> str:
+    """Dernier jour (inclus) d'une occurrence. Journée entière : durée arrondie au jour (3 jours = 4320 min) ;
+    avec heure : le jour où elle se termine (fin à minuit pile = la veille). Anniversaire : un seul jour."""
+    d = parse_date(date)
+    if anniversaire or not duree:
+        return date
+    if not heure:
+        return (d + dt.timedelta(days=max(1, math.ceil(duree / 1440)) - 1)).isoformat()
+    hh, mm = (int(x) for x in heure.split(":"))
+    fin = dt.datetime(d.year, d.month, d.day, hh, mm) + dt.timedelta(minutes=duree) - dt.timedelta(minutes=1)
+    return max(d, fin.date()).isoformat()
+
+
 def occurrences(db: dict, start: dt.date, end: dt.date) -> list[dict]:
-    """Toutes les occurrences entre start et end inclus, exceptions appliquées."""
+    """Toutes les occurrences qui touchent la période start..end (incluse), exceptions appliquées. Une occurrence sur
+    plusieurs jours (« fin », « jours ») est rendue si l'un de ses jours y est, même si elle a commencé avant."""
     out = []
-    span = (end - start).days
     for e in db.get("events", []):
         exc = e.get("exceptions") or {}
+        durees = [e.get("duration") or 0, *[x.get("duration") or 0 for x in exc.values() if isinstance(x, dict)]]
+        avant = 0 if e.get("birthday") else math.ceil(max(durees) / 1440)  # commencées jusqu'à N jours avant
+        s0 = start - dt.timedelta(days=avant)
         keys = set()
         if (e.get("repeat") or "none") == "none":
             keys.add(parse_date(e["date"]))
         else:
-            for i in range(span + 1):
-                d = start + dt.timedelta(days=i)
+            for i in range((end - s0).days + 1):
+                d = s0 + dt.timedelta(days=i)
                 if _base_occurs(e, d):
                     keys.add(d)
         # occurrences déplacées depuis une date hors de la plage
@@ -124,7 +141,7 @@ def occurrences(db: dict, start: dt.date, end: dt.date) -> list[dict]:
                     nd, kd = parse_date(x["date"]), parse_date(k)
                 except ValueError:
                     continue
-                if start <= nd <= end and _base_occurs(e, kd):
+                if s0 <= nd <= end and _base_occurs(e, kd):
                     keys.add(kd)
         for k in keys:
             ks = k.isoformat()
@@ -132,14 +149,18 @@ def occurrences(db: dict, start: dt.date, end: dt.date) -> list[dict]:
             if x.get("cancelled"):
                 continue
             day = parse_date(x["date"]) if x.get("date") else k
-            if not (start <= day <= end):
+            heure = x.get("time", e.get("time")) if not e.get("birthday") else None
+            fin = parse_date(fin_occurrence(day.isoformat(), heure, x.get("duration", e.get("duration")), bool(e.get("birthday"))))
+            if day > end or fin < start:
                 continue
             o = {
                 "id": f"{e['id']}@{ks}",
                 "event_id": e["id"],
                 "original_date": ks,
                 "date": day.isoformat(),
-                "time": x.get("time", e.get("time")) if not e.get("birthday") else None,
+                "fin": fin.isoformat(),
+                "jours": (fin - day).days + 1,
+                "time": heure,
                 "duration": x.get("duration", e.get("duration")),
                 "title": x.get("title", e["title"]),
                 "description": x.get("description", e.get("description", "")),

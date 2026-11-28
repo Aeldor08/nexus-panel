@@ -87,7 +87,29 @@
   const isG = o => o && o.source === "google";
   view.setDate(1);
 
-  const eventsOn = key => occ.filter(o => o.date === key);
+  // Évènements sur plusieurs jours (« fin », « jours » envoyés par le serveur) : affichés sur CHACUN de leurs jours,
+  // avec « 2/3 » ; l'heure seulement le premier (début) et le dernier jour (fin). Une seule occurrence : ✎ et ✕
+  // agissent sur l'évènement entier depuis n'importe lequel de ses jours.
+  const finOf = o => o.fin || o.date;
+  const eventsOn = key => occ.filter(o => o.date <= key && key <= finOf(o));
+  const partOf = (o, key) => {
+    const n = o.jours || 1;
+    if (n < 2) return null;
+    const i = Math.round((parse(key) - parse(o.date)) / 864e5) + 1;   // (arrondi : jours de 23 ou 25 h)
+    return { i, n, premier: i === 1, dernier: i === n };
+  };
+  const heureFin = o => {
+    if (!o.time || !o.duration) return "";
+    const [h, m] = o.time.split(":").map(Number), d = new Date(2000, 0, 1, h, m + o.duration);
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+  const heureDuJour = (o, key) => {
+    const p = partOf(o, key);
+    if (!p || !o.time) return p ? "" : (o.time || "");
+    return p.premier ? o.time : p.dernier ? "→" + heureFin(o) : "";
+  };
+  const court = k => parse(k).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+  const plage = o => `du ${court(o.date)}${o.time ? " " + o.time : ""} au ${court(finOf(o))}${o.time && heureFin(o) ? " " + heureFin(o) : ""}`;
   // Fêtes et jours fériés (js/fetes.js, calculés localement) : choix mémorisé sur cet appareil
   const FETES_KEY = "nexus-agenda-fetes";
   let fetesMode = "toutes";
@@ -168,7 +190,11 @@
       const d = addDays(start, i), key = ymd(d);
       const fetes = fetesOn(key);
       const chips = [...fetes.map(f => `<span class="ev fete${f.ferie ? " ferie" : ""}" title="${esc(f.nom)}${f.ferie ? " (jour férié)" : ""}">${f.icone} ${esc(f.nom)}</span>`),
-                     ...eventsOn(key).map(o => `<span class="ev${o.birthday ? " bday" : ""}${isG(o) ? " g" : ""}"${isG(o) ? ` title="Google Agenda"` : ""}>${o.time ? o.time + " " : ""}${esc(evLabel(o))}</span>`),
+                     ...eventsOn(key).map(o => {
+                       const p = partOf(o, key), h = heureDuJour(o, key);
+                       return `<span class="ev${o.birthday ? " bday" : ""}${isG(o) ? " g" : ""}${p ? " multi" : ""}${p && !p.premier ? " suite" : ""}"
+                         title="${isG(o) ? "Google Agenda" : ""}${p ? `${isG(o) ? " · " : ""}${esc(plage(o))}` : ""}">${p && !p.premier ? "↳ " : ""}${h ? h + " " : ""}${esc(evLabel(o))}${p ? ` <small class="ag-part">${p.i}/${p.n}</small>` : ""}</span>`;
+                     }),
                      ...todos.filter(t => t.due === key && !t.done).map(t => `<span class="ev todo">☐ ${esc(t.text)}</span>`)];
       html += `<button class="day${d.getMonth() !== view.getMonth() ? " other" : ""}${key === today ? " today" : ""}${key === selDay ? " sel" : ""}${fetes.some(f => f.ferie) ? " ferie" : ""}" data-day="${key}"
         aria-label="${fmtDay(key)}${chips.length ? ", " + chips.length + " élément(s)" : ""}">
@@ -201,16 +227,18 @@
     $("a-day").innerHTML = `
       ${fts.map(f => `<div class="item ag-fete${f.ferie ? " ferie" : ""}"><span class="t">${f.icone}</span>
         <span class="x">${esc(f.nom)}</span><span class="due">${f.ferie ? "jour férié" : "fête"}</span></div>`).join("")}
-      ${evs.map(o => `<div class="item ag-ev${editing && editing.occurrence === o.id ? " editing" : ""}${isG(o) ? " g" : ""}">
-        <span class="t">${o.time || (o.birthday ? "🎂" : "journée")}</span>
-        <span class="x">${esc(evLabel(o).replace(/^🎂 /, ""))}${o.duration ? ` <small class="muted">· ${fmtDur(o.duration)}</small>` : ""}
+      ${evs.map(o => { const p = partOf(o, selDay); return `<div class="item ag-ev${editing && editing.occurrence === o.id ? " editing" : ""}${isG(o) ? " g" : ""}${p ? " multi" : ""}">
+        <span class="t">${heureDuJour(o, selDay) || (o.birthday ? "🎂" : p && o.time ? "↔" : "journée")}</span>
+        <span class="x">${p && !p.premier ? "↳ " : ""}${esc(evLabel(o).replace(/^🎂 /, ""))}${o.duration && !p ? ` <small class="muted">· ${fmtDur(o.duration)}</small>` : ""}
+          ${p ? `<small class="muted ag-plage">${esc(plage(o))}</small>` : ""}
           ${o.description ? `<small class="ag-desc">${esc(o.description)}</small>` : ""}</span>${rep(o)}
+        ${p ? `<span class="due ag-part" title="Évènement sur ${p.n} jours">jour ${p.i}/${p.n}</span>` : ""}
         ${o.exception ? `<span class="due" title="Cette occurrence a été modifiée seule">modifié</span>` : ""}
         ${google.connecte && o.seulement_nexus ? `<span class="due" title="Créé avec le choix « NEXUS (sur ce PC seulement) » : jamais envoyé dans Google Agenda">sur ce PC</span>` : ""}
         ${isG(o) ? `<span class="due ag-gtag" title="Évènement de Google Agenda${o.lecture_seule ? " (lecture seule ici)" : ""}">G${o.lecture_seule ? " · lecture seule" : ""}</span>` : ""}
         ${isG(o) && o.lien ? `<a class="del" href="${esc(o.lien)}" target="_blank" rel="noopener noreferrer" title="Ouvrir dans Google Agenda" aria-label="Ouvrir ${esc(o.title)} dans Google Agenda">↗</a>` : ""}
         ${o.lecture_seule ? "" : `<button class="del" data-edit="${esc(o.id)}" title="Modifier" aria-label="Modifier ${esc(o.title)}">✎</button>
-        <button class="del" data-del="${esc(o.id)}" title="Supprimer" aria-label="Supprimer ${esc(o.title)}">✕</button>`}</div>`).join("")}
+        <button class="del" data-del="${esc(o.id)}" title="Supprimer" aria-label="Supprimer ${esc(o.title)}">✕</button>`}</div>`; }).join("")}
       ${tds.map(t => `<div class="item${t.done ? " done" : ""}"><input type="checkbox" data-todo="${t.id}" ${t.done ? "checked" : ""} aria-label="Terminée">
         <span class="x">${esc(t.text)}</span><span class="due">to-do</span></div>`).join("")}
       ${!evs.length && !tds.length && !fts.length ? `<div class="muted" style="font-size:15px;padding:4px 0">Rien de prévu.</div>` : ""}`;
@@ -405,8 +433,11 @@
 
   function renderUpcoming() {
     const now = new Date(), today = ymd(now), hm = `${pad(now.getHours())}:${pad(now.getMinutes())}`, end = ymd(addDays(now, 6));
-    const list = occ.filter(o => o.date >= today && o.date <= end && !(o.date === today && o.time && o.time < hm))
-      .map(o => ({ date: o.date, time: o.time || "", label: esc(evLabel(o)), cls: isG(o) ? " g" : "" }));
+    // en cours depuis un jour précédent (plusieurs jours) : en tête d'aujourd'hui, avec sa date de fin
+    const list = occ.filter(o => o.date <= end && finOf(o) >= today && !(o.date === today && o.time && o.time < hm && (o.jours || 1) < 2))
+      .map(o => { const enCours = o.date < today;
+        return { date: enCours ? today : o.date, time: enCours ? "" : o.time || "", cls: isG(o) ? " g" : "",
+                 label: (enCours ? "↳ " : "") + esc(evLabel(o)) + ((o.jours || 1) > 1 ? ` <small class="muted">${enCours ? "jusqu'au " + esc(court(finOf(o))) : o.jours + " jours"}</small>` : "") }; });
     for (let d = 0; d < 7; d++) {                      // fêtes de la semaine, en tête de leur journée
       const key = ymd(addDays(now, d));
       for (const f of fetesOn(key)) list.push({ date: key, time: "", label: `${f.icone} ${esc(f.nom)}`, cls: " fete", fete: true });
@@ -542,8 +573,9 @@
   window.agendaSummary = (days = 7) => {
     if (!loaded) return null;
     const now = new Date(), today = ymd(now), hm = `${pad(now.getHours())}:${pad(now.getMinutes())}`, end = ymd(addDays(now, days - 1));
-    return { next: occ.filter(o => o.date >= today && o.date <= end && !(o.date === today && o.time && o.time < hm))
-                      .map(o => ({ key: o.date, time: o.time, label: evLabel(o) })),
+    return { next: occ.filter(o => o.date <= end && finOf(o) >= today && !(o.date === today && o.time && o.time < hm && (o.jours || 1) < 2))
+                      .map(o => o.date < today ? { key: today, time: null, label: `${evLabel(o)} (en cours, jusqu'au ${court(finOf(o))})` }
+                                               : { key: o.date, time: o.time, label: evLabel(o) + ((o.jours || 1) > 1 ? ` (${o.jours} jours)` : "") }),
              todos: todos.filter(t => !t.done).length };
   };
   window.agendaRefresh = refresh;       // utilisé après un rappel, et toutes les 5 min (changement de jour…)
