@@ -8,6 +8,8 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+## [1.14.0] - 2026-11-28
+
 ### Ajouté
 - **Agenda relié à Google Agenda, dans les deux sens** (⚙ Réglages → Google Agenda) : les évènements de ton
   Google Agenda s'affichent dans l'Agenda (pastille **G**, lien vers Google), et tu peux en créer, modifier (cette
