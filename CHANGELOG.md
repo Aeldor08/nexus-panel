@@ -8,6 +8,8 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+## [1.14.2] - 2026-11-28
+
 ### Corrigé
 - **Agenda : un évènement sur plusieurs jours n'apparaissait que le premier jour.** Il s'affiche maintenant sur
   chacun de ses jours (calendrier, fenêtre du jour, « À venir », sommaire), avec « 2/3 », un « ↳ » les jours
