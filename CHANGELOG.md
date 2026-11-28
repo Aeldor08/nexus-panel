@@ -8,6 +8,8 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+## [1.14.3] - 2026-11-28 - Du nouveau pour Philibert
+
 ### Ajouté
 - Philibert : **8 nouveaux accessoires** dans la boutique, de toutes les raretés : chapeau melon, fleur de frangipanier et lunettes rondes (communs), haut-de-forme et dent de requin (rares), lunettes d'or et collier de jade (très rares), couronne de corail (légendaire). Chacun est dessiné sur Philibert à tous les âges et a son icône
 
