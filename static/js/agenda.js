@@ -222,7 +222,10 @@
   function renderDay() {
     $("a-day-title").textContent = fmtDay(selDay);
     const evs = eventsOn(selDay), tds = todos.filter(t => t.due === selDay);
-    const rep = o => o.repeat !== "none" ? `<span class="due" title="${esc(REPEAT[o.repeat])} depuis le ${parse(o.series_start).toLocaleDateString("fr-FR")}">↻ ${esc(REPEAT[o.repeat].toLowerCase())}</span>` : "";
+    // (panneau étroit : « ↻ » seul, le texte complet reste dans title et aria-label)
+    const rep = o => { if (o.repeat === "none") return "";
+      const t = `${REPEAT[o.repeat]} depuis le ${parse(o.series_start).toLocaleDateString("fr-FR")}`;
+      return `<span class="due ag-rep" title="${esc(t)}" aria-label="${esc(t)}">↻<span class="ag-long" aria-hidden="true"> ${esc(REPEAT[o.repeat].toLowerCase())}</span></span>`; };
     const fts = fetesOn(selDay);
     $("a-day").innerHTML = `
       ${fts.map(f => `<div class="item ag-fete${f.ferie ? " ferie" : ""}"><span class="t">${f.icone}</span>
@@ -231,14 +234,15 @@
         <span class="t">${heureDuJour(o, selDay) || (o.birthday ? "🎂" : p && o.time ? "↔" : "journée")}</span>
         <span class="x">${p && !p.premier ? "↳ " : ""}${esc(evLabel(o).replace(/^🎂 /, ""))}${o.duration && !p ? ` <small class="muted">· ${fmtDur(o.duration)}</small>` : ""}
           ${p ? `<small class="muted ag-plage">${esc(plage(o))}</small>` : ""}
-          ${o.description ? `<small class="ag-desc">${esc(o.description)}</small>` : ""}</span>${rep(o)}
+          ${o.description ? `<small class="ag-desc">${esc(o.description)}</small>` : ""}</span>
+        <span class="ag-meta">${rep(o)}
         ${p ? `<span class="due ag-part" title="Évènement sur ${p.n} jours">jour ${p.i}/${p.n}</span>` : ""}
         ${o.exception ? `<span class="due" title="Cette occurrence a été modifiée seule">modifié</span>` : ""}
         ${google.connecte && o.seulement_nexus ? `<span class="due" title="Créé avec le choix « NEXUS (sur ce PC seulement) » : jamais envoyé dans Google Agenda">sur ce PC</span>` : ""}
-        ${isG(o) ? `<span class="due ag-gtag" title="Évènement de Google Agenda${o.lecture_seule ? " (lecture seule ici)" : ""}">G${o.lecture_seule ? " · lecture seule" : ""}</span>` : ""}
-        ${isG(o) && o.lien ? `<a class="del" href="${esc(o.lien)}" target="_blank" rel="noopener noreferrer" title="Ouvrir dans Google Agenda" aria-label="Ouvrir ${esc(o.title)} dans Google Agenda">↗</a>` : ""}
+        ${isG(o) ? `<span class="due ag-gtag" title="Évènement de Google Agenda${o.lecture_seule ? " (lecture seule ici)" : ""}">G${o.lecture_seule ? " · lecture seule" : ""}</span>` : ""}</span>
+        <span class="ag-acts">${isG(o) && o.lien ? `<a class="del" href="${esc(o.lien)}" target="_blank" rel="noopener noreferrer" title="Ouvrir dans Google Agenda" aria-label="Ouvrir ${esc(o.title)} dans Google Agenda">↗</a>` : ""}
         ${o.lecture_seule ? "" : `<button class="del" data-edit="${esc(o.id)}" title="Modifier" aria-label="Modifier ${esc(o.title)}">✎</button>
-        <button class="del" data-del="${esc(o.id)}" title="Supprimer" aria-label="Supprimer ${esc(o.title)}">✕</button>`}</div>`; }).join("")}
+        <button class="del" data-del="${esc(o.id)}" title="Supprimer" aria-label="Supprimer ${esc(o.title)}">✕</button>`}</span></div>`; }).join("")}
       ${tds.map(t => `<div class="item${t.done ? " done" : ""}"><input type="checkbox" data-todo="${t.id}" ${t.done ? "checked" : ""} aria-label="Terminée">
         <span class="x">${esc(t.text)}</span><span class="due">to-do</span></div>`).join("")}
       ${!evs.length && !tds.length && !fts.length ? `<div class="muted" style="font-size:15px;padding:4px 0">Rien de prévu.</div>` : ""}`;
@@ -269,7 +273,7 @@
       ${isG(o) ? `<p class="muted ag-note"><span class="ag-gdot">G</span> Évènement de Google Agenda (${gNom}) : les changements y sont envoyés.</p>` : ""}
       ${o && o.repeat === "custom" ? `<p class="muted ag-note">↻ Répétition réglée dans Google Agenda : elle est gardée telle quelle (modifie-la là-bas si besoin).</p>` : ""}
       ${o && o.repeat !== "none" ? `<p class="muted ag-note">↻ Fait partie d'une série (${esc(REPEAT[o.repeat].toLowerCase())}). À l'enregistrement, tu choisiras : cette occurrence, les suivantes, ou toute la série.</p>` : ""}
-      ${choixAgenda ? `<label class="ag-f"><span>Agenda</span><select class="in" name="agenda">
+      ${choixAgenda ? `<label class="ag-f"><span>Agenda</span><select class="in" name="agenda" title="Google Agenda (${gNom}) ou NEXUS (sur ce PC seulement)">
         <option value="google" ${google.cible !== "nexus" ? "selected" : ""}>Google Agenda (${gNom})</option>
         <option value="nexus" ${google.cible === "nexus" ? "selected" : ""}>NEXUS (sur ce PC seulement)</option></select></label>` : ""}
       <label class="ag-f"><span>Titre ${v.birthday ? "(prénom)" : ""}</span><input class="in" name="title" maxlength="120" value="${esc(v.title)}" required><em data-err="title"></em></label>

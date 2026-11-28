@@ -15,8 +15,13 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
   Évènements de NEXUS comme de Google Agenda (fin « exclusive » de Google prise en compte : du 1er au 3 inclus),
   séries sur plusieurs jours (un week-end chaque mois) et évènements commencés avant le mois affiché compris.
   Un seul rappel, au début ; ✎ et ✕ depuis n'importe quel jour agissent sur l'évènement entier (ou proposent le
-  choix habituel pour une série). Fenêtre du jour étroite : les étiquettes passent à la ligne au lieu d'écraser
-  le titre
+  choix habituel pour une série)
+- **Agenda en fenêtre étroite** (demi-écran, téléphone) : dans la fenêtre du jour, le titre d'un évènement était
+  écrasé lettre par lettre par l'heure, « ↻ tous les ans », la pastille G et les boutons. Sous 520 px de large, le
+  titre prend toute la largeur et passe à la ligne mot par mot ; l'heure, « ↻ » (texte complet au survol) et les
+  étiquettes vont sur une petite ligne en dessous ; ↗ ✎ ✕ restent à droite, assez grands pour le doigt (32 px).
+  « À venir » étroit : date et heure au-dessus du titre. Le nom de l'agenda Google (adresse Gmail) est coupé
+  avec « … » dans le formulaire. Rien ne change en plein écran
 
 ## [1.14.1] - 2026-11-28
 

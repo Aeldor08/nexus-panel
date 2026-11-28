@@ -409,6 +409,8 @@ def exemples(etat: Etat) -> None:
 if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8790
     s, e = serveur(port)
+    if len(sys.argv) > 2:  # nom de l'agenda principal (ex. une longue adresse, pour essayer l'affichage)
+        e.agendas["moi@exemple.fr"]["summary"] = sys.argv[2]
     exemples(e)
     print(f"Faux Google sur http://127.0.0.1:{port} (client : {CLIENT_ID} / {CLIENT_SECRET})", flush=True)
     threading.Event().wait()
