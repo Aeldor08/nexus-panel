@@ -375,7 +375,8 @@ async def api_agenda_create(request: Request) -> JSONResponse:
             e = await run_in_threadpool(google_mod.creer, body.get("champs") or {})
             activite.noter("agenda", "évènement créé dans Google Agenda", "ok", "", _ip(request))
             return JSONResponse({"ok": True, "evenement": e})
-        return JSONResponse({"ok": True, "evenement": agenda_mod.create(body.get("champs") or {})})
+        # choix explicite « NEXUS (sur ce PC seulement) » : jamais envoyé dans Google Agenda (envoi automatique)
+        return JSONResponse({"ok": True, "evenement": agenda_mod.create(body.get("champs") or {}, seulement_nexus=body.get("agenda") == "nexus")})
     except agenda_mod.AgendaError as exc:
         return _agenda_error(exc)
 
@@ -437,7 +438,7 @@ async def api_google_client(request: Request) -> JSONResponse:
 async def api_google_reglages(request: Request) -> JSONResponse:
     body = await json_body(request)
     try:
-        return JSONResponse(google_mod.modifier_reglages({k: body[k] for k in ("agenda", "cible", "rappels", "intervalle_minutes") if k in body}))
+        return JSONResponse(google_mod.modifier_reglages({k: body[k] for k in ("agenda", "cible", "rappels", "intervalle_minutes", "envoi_auto") if k in body}))
     except agenda_mod.AgendaError as exc:
         return _agenda_error(exc)
     except ValueError as exc:

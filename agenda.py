@@ -10,7 +10,8 @@ Format 2 (depuis la v3.9) :
      "reminders": [minutes…] | null (null = délais par défaut de config.json),
      "exceptions": { "AAAA-MM-JJ d'origine": {"cancelled": true} | {champs modifiés : title, date, time,
                      duration, description, reminders} },
-     "created", "updated": horodatages (secondes)
+     "created", "updated": horodatages (secondes),
+     "seulement_nexus": true si créé avec le choix « NEXUS (sur ce PC seulement) » : jamais envoyé dans Google Agenda
   }],
   "todos": [...], "notes": [...]
 }
@@ -150,6 +151,7 @@ def occurrences(db: dict, start: dt.date, end: dt.date) -> list[dict]:
                 "until": e.get("until"),
                 "series_start": e["date"],
                 "exception": bool(x),
+                "seulement_nexus": bool(e.get("seulement_nexus")),
                 "updated": max(e.get("updated") or 0, x.get("updated") or 0),
             }
             out.append(o)
@@ -374,7 +376,8 @@ def _check_occ(e: dict, occ: str | None) -> str:
     return occ
 
 
-def create(fields: dict) -> dict:
+def create(fields: dict, seulement_nexus: bool = False) -> dict:
+    """seulement_nexus : choix explicite « NEXUS (sur ce PC seulement) » (jamais envoyé dans Google Agenda)."""
     with _lock:
         db = load()
         if len(db["events"]) >= MAX_EVENTS:
@@ -382,6 +385,8 @@ def create(fields: dict) -> dict:
         f = validate(fields)
         now = time.time()
         e = {"id": secrets.token_hex(6), **f, "exceptions": {}, "created": now, "updated": now}
+        if seulement_nexus:
+            e["seulement_nexus"] = True
         if not e["birthday"]:
             e["birth_year"] = None
         db["events"].append(e)
@@ -487,6 +492,19 @@ def delete(eid: str, occ: str | None = None, scope: str = "all") -> None:
                 e["exceptions"] = {k: v for k, v in (e.get("exceptions") or {}).items() if k < occ}
             e["updated"] = time.time()
         save(db)
+
+
+def retirer_envoye(eid: str, updated) -> bool:
+    """Retire un évènement envoyé dans Google Agenda (agenda_google.py), seulement s'il n'a pas changé depuis
+    l'envoi (sinon il reste, et son nouvel état repart au prochain envoi). Renvoie True s'il a été retiré."""
+    with _lock:
+        db = load()
+        reste = [e for e in db["events"] if not (e["id"] == eid and e.get("updated") == updated)]
+        if len(reste) == len(db["events"]):
+            return False
+        db["events"] = reste
+        save(db)
+        return True
 
 
 def save_notebook(todos, notes) -> None:

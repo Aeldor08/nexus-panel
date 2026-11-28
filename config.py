@@ -74,6 +74,7 @@ DEFAULTS = {
         "cible": "google",  # où vont les nouveaux évènements par défaut : google | nexus
         "rappels": True,  # rappels de NEXUS (panel, Discord) aussi pour les évènements Google
         "intervalle_minutes": 10,  # relecture de Google Agenda
+        "envoi_auto": True,  # envoyer les évènements NEXUS dans Google Agenda (sauf « NEXUS seulement »)
     },
 }
 

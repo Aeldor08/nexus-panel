@@ -40,6 +40,7 @@ TESTS = [
     ("test_superviseur.py", []),
     ("test_demarrage.py", []),
     ("test_agenda_google.py", [str(BASE)]),
+    ("test_agenda_google_envoi.py", [str(BASE)]),
 ]
 
 

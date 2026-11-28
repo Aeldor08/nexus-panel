@@ -6,6 +6,11 @@ Principe
   hors connexion (en lecture). Créer / modifier / supprimer un évènement Google depuis NEXUS passe par l'API :
   seuls les champs changés sont envoyés (invités, lieu, visioconférence… ne sont jamais effacés).
 - Les évènements NEXUS restent dans data\agenda.json ; le formulaire de l'Agenda choisit où créer un évènement.
+  Envoi automatique (réglage « envoi_auto », activé par défaut) : à chaque relecture, les évènements NEXUS
+  encore locaux (sauf ceux créés avec le choix « NEXUS (sur ce PC seulement) ») sont créés dans Google Agenda
+  puis retirés de NEXUS. Jamais de doublon : l'identifiant Google est calculé à partir de celui de NEXUS (un
+  second envoi est refusé par Google, « 409 », et devient une simple mise à jour) et chaque envoi est noté
+  (data\agenda_google_envois.json) avant que la copie locale soit retirée.
 - Répétitions : une série Google « simple » (tous les jours / semaines / mois / ans, avec ou sans date de fin)
   se modifie comme une série NEXUS (cette occurrence, les suivantes, toute la série). Une répétition plus riche
   (« toutes les 2 semaines », « lundi et jeudi »…) est affichée et modifiable, mais sa règle reste celle de Google.
@@ -55,6 +60,8 @@ SCOPES = "https://www.googleapis.com/auth/calendar.events https://www.googleapis
 SECTION = "google_agenda"
 SERVICE = identifiants.SERVICE_GOOGLE
 CACHE_FILE = paths.DATA_DIR / "agenda_google.json"
+ENVOIS_FILE = paths.DATA_DIR / "agenda_google_envois.json"  # trace des évènements NEXUS envoyés dans Google
+ENVOI_MAX = 200  # évènements envoyés au plus par relecture (la suite à la relecture suivante)
 FENETRE_AVANT, FENETRE_APRES = 62, 400  # jours gardés en copie autour d'aujourd'hui
 CONNEXION_SECONDES = 300
 MAX_PAGES = 20
@@ -70,7 +77,7 @@ REPEAT_CUSTOM_LABEL = "Répétition personnalisée (Google Agenda)"
 _lock = threading.RLock()  # état en mémoire et fichier de cache
 _sync_lock = threading.Lock()  # une seule relecture à la fois
 _acces: dict = {"jeton": "", "expire": 0.0}  # jeton d'accès (1 h), jamais écrit sur le disque
-_etat: dict = {"erreur": "", "derniere": 0.0, "connexion": None}
+_etat: dict = {"erreur": "", "derniere": 0.0, "connexion": None, "envoi": None}
 _plages: dict = {}  # plages hors de la copie, lues à la demande : {(début, fin): (horodatage, occurrences)}
 _cache: dict | None = None
 _thread: threading.Thread | None = None
@@ -98,6 +105,18 @@ class AccesRetire(GoogleErreur):
     """Jeton de rafraîchissement refusé par Google (expiré ou révoqué) : il faut se reconnecter."""
 
 
+class DejaExistant(GoogleErreur):
+    """Identifiant d'évènement déjà pris chez Google (409) : l'évènement a déjà été envoyé."""
+
+
+class Refuse(GoogleErreur):
+    """Google refuse CET évènement (valeurs invalides) : les autres envois continuent."""
+
+
+class OccurrenceAbsente(GoogleErreur):
+    """L'occurrence demandée n'existe pas (ou plus) dans la série Google."""
+
+
 # --------------------------------------------------------------------------- #
 #  Réglages et secrets
 # --------------------------------------------------------------------------- #
@@ -114,6 +133,7 @@ def reglages() -> dict:
         r["intervalle_minutes"] = max(2, min(240, int(float(r.get("intervalle_minutes") or 10))))
     except (TypeError, ValueError):
         r["intervalle_minutes"] = 10
+    r["envoi_auto"] = bool(r.get("envoi_auto", True))
     return r
 
 
@@ -188,6 +208,8 @@ def modifier_reglages(changes: dict) -> dict:
         ok["cible"] = "nexus" if changes["cible"] == "nexus" else "google"
     if "rappels" in changes:
         ok["rappels"] = bool(changes["rappels"])
+    if "envoi_auto" in changes:
+        ok["envoi_auto"] = bool(changes["envoi_auto"])
     if "intervalle_minutes" in changes:
         try:
             ok["intervalle_minutes"] = max(2, min(240, int(float(changes["intervalle_minutes"]))))
@@ -199,6 +221,8 @@ def modifier_reglages(changes: dict) -> dict:
         if ok.get("agenda", avant) != avant:
             _vider_cache()
             reveiller()
+        elif ok.get("envoi_auto"):
+            reveiller()  # envoi tout de suite (en arrière-plan)
     return etat()
 
 
@@ -220,11 +244,24 @@ def etat() -> dict:
         "cible": r["cible"],
         "rappels": r["rappels"],
         "intervalle_minutes": r["intervalle_minutes"],
+        "envoi_auto": r["envoi_auto"],
+        "envoi": dict(_etat["envoi"]) if _etat.get("envoi") else None,
+        **comptes_locaux(),
         "derniere_synchro": c.get("maj") or 0,
         "nb_evenements": len(c.get("occurrences") or []),
         "erreur": _etat.get("erreur") or "",
         "connexion": dict(connexion) if connexion else None,
     }
+
+
+def comptes_locaux() -> dict:
+    """Évènements NEXUS encore à envoyer, et ceux gardés « sur ce PC seulement »."""
+    try:
+        evs = agenda.load()["events"]
+    except Exception:
+        evs = []
+    seuls = sum(1 for e in evs if e.get("seulement_nexus"))
+    return {"a_envoyer": len(evs) - seuls, "seulement_nexus": seuls}
 
 
 def court() -> dict:
@@ -239,6 +276,7 @@ def court() -> dict:
         "lecture_seule": c.get("acces") not in (None, "owner", "writer"),
         "derniere_synchro": c.get("maj") or 0,
         "erreur": _etat.get("erreur") or "",
+        "envoi": dict(_etat["envoi"]) if _etat.get("envoi") else None,
     }
 
 
@@ -307,10 +345,12 @@ def _erreur_api(code: int, corps: dict) -> GoogleErreur:
         return GoogleErreur("Google Agenda limite les demandes : réessaie dans une minute.")
     if code == 403:
         return GoogleErreur("Google refuse cette modification (agenda en lecture seule ou évènement dont tu n'es pas l'organisateur).")
+    if code == 409:
+        return DejaExistant("Cet évènement existe déjà dans Google Agenda.")
     if code in (404, 410):
         return GoogleErreur("Évènement introuvable dans Google Agenda (il a peut-être été supprimé ailleurs).")
     if code == 400:
-        return GoogleErreur("Google refuse ces valeurs" + (f" : {message[:160]}" if message else "."))
+        return Refuse("Google refuse ces valeurs" + (f" : {message[:160]}" if message else "."))
     if code >= 500:
         return GoogleErreur("Google Agenda ne répond pas correctement : réessaie dans un instant.")
     return GoogleErreur(f"erreur de Google Agenda ({code})")
@@ -625,12 +665,24 @@ def _until_avant(recurrence: list[str], occ: dt.date, journee: bool) -> list[str
     return out
 
 
+def _ref_minutes() -> int:
+    """Heure de référence des rappels NEXUS pour une journée entière (config.json, agenda.heure_reference)."""
+    ref = str(config.get("agenda").get("heure_reference") or "09:00")
+    if not agenda.TIME_RE.match(ref):
+        ref = "09:00"
+    h, m = ref.split(":")
+    return int(h) * 60 + int(m)
+
+
 def _rappels_minutes(ev: dict, defaut: list[int]) -> tuple[list[int] | None, list[int]]:
-    """(rappels NEXUS : None = « par défaut de Google », minutes effectives)."""
+    """(rappels NEXUS : None = « par défaut de Google », minutes effectives).
+    Journée entière : Google compte depuis minuit, NEXUS depuis l'heure de référence (09:00) ; on convertit
+    pour que le rappel tombe à la même heure des deux côtés (1 jour avant à 9 h = 900 min chez Google)."""
     r = ev.get("reminders") or {}
     if r.get("useDefault", True):
         return None, list(defaut)
-    mins = sorted({int(o.get("minutes") or 0) for o in r.get("overrides") or [] if isinstance(o, dict)}, reverse=True)
+    decale = _ref_minutes() if (ev.get("start") or {}).get("date") else 0
+    mins = sorted({min(agenda.MAX_REMINDER_MIN, int(o.get("minutes") or 0) + decale) for o in r.get("overrides") or [] if isinstance(o, dict)}, reverse=True)
     return mins, mins
 
 
@@ -686,10 +738,11 @@ def _horaires(f: dict, fuseau: str) -> dict:
     return out
 
 
-def _rappels_google(rem: list[int] | None) -> dict:
+def _rappels_google(rem: list[int] | None, journee: bool = False) -> dict:
     if rem is None:
         return {"useDefault": True}
-    return {"useDefault": False, "overrides": [{"method": "popup", "minutes": int(m)} for m in sorted(rem)[:5]]}
+    decale = _ref_minutes() if journee else 0  # (un rappel le jour même avant 9 h : à minuit, au plus tôt)
+    return {"useDefault": False, "overrides": [{"method": "popup", "minutes": m} for m in sorted({max(0, int(m) - decale) for m in rem})[:5]]}
 
 
 def _prive(f: dict) -> dict:
@@ -704,7 +757,7 @@ def _prive(f: dict) -> dict:
 def corps(f: dict, fuseau: str) -> dict:
     """Champs NEXUS validés -> nouvel évènement Google."""
     b = {"summary": f["title"], "description": f.get("description") or "", **_horaires(f, fuseau)}
-    b["reminders"] = _rappels_google(f.get("reminders"))
+    b["reminders"] = _rappels_google(f.get("reminders"), not f.get("time"))
     b["extendedProperties"] = {"private": {"nexus": "1", **_prive(f)}}
     rec = rrule(f.get("repeat") or "none", agenda.parse_date(f["date"]), f.get("until"), not f.get("time"))
     if rec:
@@ -721,8 +774,8 @@ def _differences(avant: dict, apres: dict, fuseau: str, serie: bool) -> dict:
         p["description"] = apres.get("description", "")
     if any(apres.get(k) != avant.get(k) for k in ("date", "time", "duration")):
         p.update(_horaires(apres, fuseau))
-    if apres.get("reminders") != avant.get("reminders"):
-        p["reminders"] = _rappels_google(apres.get("reminders"))
+    if apres.get("reminders") != avant.get("reminders") or (apres.get("reminders") is not None and bool(apres.get("time")) != bool(avant.get("time"))):
+        p["reminders"] = _rappels_google(apres.get("reminders"), not apres.get("time"))
     if any(apres.get(k) != avant.get(k) for k in ("birthday", "birth_year")) or (bool(apres.get("time")) and not apres.get("duration")) != (
         bool(avant.get("time")) and not avant.get("duration")
     ):
@@ -849,6 +902,7 @@ def _infos_agenda() -> dict:
     rappels = sorted({int(x.get("minutes") or 0) for x in r.get("defaultReminders") or [] if isinstance(x, dict)}, reverse=True)
     return {
         "agenda": reglages()["agenda"],
+        "agenda_id": str(r.get("id") or reglages()["agenda"]),
         "nom": str(r.get("summaryOverride") or r.get("summary") or "Google Agenda")[:80],
         "fuseau": str(r.get("timeZone") or ""),
         "acces": str(r.get("accessRole") or "reader"),
@@ -869,23 +923,161 @@ def _lire_plage(debut: dt.date, fin: dt.date, infos: dict) -> list[dict]:
     return out
 
 
-def synchroniser() -> dict:
-    """Relit Google Agenda (période autour d'aujourd'hui) et met la copie locale à jour."""
+def _relire() -> dict:
+    infos = _infos_agenda()
+    today = dt.date.today()
+    debut, fin = today - dt.timedelta(days=FENETRE_AVANT), today + dt.timedelta(days=FENETRE_APRES)
+    occs = _lire_plage(debut, fin, infos)
+    c = {**infos, "debut": debut.isoformat(), "fin": fin.isoformat(), "maj": time.time(), "occurrences": occs}
+    _ecrire_cache(c)
+    _etat["erreur"] = ""
+    _etat["derniere"] = time.time()
+    return c
+
+
+def synchroniser(envoyer: bool = True) -> dict:
+    """Relit Google Agenda (période autour d'aujourd'hui) et met la copie locale à jour ; puis, si l'envoi
+    automatique est activé, envoie les évènements NEXUS encore locaux (et relit pour les afficher)."""
     if not connecte():
         return etat()
     with _sync_lock:
         try:
-            infos = _infos_agenda()
-            today = dt.date.today()
-            debut, fin = today - dt.timedelta(days=FENETRE_AVANT), today + dt.timedelta(days=FENETRE_APRES)
-            occs = _lire_plage(debut, fin, infos)
-            _ecrire_cache({**infos, "debut": debut.isoformat(), "fin": fin.isoformat(), "maj": time.time(), "occurrences": occs})
-            _etat["erreur"] = ""
-            _etat["derniere"] = time.time()
+            c = _relire()
         except GoogleErreur as exc:
             _etat["erreur"] = str(exc)
             _journal(f"[Google Agenda] relecture impossible : {exc}")
+            return etat()
+        if envoyer and reglages()["envoi_auto"]:
+            erreur_envoi = envoyer_evenements_nexus(c)
+            if (_etat.get("envoi") or {}).get("envoyes"):
+                try:
+                    _relire()
+                except GoogleErreur as exc:
+                    _etat["erreur"] = str(exc)
+            if erreur_envoi:
+                _etat["erreur"] = erreur_envoi
     return etat()
+
+
+# --------------------------------------------------------------------------- #
+#  Envoi automatique des évènements NEXUS dans Google Agenda (sans doublon)
+# --------------------------------------------------------------------------- #
+CHAMPS_ENVOI = ("title", "date", "time", "duration", "description", "repeat", "until", "birthday", "birth_year", "reminders")
+
+
+def id_envoi(agenda_id: str, eid: str) -> str:
+    """Identifiant Google calculé depuis l'agenda et l'évènement NEXUS : toujours le même pour le même évènement
+    (caractères a-v et 0-9, comme l'exige Google). Un second envoi est refusé par Google (409) : pas de doublon."""
+    return "ag" + hashlib.sha1(f"{agenda_id}|{eid}".encode()).hexdigest()[:30]  # (identifiant, pas de sécurité)
+
+
+def _lire_envois() -> dict:
+    try:
+        d = json.loads(ENVOIS_FILE.read_text(encoding="utf-8"))
+        return d if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _noter_envoi(cle: str, info: dict) -> None:
+    with _lock:
+        d = _lire_envois()
+        d[cle] = info
+        ENVOIS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = ENVOIS_FILE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
+        tmp.replace(ENVOIS_FILE)
+
+
+def _champs_envoi(e: dict) -> dict:
+    f = agenda.validate({k: e.get(k) for k in CHAMPS_ENVOI})
+    if f.get("reminders") is None and f.get("time"):
+        # « rappels par défaut » de NEXUS : envoyés tels quels (Google aurait ses propres délais par défaut)
+        f["reminders"] = sorted({int(x) for x in config.get("agenda").get("rappels_minutes") or [] if str(x).isdigit()}, reverse=True)
+    return f
+
+
+def _envoyer_un(e: dict, c: dict) -> str:
+    """Crée (ou met à jour, s'il est déjà là) l'évènement NEXUS e dans Google, exceptions comprises. Renvoie son id Google."""
+    fuseau = c.get("fuseau") or ""
+    f = _champs_envoi(e)
+    b = corps(f, fuseau)
+    b["extendedProperties"]["private"]["nexus_id"] = str(e["id"])[:100]
+    gid = id_envoi(c.get("agenda_id") or c.get("agenda") or "", e["id"])
+    try:
+        _appel("POST", _cal() + "/events", corps={**b, "id": gid})
+    except DejaExistant:
+        # déjà envoyé (envoi interrompu, ou évènement modifié dans NEXUS depuis) : mise à jour, jamais de doublon
+        ev = _appel("GET", _cal() + "/events/" + _q(gid)) or {}
+        if ev.get("status") == "cancelled":
+            return gid  # supprimé entre-temps dans Google Agenda : on ne le recrée pas
+        _appel("PATCH", _cal() + "/events/" + _q(gid), corps=b)
+    for occ, x in sorted((e.get("exceptions") or {}).items()):
+        if not agenda.DATE_RE.match(str(occ)) or not isinstance(x, dict):
+            continue
+        try:
+            inst = _instance(gid, occ, {})
+        except OccurrenceAbsente:
+            continue  # déjà annulée (envoi repris) ou hors de la série
+        if x.get("cancelled"):
+            _appel("DELETE", _cal() + "/events/" + _q(inst["id"]))
+            continue
+        base = champs(inst, c.get("defaut_rappels") or [], recurrence=[])
+        modif = {k: x[k] for k in agenda.ONE_FIELDS if k in x}
+        if f.get("birthday"):
+            modif.pop("time", None)
+            modif.pop("duration", None)
+        apres = {**base, **agenda.validate(modif, base=base)} if modif else base
+        p = _differences(base, apres, fuseau, serie=False)
+        if p:
+            _appel("PATCH", _cal() + "/events/" + _q(inst["id"]), corps=p)
+    return gid
+
+
+def envoyer_evenements_nexus(c: dict | None = None) -> str:
+    """Envoie dans Google Agenda les évènements NEXUS encore locaux (sauf « NEXUS seulement »), puis les retire de
+    NEXUS. Réseau coupé ou refus : l'évènement reste dans NEXUS, nouvel essai à la relecture suivante.
+    Renvoie le message d'erreur à afficher (vide si tout va bien)."""
+    c = c or _lire_cache()
+    a_envoyer = [e for e in agenda.load()["events"] if not e.get("seulement_nexus")]
+    if not a_envoyer:
+        return ""
+    if c.get("acces") not in ("owner", "writer"):
+        msg = f"{len(a_envoyer)} évènement(s) NEXUS non envoyé(s) : l'agenda Google relié est en lecture seule (choisis-en un autre dans ⚙ Réglages)."
+        _etat["envoi"] = {"t": time.time(), "envoyes": 0, "restants": len(a_envoyer), "message": msg}
+        return msg
+    agenda_id = c.get("agenda_id") or c.get("agenda") or ""
+    envois = _lire_envois()
+    envoyes, refuses, erreur = 0, [], ""
+    for e in a_envoyer[:ENVOI_MAX]:
+        cle = f"{agenda_id}|{e['id']}"
+        deja = envois.get(cle)
+        try:
+            if deja and deja.get("updated") == e.get("updated"):
+                gid = deja["google_id"]  # envoyé, mais retrait de NEXUS interrompu : on le finit seulement
+            else:
+                gid = _envoyer_un(e, c)
+                _noter_envoi(cle, {"google_id": gid, "titre": e.get("title", "")[:120], "updated": e.get("updated"), "t": time.time()})
+        except Refuse as exc:
+            refuses.append(f"« {e.get('title', '')[:40]} » : {exc}")
+            continue
+        except agenda.AgendaError as exc:
+            if not isinstance(exc, GoogleErreur):  # données NEXUS invalides pour Google : cet évènement seulement
+                refuses.append(f"« {e.get('title', '')[:40]} » : {exc}")
+                continue
+            erreur = f"Envoi vers Google Agenda interrompu : {exc} Nouvel essai à la prochaine relecture."
+            break
+        if agenda.retirer_envoye(e["id"], e.get("updated")):
+            envoyes += 1
+    restants = comptes_locaux()["a_envoyer"]
+    if refuses and not erreur:
+        erreur = f"{len(refuses)} évènement(s) NEXUS refusé(s) par Google, gardé(s) dans NEXUS : " + " ; ".join(refuses[:3])
+    msg = f"{envoyes} évènement{'s' if envoyes > 1 else ''} NEXUS envoyé{'s' if envoyes > 1 else ''} dans Google Agenda" if envoyes else ""
+    if envoyes or erreur:
+        _etat["envoi"] = {"t": time.time(), "envoyes": envoyes, "restants": restants, "message": msg or erreur}
+    if envoyes:
+        _journal(f"[Google Agenda] {msg} ({restants} encore dans NEXUS)")
+    return erreur
 
 
 def occurrences(debut: dt.date, fin: dt.date, reseau: bool = True) -> list[dict]:
@@ -996,7 +1188,7 @@ def _instance(serie: str, occ: str, c: dict) -> dict:
     for ev in r.get("items") or []:
         if _jour_local(ev.get("originalStartTime")) == d and ev.get("status") != "cancelled":
             return ev
-    raise GoogleErreur("Cette occurrence n'existe plus dans Google Agenda.")
+    raise OccurrenceAbsente("Cette occurrence n'existe plus dans Google Agenda.")
 
 
 def _sans_repeat_custom(fields: dict) -> dict:
@@ -1094,7 +1286,7 @@ def modifier(eid: str, fields: dict, occ: str | None = None, scope: str = "all")
     nouveau.update(
         summary=apres["title"],
         description=apres.get("description", "") if apres.get("description", "") != avant.get("description", "") else maitre.get("description", ""),
-        reminders=_rappels_google(apres.get("reminders")),
+        reminders=_rappels_google(apres.get("reminders"), not apres.get("time")),
         **_horaires(apres, fuseau),
     )
     priv = dict(((maitre.get("extendedProperties") or {}).get("private")) or {})

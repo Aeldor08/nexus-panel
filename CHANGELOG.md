@@ -8,6 +8,19 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+### Ajouté
+- **Google Agenda : tes évènements NEXUS y partent tout seuls** (⚙ Réglages → Google Agenda, case cochée par
+  défaut) : à la liaison puis à chaque relecture, les évènements encore enregistrés dans NEXUS (anniversaires
+  compris) sont créés dans l'agenda Google relié, avec heure, durée, répétition (dates annulées ou modifiées
+  comprises), rappels et note, puis retirés de NEXUS. Jamais de doublon, même si l'envoi est interrompu ; en cas
+  de refus ou de coupure, l'évènement reste dans NEXUS et repart à la relecture suivante (erreur affichée sous le
+  calendrier). Le choix « NEXUS (sur ce PC seulement) » du formulaire garde un évènement sur le PC. Résultat
+  annoncé : « 12 évènements NEXUS envoyés dans Google Agenda »
+
+### Corrigé
+- **Google Agenda, rappels des journées entières** : « 1 jour avant » tombait à minuit chez Google au lieu de 9 h
+  (heure de référence de NEXUS) ; les rappels sont maintenant convertis dans les deux sens
+
 ## [1.14.0] - 2026-11-28
 
 ### Ajouté

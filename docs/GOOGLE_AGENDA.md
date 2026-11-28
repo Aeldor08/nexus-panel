@@ -61,15 +61,41 @@ Ensuite, dans **⚙ Réglages → Google Agenda** :
 - **Nouveaux évènements** : où le formulaire les crée par défaut (Google Agenda ou NEXUS seulement). Le
   formulaire de l'Agenda propose aussi le choix pour chaque évènement ;
 - **Relire Google Agenda toutes les** 5 à 60 minutes ;
+- **Envoyer automatiquement mes évènements NEXUS dans Google Agenda** (coché par défaut) : voir ci-dessous ;
 - **Rappels de NEXUS aussi pour les évènements Google** : bannière, son et Discord, avec les rappels de
   l'évènement Google (ou ceux par défaut de ton agenda Google) ;
 - **Se déconnecter** : NEXUS oublie l'accès (et le retire chez Google) et sa copie des évènements. Tes
   évènements restent dans Google Agenda.
 
+## Tes évènements NEXUS partent dans Google Agenda
+
+Avec la case **Envoyer automatiquement mes évènements NEXUS dans Google Agenda** (cochée par défaut), dès la
+liaison puis à chaque relecture, chaque évènement encore enregistré dans NEXUS est créé dans l'agenda Google relié
+— titre, date ou heure, durée, répétition (avec les dates annulées ou modifiées une par une), rappels et note —
+puis **retiré de NEXUS**, pour ne pas l'avoir en double. Un anniversaire devient un évènement d'une journée répété
+chaque année (NEXUS le reconnaît ensuite comme anniversaire, avec l'âge). Le résultat s'affiche sous le
+calendrier et dans une bulle : « 12 évènements NEXUS envoyés dans Google Agenda ».
+
+- **Jamais de doublon :** chaque évènement a chez Google un identifiant calculé à partir du sien. Si l'envoi est
+  interrompu (NEXUS fermé, coupure) puis relancé, Google refuse de le créer une seconde fois et NEXUS le met
+  simplement à jour. Chaque envoi est noté dans `data\agenda_google_envois.json` avant que la copie de NEXUS
+  soit retirée.
+- **Google refuse, ou plus de réseau :** l'évènement reste dans NEXUS, l'erreur s'affiche dans la ligne Google
+  sous le calendrier, et NEXUS réessaie à la relecture suivante.
+- **Agenda relié en lecture seule :** rien n'est envoyé, et c'est indiqué.
+- **Garder un évènement sur ce PC seulement :** dans le formulaire, **Agenda : NEXUS (sur ce PC seulement)**.
+  Il n'est jamais envoyé (étiquette « sur ce PC » dans la fenêtre du jour). Décocher la case garde tous les
+  nouveaux évènements dans NEXUS.
+- **Rappels :** ceux de l'évènement, ou ceux par défaut de NEXUS (1 h et 30 min avant) pour un évènement à
+  heure fixe. Pour une journée entière (anniversaire…), Google compte depuis minuit et NEXUS depuis l'heure de
+  référence (9 h) : « 1 jour avant » reste à 9 h la veille. Un rappel le jour même avant 9 h tombe à minuit chez
+  Google ; une journée entière avec les rappels par défaut prend ceux de Google.
+
 ## Ce que fait NEXUS (et ne fait pas)
 
 - Les évènements Google restent **dans Google Agenda**. NEXUS en garde une copie (`data\agenda_google.json`)
-  pour les afficher hors connexion et envoyer les rappels. Les évènements NEXUS restent dans NEXUS.
+  pour les afficher hors connexion et envoyer les rappels. Les évènements NEXUS partent dans Google (ci-dessus),
+  sauf ceux gardés « sur ce PC seulement ».
 - Une modification depuis NEXUS n'envoie **que ce que tu as changé** : invités, lieu, visioconférence, couleur…
   ne sont jamais effacés.
 - Répétitions : « tous les jours / semaines / mois / ans » se modifient comme dans NEXUS (**cet évènement
@@ -103,3 +129,5 @@ Ensuite, dans **⚙ Réglages → Google Agenda** :
 | `Error 403: access_denied` sur la page de Google | Ajoute ton adresse dans **Utilisateurs test** (étape 3.4), ou publie l'application |
 | « Délai dépassé (5 minutes) » | Relance **Se connecter à Google** et termine la connexion dans les 5 minutes |
 | « Cet agenda Google est en lecture seule » | Choisis un autre **Agenda relié** |
+| « Envoi vers Google Agenda interrompu… » | Rien à faire : les évènements restent dans NEXUS et repartent à la relecture suivante |
+| « … refusé(s) par Google, gardé(s) dans NEXUS » | Vérifie l'évènement nommé (titre, dates) ; il repart à la relecture suivante |

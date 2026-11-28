@@ -105,7 +105,7 @@
         d'identifiants de Windows, envoyé uniquement à api.github.com.</small>`;
   }
   // ---- Google Agenda (PC seulement) : identifiant client, connexion, agenda relié. Aucun secret n'est réaffiché ----
-  let gTimer = null, gClient = false;
+  let gTimer = null, gClient = false, gAttente = false;
   async function renderGoogle() {
     clearTimeout(gTimer);
     const box = document.getElementById("rg-google");
@@ -136,8 +136,12 @@
           affiche « Google n'a pas validé cette application », clique sur « Continuer » : c'est ton propre projet.</small>
         <div class="form-row"><button class="btn" data-g-act="client-changer">Changer d'identifiant client</button>
           <button class="btn danger" data-g-act="client-effacer">Effacer</button></div>`;
-      if (cx && cx.etat === "attente") gTimer = setTimeout(renderGoogle, 2000);
+      if (cx && cx.etat === "attente") { gAttente = true; gTimer = setTimeout(renderGoogle, 2000); }
       return;
+    }
+    if (gAttente && window.agendaRefresh) {   // vient d'être relié : relecture (et envoi) en arrière-plan, l'Agenda suit
+      gAttente = false;
+      for (const ms of [1500, 6000, 15000]) setTimeout(() => window.agendaRefresh(), ms);
     }
     const quand = g.derniere_synchro ? fmtAgo(g.derniere_synchro) : "jamais";
     box.innerHTML = head + `
@@ -153,6 +157,12 @@
       <label class="rg-row rg-sel"><span>Relire Google Agenda toutes les</span>
         <select class="in" data-g="intervalle_minutes" aria-label="Intervalle de relecture">
           ${[5, 10, 15, 30, 60].map(m => `<option value="${m}"${Number(g.intervalle_minutes) === m ? " selected" : ""}>${m} min</option>`).join("")}</select></label>
+      <label class="rg-row rg-chk"><input type="checkbox" data-g="envoi_auto" ${g.envoi_auto ? "checked" : ""}>
+        <span>Envoyer automatiquement mes évènements NEXUS dans Google Agenda</span></label>
+      <small class="muted rg-note">${g.envoi && g.envoi.message ? esc(g.envoi.message) + ". " : ""}${g.a_envoyer ? `${g.a_envoyer} évènement(s) NEXUS
+        ${g.envoi_auto && !g.lecture_seule ? "partiront à la prochaine relecture" : "restent dans NEXUS"}. ` : "Aucun évènement NEXUS en attente. "}${g.seulement_nexus ? `${g.seulement_nexus} gardé(s) « sur ce PC seulement ». ` : ""}
+        Une fois dans Google, l'évènement est retiré de NEXUS (pas de doublon). Le choix « NEXUS (sur ce PC seulement) » du
+        formulaire garde un évènement ici.</small>
       <label class="rg-row rg-chk"><input type="checkbox" data-g="rappels" ${g.rappels ? "checked" : ""}>
         <span>Rappels de NEXUS aussi pour les évènements Google (panel, Discord)</span></label>
       <div class="form-row"><button class="btn" data-g-act="relire">⟳ Relire maintenant</button>
@@ -170,8 +180,8 @@
     const v = e.target.type === "checkbox" ? e.target.checked : k === "intervalle_minutes" ? Number(e.target.value) : e.target.value;
     try {
       await api("/api/agenda/google/reglages", { [k]: v });
-      toast(k === "agenda" ? "Agenda relié changé : relecture en cours…" : "Réglage enregistré.");
-      if (k === "agenda") { await api("/api/agenda/synchroniser", {}).catch(() => {}); renderGoogle(); }
+      toast(k === "agenda" ? "Agenda relié changé : relecture en cours…" : k === "envoi_auto" && v ? "Envoi des évènements NEXUS en cours…" : "Réglage enregistré.");
+      if (k === "agenda" || (k === "envoi_auto" && v)) { await api("/api/agenda/synchroniser", {}).catch(() => {}); renderGoogle(); }
       if (window.agendaRefresh) window.agendaRefresh();
     } catch (x) { toast("Google Agenda : " + x.message, true); }
   });

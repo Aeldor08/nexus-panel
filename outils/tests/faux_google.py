@@ -14,6 +14,7 @@ import copy
 import datetime as dt
 import hashlib
 import json
+import re
 import secrets
 import sys
 import threading
@@ -63,6 +64,9 @@ class Etat:
         self.events: dict[str, dict[str, dict]] = {k: {} for k in self.agendas}  # agenda -> id -> évènement / exception
         self.journal: list[tuple[str, str, dict | None]] = []  # (méthode, chemin, corps)
         self.refuser_api = False
+        self.utilises: set[str] = set()  # identifiants déjà pris (même supprimés), comme chez Google : 409
+        self.ecritures_avant_coupure: int | None = None  # réseau coupé après N écritures (None = jamais)
+        self.refuser_titre = ""  # évènements dont le titre contient ce texte : refusés (400)
         self.lock = threading.RLock()
 
     def cal(self, cid: str) -> str:
@@ -197,6 +201,7 @@ class Etat:
     def ajouter(self, cal: str, ev: dict) -> dict:
         ev = copy.deepcopy(ev)
         ev.setdefault("id", secrets.token_hex(8))
+        self.utilises.add(ev["id"])
         ev.setdefault("status", "confirmed")
         ev.setdefault("eventType", "default")
         ev.setdefault("organizer", {"email": "moi@exemple.fr", "self": True})
@@ -242,6 +247,11 @@ def serveur(port: int = 0) -> tuple[ThreadingHTTPServer, Etat]:
             tok = (self.headers.get("Authorization") or "").removeprefix("Bearer ")
             if tok not in etat.acces:
                 return self._json(401, {"error": {"code": 401, "message": "Invalid Credentials"}})
+            if methode in ("POST", "PATCH", "DELETE") and etat.ecritures_avant_coupure is not None:
+                if etat.ecritures_avant_coupure <= 0:
+                    self.close_connection = True  # coupure : aucune réponse
+                    return None
+                etat.ecritures_avant_coupure -= 1
             if etat.refuser_api:
                 return self._json(403, {"error": {"code": 403, "message": "Calendar API has not been used", "errors": [{"reason": "accessNotConfigured"}]}})
             chemin = [urllib.parse.unquote(x) for x in u.path.split("/") if x][2:]  # sans calendar/v3
@@ -295,6 +305,13 @@ def serveur(port: int = 0) -> tuple[ThreadingHTTPServer, Etat]:
                     return self._json(403, {"error": {"code": 403, "message": "Forbidden"}})
                 if "recurrence" in corps and not all(x.get("timeZone") for x in (corps["start"], corps["end"]) if "dateTime" in x):
                     return self._json(400, {"error": {"code": 400, "message": "Missing time zone definition for start time."}})
+                if "id" in corps:
+                    if not re.fullmatch(r"[a-v0-9]{5,1024}", str(corps["id"])):
+                        return self._json(400, {"error": {"code": 400, "message": "Invalid resource id value."}})
+                    if corps["id"] in etat.utilises:
+                        return self._json(409, {"error": {"code": 409, "message": "The requested identifier already exists."}})
+                if etat.refuser_titre and etat.refuser_titre in str(corps.get("summary")):
+                    return self._json(400, {"error": {"code": 400, "message": "Invalid value"}})
                 return self._json(200, etat.ajouter(cal, corps))
             ev = etat.trouver(cal, p[3])
             if ev is None or (ev.get("status") == "cancelled" and m != "DELETE"):

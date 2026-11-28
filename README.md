@@ -342,7 +342,9 @@ si le bot est configuré. Ils sont calculés par NEXUS même si aucune page n'es
 
 **Google Agenda (dans les deux sens) :** ⚙ Réglages → **Google Agenda**. Une fois relié, l'Agenda affiche
 aussi les évènements de ton Google Agenda (bord bleu, pastille **G**, lien **↗** vers Google) et le formulaire
-propose **Agenda : Google Agenda / NEXUS**. Créer, modifier (une occurrence, les suivantes, toute la série) ou
+propose **Agenda : Google Agenda / NEXUS (sur ce PC seulement)**. Les évènements déjà dans NEXUS partent
+tout seuls dans Google Agenda puis sont retirés de NEXUS, sans doublon (case « Envoyer automatiquement… », sauf
+ceux gardés « sur ce PC seulement »). Créer, modifier (une occurrence, les suivantes, toute la série) ou
 supprimer un évènement Google depuis NEXUS le change dans Google Agenda ; les changements faits dans Google
 arrivent toutes les 10 minutes (réglable) ou tout de suite avec **⟳ Relire**, sous le calendrier. Les invitations
 et les anniversaires de tes contacts sont en lecture seule. Les rappels de NEXUS (bannière, Discord) marchent

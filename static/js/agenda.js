@@ -83,6 +83,7 @@
   let range = null, loaded = false, view = new Date(), selDay = ymd(new Date()), noteId = null;
   let editing = null;          // { event, occurrence } quand on modifie
   let google = { connecte: false };   // liaison Google Agenda (résumé envoyé par /api/agenda)
+  let envoiVu = Date.now() / 1000;     // dernier résultat d'envoi déjà annoncé (pas ceux d'avant l'ouverture)
   const isG = o => o && o.source === "google";
   view.setDate(1);
 
@@ -127,6 +128,9 @@
       google = data.google || { connecte: false };
       // liaison faite ou retirée (⚙ Réglages) : le formulaire vide est refait (choix de l'agenda)
       if (!editing && (avant.connecte !== google.connecte || avant.lecture_seule !== google.lecture_seule)) $("a-form").dataset.formDay = "";
+      // envoi automatique des évènements NEXUS dans Google Agenda : résultat annoncé une fois (toast)
+      const env = google.envoi;
+      if (env && env.t > envoiVu) { envoiVu = env.t; if (env.envoyes) toast(env.message + (env.restants ? ` (${env.restants} encore dans NEXUS)` : ".")); }
       range = r; loaded = true;
     } catch (e) { toast("Agenda : " + e.message, true); if (Tabs.current === "agenda") renderCal(); return; }
     if (Tabs.current === "agenda") renderAll();
@@ -183,7 +187,9 @@
     if (!google.connecte) return;
     const quand = google.derniere_synchro ? `relu ${fmtAgo(google.derniere_synchro)}` : "pas encore relu";
     box.innerHTML = `<span class="ag-gdot">G</span><span class="x"><b>${esc(google.agenda_nom || "Google Agenda")}</b>
-      ${google.erreur ? `<span class="ag-gerr">⚠ ${esc(google.erreur)}</span>` : `<small class="muted">· ${esc(quand)}${google.lecture_seule ? " · lecture seule" : ""}</small>`}</span>
+      ${google.erreur ? `<span class="ag-gerr">⚠ ${esc(google.erreur)}</span>` : `<small class="muted">· ${esc(quand)}${google.lecture_seule ? " · lecture seule" : ""}</small>`}
+      ${!google.erreur && google.envoi && google.envoi.envoyes && Date.now() / 1000 - google.envoi.t < 3600
+        ? `<small class="muted">· ${esc(google.envoi.message)}${google.envoi.restants ? ` (${google.envoi.restants} encore dans NEXUS)` : ""}</small>` : ""}</span>
       <button class="btn" data-gsync title="Relire Google Agenda maintenant">⟳ Relire</button>`;
   }
 
@@ -200,6 +206,7 @@
         <span class="x">${esc(evLabel(o).replace(/^🎂 /, ""))}${o.duration ? ` <small class="muted">· ${fmtDur(o.duration)}</small>` : ""}
           ${o.description ? `<small class="ag-desc">${esc(o.description)}</small>` : ""}</span>${rep(o)}
         ${o.exception ? `<span class="due" title="Cette occurrence a été modifiée seule">modifié</span>` : ""}
+        ${google.connecte && o.seulement_nexus ? `<span class="due" title="Créé avec le choix « NEXUS (sur ce PC seulement) » : jamais envoyé dans Google Agenda">sur ce PC</span>` : ""}
         ${isG(o) ? `<span class="due ag-gtag" title="Évènement de Google Agenda${o.lecture_seule ? " (lecture seule ici)" : ""}">G${o.lecture_seule ? " · lecture seule" : ""}</span>` : ""}
         ${isG(o) && o.lien ? `<a class="del" href="${esc(o.lien)}" target="_blank" rel="noopener noreferrer" title="Ouvrir dans Google Agenda" aria-label="Ouvrir ${esc(o.title)} dans Google Agenda">↗</a>` : ""}
         ${o.lecture_seule ? "" : `<button class="del" data-edit="${esc(o.id)}" title="Modifier" aria-label="Modifier ${esc(o.title)}">✎</button>
@@ -344,7 +351,8 @@
     const err = check(v);
     showErrors(err);
     if (Object.keys(err).length) return;
-    const fa = $("a-form").elements.agenda, cible = fa ? fa.value : "nexus";
+    // choix de l'agenda (seulement si Google est relié) : « nexus » = sur ce PC seulement, jamais envoyé dans Google
+    const fa = $("a-form").elements.agenda, cible = fa ? fa.value : undefined;
     const sub = $("a-form").querySelector("button[type=submit]");
     envoi = true; if (sub) sub.disabled = true;
     try {
