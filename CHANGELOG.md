@@ -8,6 +8,8 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
 
 ## [Non publié]
 
+## [1.14.1] - 2026-11-28
+
 ### Ajouté
 - **Google Agenda : tes évènements NEXUS y partent tout seuls** (⚙ Réglages → Google Agenda, case cochée par
   défaut) : à la liaison puis à chaque relecture, les évènements encore enregistrés dans NEXUS (anniversaires
