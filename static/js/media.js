@@ -141,6 +141,10 @@
   // 3. Les boutons réagissent au clic, sans attendre l'application : ⏯ bascule tout de suite ; ⏭ / ⏮ estompent
   //    le titre jusqu'à l'arrivée de la nouvelle piste. L'état réel remplace l'affichage dès qu'il arrive.
   let sig = "", fetchedAt = 0, attente = null;                  // attente : { source, title, until } après ⏭ / ⏮
+  // voulu : { source, status, until } après ⏯. L'appli met quelques centaines de ms à basculer : une lecture faite
+  // entre-temps (encore l'ancien état) ne doit pas refaire basculer le bouton (aller-retour ❚❚ → ▶ → ❚❚).
+  // On garde l'état demandé jusqu'à ce que le serveur le confirme, 2,5 s au plus (refus, autre appareil…).
+  let voulu = null;
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const posNow = s => !s ? 0 : s.status !== "playing" ? s.position
     : Math.min(s.duration || Infinity, s.position + (performance.now() - fetchedAt) / 1000);
@@ -148,19 +152,32 @@
   async function control(action, position) {
     const s = pick();
     if (!s) return;
-    if (action === "toggle") { s.position = posNow(s); fetchedAt = performance.now(); s.status = s.status === "playing" ? "paused" : "playing"; }
+    if (action === "toggle") {
+      s.position = posNow(s); fetchedAt = performance.now(); s.status = s.status === "playing" ? "paused" : "playing";
+      voulu = { source: s.source, status: s.status, until: performance.now() + 2500 };
+      if (s.status === "playing" && window.nxMixer) setTimeout(() => window.nxMixer.relire(), 400);   // volume de l'appli
+    }
     else if (action === "seek") { s.position = position; fetchedAt = performance.now(); }
     else attente = { source: s.source, title: s.title, until: performance.now() + 3000 };
     renderMain(); renderNowPlaying();
     try {
       const r = await api("/api/media/control", { source: s.source, action, position });
-      if (!r.ok) { toast("Commande refusée par l'application", true); attente = null; }
-    } catch (e) { toast("Erreur : " + e.message, true); attente = null; }
+      if (!r.ok) { toast("Commande refusée par l'application", true); attente = null; voulu = null; }
+    } catch (e) { toast("Erreur : " + e.message, true); attente = null; voulu = null; }
     refresh(0).catch(() => {});                                   // état réel tout de suite
   }
 
   function apply(st) {
+    const avant = state;
     state = st; sig = st.sig || ""; fetchedAt = performance.now();
+    if (voulu) {
+      const s = state.sessions.find(x => x.source === voulu.source);
+      if (!s || s.status === voulu.status || performance.now() > voulu.until) voulu = null;   // confirmé (ou abandon)
+      else s.status = voulu.status;                                // pas encore suivi : on garde l'état demandé
+    }
+    // une source qui (re)passe en lecture : son volume peut apparaître dans le mélangeur, on le relit sans attendre
+    if (window.nxMixer && state.sessions.some(x => x.status === "playing" &&
+        !(avant && avant.sessions.some(y => y.source === x.source && y.status === "playing")))) window.nxMixer.relire();
     window.mediaState = state;        // réutilisé par le sommaire
     if (selected && !state.sessions.some(s => s.source === selected)) selected = null;
     if (attente) {

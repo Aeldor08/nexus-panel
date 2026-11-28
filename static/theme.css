@@ -450,6 +450,7 @@ h1 .home-link:hover span { filter: brightness(1.3); }
 .mx-range:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 .m-vol { margin-top: 18px; max-width: 640px; }
 .m-vol .mx-row { grid-template-columns: 30px minmax(110px, 1fr) minmax(50px, .5fr) minmax(140px, 2fr) 52px 40px; }
+.m-vol .m-vol-attente { font-size: 14px; }
 
 /* ---------- Stream deck ---------- */
 .c-deck { --accent: var(--magenta); }

@@ -18,6 +18,14 @@ racine, est la source de vérité ; `outils/release.py` le fait avancer et compl
   propre identifiant client (guide : `docs/GOOGLE_AGENDA.md`) ; code secret et jeton dans le gestionnaire
   d'identifiants de Windows, réglages modifiables depuis le PC seulement
 
+### Corrigé
+- **Média, ⏯** : le bouton bascule tout de suite et ne fait plus d'aller-retour (❚❚ → ▶ → ❚❚) pendant que
+  l'application (Spotify…) met quelques centaines de millisecondes à suivre ; l'état demandé est gardé jusqu'à ce
+  que l'application le confirme (2,5 s au plus)
+- **Média, volume de la source** : quand Spotify (ou une autre appli) refait du son, son curseur de volume revient
+  dès que Windows le liste dans le mélangeur (environ 1 s) au lieu de rester plusieurs secondes sur « l'appli
+  n'apparaît pas encore dans le mélangeur » ; message plus clair en attendant
+
 ## [1.13.0] - 2026-11-26
 
 ### Ajouté

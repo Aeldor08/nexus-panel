@@ -223,6 +223,10 @@
       if (!tenu && list.children[i] !== el) list.insertBefore(el, list.children[i] || null);
     });
     if (!state.apps.length && !list.querySelector(".empty")) list.innerHTML = `<div class="empty">Aucune application n'émet de son</div>`;
+    // curseur du lecteur : mis à jour à chaque lecture du mélangeur (pas seulement quand la carte Média change),
+    // sinon il restait « pas encore dans le mélangeur » plusieurs secondes après le retour du son
+    const mb = $("m-body");
+    if (mb && mb.dataset.source && $("m-vol")) window.renderMediaVolume({ source: mb.dataset.source });
   }
 
   // ---- Curseur de volume dans le lecteur (source en cours : Spotify, navigateur…) ----
@@ -236,7 +240,12 @@
     const box = $("m-vol");
     if (!box) return;
     const a = appFor(s.source);
-    if (!a) { box.innerHTML = `<span class="muted" style="font-size:14px">Volume : l'appli n'apparaît pas encore dans le mélangeur</span>`; return; }
+    if (!a) {
+      // Windows ne liste une appli qu'une fois son son ouvert (Spotify le referme après une longue pause) : quelques
+      // instants au plus, le mélangeur est relu dès que la lecture reprend
+      if (box.dataset.key !== "") { box.innerHTML = `<span class="muted m-vol-attente">Volume : apparaît dès que l'appli joue du son</span>`; box.dataset.key = ""; }
+      return;
+    }
     if (box.dataset.key !== a.key) { box.innerHTML = ""; box.dataset.key = a.key; }
     row(box, a.key, { name: "Volume " + a.name, volume: a.volume, muted: a.muted, peak: a.peak, letter: "♪" });
   };
@@ -257,6 +266,8 @@
       if (i && peak != null) meterLevel(i, peak, r.dataset.muted === "1");
     });
   }, 100);
+  // Relecture immédiate (la carte Média l'appelle quand une source repasse en lecture)
+  window.nxMixer = { relire: () => { if (Tabs.current === "media" && !document.hidden) poll.now(); } };
   // S'ajoute au gestionnaire existant de l'onglet Média (sans le remplacer)
   const prev = Tabs.handlers.media || {};
   Tabs.register("media", {
