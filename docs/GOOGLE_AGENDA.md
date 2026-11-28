@@ -23,7 +23,12 @@ environ, gratuit, aucune carte bancaire).
 
 1. Menu ☰ → **API et services** → **Écran de consentement OAuth** (selon l'interface : **Google Auth Platform**)
    → **Commencer**.
-2. **Nom de l'application** : `NEXUS` ; **Adresse e-mail d'assistance** : la tienne → **Suivant**.
+2. **Nom de l'application** : `Tableau de bord PC` (ou un autre nom à toi) ; **Adresse e-mail d'assistance** : la
+   tienne → **Suivant**.
+   > **Pas « NEXUS »** : Google refuse les noms qui reprennent une de ses marques (Nexus était une gamme de
+   > téléphones Google ; de même Google, Gmail, Android, Chrome, YouTube, Pixel…). L'erreur est « le nom de
+   > l'application ne respecte pas les exigences de Google ». Ce nom n'apparaît que sur la page de connexion de
+   > Google : il ne change rien pour NEXUS.
 3. **Audience** : **Externe** → **Suivant**. **Coordonnées** : ton adresse → **Suivant** → accepte → **Créer**.
 4. **Audience** → **Utilisateurs test** → **Ajouter des utilisateurs** → ton adresse Gmail → **Enregistrer**.
 
@@ -31,7 +36,8 @@ environ, gratuit, aucune carte bancaire).
 > NEXUS affiche alors « reconnecte-toi » et il faut recliquer sur **Se connecter à Google**. Pour l'éviter :
 > **Audience** → **Publier l'application** → **Confirmer**. Pas besoin de validation par Google pour ton seul
 > compte ; à la connexion, Google affichera juste « Google n'a pas validé cette application » : clique sur
-> **Paramètres avancés** → **Accéder à NEXUS**. C'est normal, c'est ton propre projet.
+> **Paramètres avancés** → **Accéder à Tableau de bord PC** (le nom choisi plus haut). C'est normal, c'est ton
+> propre projet.
 
 ## 4. Créer l'identifiant client
 
